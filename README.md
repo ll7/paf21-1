@@ -2,7 +2,16 @@
 # Seminar Autonomous Driving (**P**raktikum **A**utonomes **F**ahren)
 
 ## About
-TODO: add a short introduction section what the project is about
+- [x] TODO: add a short introduction section what the project is about
+
+This project is a competition-like challenge in the course Seminar Autonomous driving at the University of Augsburg, which goal is to built an 
+autonomous time trial system from start to finish 
+
+-  Without traffic rules
+-  With traffic rules
+-  With traffic
+-  On different maps
+
 
 ## Team Members
 - Berghoff, Joshua
