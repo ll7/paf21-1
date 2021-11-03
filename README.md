@@ -2,16 +2,17 @@
 # Seminar Autonomous Driving (**P**raktikum **A**utonomes **F**ahren)
 
 ## About
-- [x] TODO: add a short introduction section what the project is about
+This project is a competition-like challenge in the course Seminar Autonomous Driving
+at the University of Augsburg.
 
-This project is a competition-like challenge in the course Seminar Autonomous driving at the University of Augsburg, which goal is to built an 
-autonomous time trial system from start to finish 
+Two teams of students (6-7 team members each) are creating their own self-driving car
+software interacting with the CARLA simulation environment. At the end of the project,
+there will be a live demo including a city and a racing mode where the cars of both
+teams compete against each other.
 
--  Without traffic rules
--  With traffic rules
--  With traffic
--  On different maps
-
+The live demo will include the interaction with other cars / pedestrians, traffic lights.
+Moreover there will be driving tests on a variety of maps to ensure that the self-driving
+is not bound to a single map that was learnt by heart.
 
 ## Team Members
 - Berghoff, Joshua
