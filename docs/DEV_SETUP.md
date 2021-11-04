@@ -81,11 +81,10 @@ According to a [GitHub post](https://github.com/carla-simulator/carla/issues/316
 CARLA simulation can be done like this using NVIDIA Docker:
 
 ```sh
-# launch a bash terminal session to a CARLA 0.9.9 environment
+# launch a bash terminal session to a CARLA 0.9.10.1 environment (version used for this seminar)
 docker run -it --gpus all \
-    -e DISPLAY=$DISPLAY -p 2000-2002:2000-2002 \
-    -v /tmp/.X11-unix:/tmp/.X11-unix \
-    carlasim/carla:0.9.9 sh -c 'SDL_VIDEODRIVER=x11 ./CarlaUE4.sh -opengl'
+    -e DISPLAY=$DISPLAY --net=host --runtime=nvidia \
+    carlasim/carla:0.9.10.1 /bin/bash CarlaUE4.sh -opengl
 ```
 
 *Note: There is [official documentation](https://carla.readthedocs.io/en/latest/build_docker/)
