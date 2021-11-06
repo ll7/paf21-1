@@ -5,6 +5,8 @@ services:
   carla-simulator:
     image: carla-sim
     runtime: nvidia
+    security_opt:
+      - seccomp:unconfined
     environment:
       SDL_VIDEODRIVER: x11
       SDL_HINT_CUDA_DEVICE: 0
