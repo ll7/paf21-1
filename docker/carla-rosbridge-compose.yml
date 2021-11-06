@@ -1,45 +1,38 @@
-# only docker-compose 2.x version that supports NVIDIA GPUs
+# this is the only docker-compose 2.x version supporting NVIDIA GPUs
 version: '2.3'
 
 services:
   carla-simulator:
-    image: carlasim/carla:0.9.10.1
+    image: carla-sim
     runtime: nvidia
-    command: /bin/sh -c 'SDL_VIDEODRIVER=x11 /bin/bash ./CarlaUE4.sh -carla-server -opengl'
     environment:
+      SDL_VIDEODRIVER: x11
+      SDL_HINT_CUDA_DEVICE: 0
       DISPLAY: $DISPLAY
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
-    ports:
-      - 2000:2000
-      - 2001:2001
-      - 2002:2002
+    expose:
+      - 2000
+      - 2001
+      - 2002
     networks:
       - carla
 
   roscore:
     image: ros:noetic
     command: roscore
-    ports:
-      - 11311:11311
+    expose:
+      - 11311
     networks:
       - ros
 
   carla-ros-bridge:
     image: carla-ros-bridge
-    volumes:
-      # override the CARLA simulator host in launchfile
-      - ./carla_ros_bridge.launch:/opt/carla-ros-bridge/install/share/carla_ros_bridge/launch/carla_ros_bridge.launch
     environment:
-      # reference the container running the roscore node
+      CARLA_SIM_HOST: carla-simulator
+      CARLA_SIM_WAIT_SECS: 20
       ROS_MASTER_URI: http://roscore:11311
       ROS_HOSTNAME: carla-ros-bridge
-
-      # override python path, carla pip package path didn't exist and was using Python 3.7 instead of 2.7
-      PYTHONPATH: /opt/carla-ros-bridge/install/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages:/opt/carla/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg
-
-    # install the python-is-python3 package, wait for the simulator to launch and start the CARLA ROS bridge
-    command: /bin/sh -c 'apt-get update && apt-get install -y python-is-python3 && sleep 20 && roslaunch carla_ros_bridge carla_ros_bridge.launch --wait'
     networks:
       - carla
       - ros
