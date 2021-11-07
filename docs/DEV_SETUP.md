@@ -50,7 +50,7 @@ system and cause lots of tears. We can tell you from our own experience.
 
 ## Install Docker with NVIDIA GPU Support
 Next, we install Docker for building images and launching containers
-(care, the second command reboots your system).
+(care, the last command reboots your system).
 
 ```sh
 # install cURL, Docker and Docker-Compose
@@ -84,6 +84,7 @@ CARLA simulation can be done like this using NVIDIA Docker:
 # launch a bash terminal session to a CARLA 0.9.10.1 environment (version used for this seminar)
 docker run -it --gpus all \
     -e DISPLAY=$DISPLAY --net=host --runtime=nvidia \
+    --security-opt seccomp=unconfined \
     carlasim/carla:0.9.10.1 /bin/bash CarlaUE4.sh -opengl
 ```
 
@@ -91,26 +92,6 @@ docker run -it --gpus all \
 for simulating CARLA 0.9.10 - 0.9.12 with Docker, so check those out as well.*
 
 ## Install an IDE of Choice
-
-### Run JupyterHub with Tensorflow GPU Support
-JupyterHub is a really nice solution to run Jupyter notebooks and quickly hack some Python AI.
-Gladly, TensorFlow officially provides their Docker image with all tools pre-installed,
-making devs like us a lot more productive.
-
-Following command launches a Docker container serving the JupyterHub website on port 8888:
-
-```sh
-# launch a JupyterHub server with GPU support
-docker run -it --rm -v $(realpath ~/notebooks):/tf/notebooks -p 8888:8888 \
-    --runtime=nvidia  --gpus all \
-    tensorflow/tensorflow:latest-gpu-jupyter
-
-# open the signup link that gets printed to the console and open it in your browser
-# now, you're good to go and can train TensorFlow AIs with GPU support
-```
-
-*Note: VSCode can attach to JupyterHub servers, so you can code in VSCode, see this
-[blog post](https://blog.jupyter.org/connect-to-a-jupyterhub-from-visual-studio-code-ed7ed3a31bcb).*
 
 ### Visual Studio Code
 Visual Studio Code offers great flexibility and lightweight code editing for various programming
@@ -135,6 +116,35 @@ Recommended VSCode extensions are:
 | ms-python.python            | Sets up useful Python tools for debugging, linting, running notebooks, etc. |
 | ms-azuretools.vscode-docker | Sets up useful Docker tools for managing images / containers via UI         |
 | Gruntfuggly.todo-tree       | Searches for TODO stubs in the code and lists them                          |
+
+### JupyterHub with Tensorflow GPU Support
+JupyterHub is a really nice solution to run Jupyter notebooks and quickly hack out 
+some Python AIs.
+Gladly, TensorFlow officially provides their Docker image with all Jupyter + NVIDIA
+tools pre-installed, allowing devs like us to be productive without having to install 
+our workstation PC for weeks just to make the GPU support work.
+
+Following command launches a Docker container serving the JupyterHub website on port 8888.
+For access, open the signup link printed to the console and open it inside your browser.
+Now, you're good to go and can train TensorFlow AIs with GPU support!
+
+```sh
+# launch a JupyterHub server with GPU support
+docker run -it --rm -v $(realpath ~/notebooks):/tf/notebooks -p 8888:8888 \
+    --runtime=nvidia  --gpus all \
+    --security-opt seccomp=unconfined \
+    tensorflow/tensorflow:latest-gpu-jupyter
+```
+
+In case you prefer code linting, auto-complete, etc. (which is unfortunately missing
+in the JupyterHub server), you can also launch a local Jupyter notebook in VSCode and
+attach it to the JupyterHub server using the *jupyter* VSCode plugin. See this
+[blog post](https://blog.jupyter.org/connect-to-a-jupyterhub-from-visual-studio-code-ed7ed3a31bcb)
+for further information.
+
+*Info: The notebook file is kept local while executing cells inside the remote Python
+kernel. In case you want to read from a dataset, you need to mount it inside the Docker
+container hosting the JupyterHub server, so the remote kernel can see your files.*
 
 ## Final Notes and Remarks
 We hope this setup did work for you like a charm.
