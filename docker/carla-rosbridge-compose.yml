@@ -30,14 +30,47 @@ services:
 
   carla-ros-bridge:
     image: carla-ros-bridge
+    volumes:
+      - ./ego_vehicle_sensors.json:/ego_vehicle_sensors.json
+      - ./custom_rosbridge_startup.launch:/custom_rosbridge_startup.launch
     environment:
-      CARLA_SIM_HOST: carla-simulator
-      CARLA_SIM_WAIT_SECS: 20
       ROS_MASTER_URI: http://roscore:11311
       ROS_HOSTNAME: carla-ros-bridge
+      CARLA_SIM_HOST: carla-simulator
+      CARLA_SIM_WAIT_SECS: 20
+      EGO_VEHICLE_SENSORS: /ego_vehicle_sensors.json
     networks:
       - carla
       - ros
+    command: ["/custom_rosbridge_startup.launch", "--wait"]
+
+  # TODO: register the ROS messages somehow to make this work
+  # observe_car_status:
+  #   image: ros:noetic
+  #   command: >
+  #     bash -c "sleep 40s
+  #     && rostopic echo /carla/ego_vehicle/vehicle_status"
+  #   environment:
+  #     ROS_MASTER_URI: http://roscore:11311
+  #     ROS_HOSTNAME: observe_car_status
+  #   expose:
+  #     - 11311
+  #   networks:
+  #     - ros
+
+  # drive_straight_forward:
+  #   image: ros:noetic
+  #   command: >
+  #     bash -c "sleep 60s
+  #     && rostopic pub /carla/ego_vehicle/ackermann_cmd ackermann_msgs/AckermannDrive
+  #         '{steering_angle: 0.0, steering_angle_velocity: 0.0, speed: 10, acceleration: 0.0, jerk: 0.0}' -r 10"
+  #   environment:
+  #     ROS_MASTER_URI: http://roscore:11311
+  #     ROS_HOSTNAME: drive_straight_forward
+  #   expose:
+  #     - 11311
+  #   networks:
+  #     - ros
 
 networks:
   carla:
