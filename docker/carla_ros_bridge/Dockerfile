@@ -1,9 +1,15 @@
 ARG ROS_BRIDGE_BASE_IMG
 FROM $ROS_BRIDGE_BASE_IMG
 
+# install pip
+RUN apt-get update && apt-get install -y python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
 # alias python3 as python
 RUN apt-get update && apt-get install -y python-is-python3 \
     && rm -rf /var/lib/apt/lists/*
+
+RUN python -m pip install pip --upgrade && python -m pip install simple_pid
 
 # override python path, carla pip package path didn't exist and was using Python 3.7 instead of 2.7
 ENV PYTHONPATH=/opt/carla-ros-bridge/install/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages:/opt/carla/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg
@@ -19,4 +25,4 @@ ENV CARLA_SIM_HOST=localhost
 ENV CARLA_SIM_WAIT_SECS=20
 
 ENTRYPOINT [ "/ros_entrypoint.sh" ]
-CMD ["carla_ros_bridge.launch", "--wait"]
+CMD ["carla_ros_bridge", "carla_ros_bridge.launch", "--wait"]
