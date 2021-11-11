@@ -1,0 +1,5 @@
+<!-- -->
+<launch>
+  <node pkg="test_subscriber_camera" name="test_subscriber_camera"
+        type="subscriber_camera.py" output="screen" required="true" />
+</launch>
