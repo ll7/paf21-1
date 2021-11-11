@@ -26,4 +26,4 @@ RUN source /opt/ros/noetic/setup.bash && catkin_make
 # register a startup procedure to launch the ROS node
 ADD ./ros_entrypoint.sh /ros_entrypoint.sh
 ENTRYPOINT ["/ros_entrypoint.sh"]
-CMD ["test_subscriber_camera", "test_subscriber_camera.launch"]
+CMD ["test_subscriber_camera", "test_subscriber_camera.launch", "--wait"]
