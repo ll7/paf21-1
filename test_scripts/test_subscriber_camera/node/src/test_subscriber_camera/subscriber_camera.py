@@ -1,8 +1,8 @@
+#!/usr/bin/env python
+
 # Subcribes to the following the /carla/ego_vehicle/camera/depth/front/camera_info topic from following node
 # roslaunch carla_ros_bridge carla_ros_bridge_with_example_ego_vehicle.launch
 
-
-#!/usr/bin/env python
 import rospy
 from sensor_msgs.msg import CameraInfo
 
