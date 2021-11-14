@@ -20,7 +20,7 @@ services:
   carla-ros-bridge:
     image: carla-ros-bridge
     build:
-      context: ./carla_ros_bridge
+      context: ./carla_ros_bridge_ui
       args:
         - ROS_BRIDGE_BASE_IMG=carla-ros-bridge-base
     depends_on:
