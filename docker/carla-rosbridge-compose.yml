@@ -30,19 +30,28 @@ services:
 
   carla-ros-bridge:
     image: carla-ros-bridge
+    runtime: nvidia
+    security_opt:
+      - seccomp:unconfined
     volumes:
-      - ./ego_vehicle_sensors.json:/ego_vehicle_sensors.json
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      # - ./ego_vehicle_sensors.json:/ego_vehicle_sensors.json
       - ./custom_rosbridge_startup.launch:/custom_rosbridge_startup.launch
     environment:
+      SDL_VIDEODRIVER: x11
+      SDL_HINT_CUDA_DEVICE: 0
+      DISPLAY: ${DISPLAY}
+      QT_X11_NO_MITSHM: 1
       ROS_MASTER_URI: http://roscore:11311
       ROS_HOSTNAME: carla-ros-bridge
       CARLA_SIM_HOST: carla-simulator
       CARLA_SIM_WAIT_SECS: 20
-      EGO_VEHICLE_SENSORS: /ego_vehicle_sensors.json
+      # EGO_VEHICLE_SENSORS: /ego_vehicle_sensors.json
     networks:
       - carla
       - ros
     command: ["/custom_rosbridge_startup.launch", "--wait"]
+    # command: ["carla_ros_bridge", "carla_ros_bridge_with_rviz.launch", "host:=$CARLA_SIM_HOST"]
 
   # TODO: register the ROS messages somehow to make this work
   # observe_car_status:
