@@ -10,6 +10,7 @@ docker-compose -f carla-images-build.yml build
 ## Launch the Simulation + ROS Bridge
 
 ```sh
+xhost +
 docker-compose -f carla-rosbridge-compose.yml up
 ```
 
