@@ -39,7 +39,7 @@ To prevemt the vehicle from crashing, send a signal to stop it like this:
 docker-compose -f carla-rosbridge-compose.yml exec carla-ros-bridge \
     /bin/bash -c 'source /opt/carla-ros-bridge/install/setup.bash && \
         rostopic pub /carla/ego_vehicle/ackermann_cmd ackermann_msgs/AckermannDrive \
-            "{steering_angle: 0.0, steering_angle_velocity: 0.0, speed: 10, acceleration: 0.0, jerk: 0.0}" -r 10'
+            "{steering_angle: 0.0, steering_angle_velocity: 0.0, speed: 0, acceleration: 0.0, jerk: 0.0}" -r 10'
 ```
 
 ## Spawn Some Vehicles and Pedestrians
