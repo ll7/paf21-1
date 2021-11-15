@@ -10,7 +10,7 @@ docker-compose -f carla-images-build.yml build
 
 ## Launch the Simulation + ROS Bridge
 Now, before you launch the Docker container, you need to allow the x11 server on the host system
-to be accessed by the rqt application inside the Docker container like this:
+to be accessed by the rviz application inside the Docker container like this:
 
 ```sh
 xhost +
