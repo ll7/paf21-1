@@ -2,30 +2,21 @@
 version: '2.3'
 
 services:
-  test-subscriber-camera:
-    image: test_subscriber_camera
-    environment:
-      ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: test-subscriber-camera
-    networks:
-      - ros
   carla-simulator:
     image: carla-sim
     runtime: nvidia
     security_opt:
       - seccomp:unconfined
     environment:
-      SDL_VIDEODRIVER: x11
+      SDL_VIDEODRIVER: offscreen
       SDL_HINT_CUDA_DEVICE: 0
-      DISPLAY: $DISPLAY
-    volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix
     expose:
       - 2000
       - 2001
       - 2002
     networks:
       - carla
+    command: ["-carla-server"]
 
   roscore:
     image: ros:noetic
@@ -58,35 +49,14 @@ services:
       - carla
       - ros
     command: ["/custom_rosbridge_startup.launch", "--wait"]
-    # command: ["carla_ros_bridge", "carla_ros_bridge_with_rviz.launch", "host:=$CARLA_SIM_HOST"]
 
-  # TODO: register the ROS messages somehow to make this work
-  # observe_car_status:
-  #   image: ros:noetic
-  #   command: >
-  #     bash -c "sleep 40s
-  #     && rostopic echo /carla/ego_vehicle/vehicle_status"
-  #   environment:
-  #     ROS_MASTER_URI: http://roscore:11311
-  #     ROS_HOSTNAME: observe_car_status
-  #   expose:
-  #     - 11311
-  #   networks:
-  #     - ros
-
-  # drive_straight_forward:
-  #   image: ros:noetic
-  #   command: >
-  #     bash -c "sleep 60s
-  #     && rostopic pub /carla/ego_vehicle/ackermann_cmd ackermann_msgs/AckermannDrive
-  #         '{steering_angle: 0.0, steering_angle_velocity: 0.0, speed: 10, acceleration: 0.0, jerk: 0.0}' -r 10"
-  #   environment:
-  #     ROS_MASTER_URI: http://roscore:11311
-  #     ROS_HOSTNAME: drive_straight_forward
-  #   expose:
-  #     - 11311
-  #   networks:
-  #     - ros
+  test-subscriber-camera:
+    image: test_subscriber_camera
+    environment:
+      ROS_MASTER_URI: http://roscore:11311
+      ROS_HOSTNAME: test-subscriber-camera
+    networks:
+      - ros
 
 networks:
   carla:
