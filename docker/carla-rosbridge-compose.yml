@@ -2,6 +2,13 @@
 version: '2.3'
 
 services:
+  test-subscriber-camera:
+    image: test_subscriber_camera
+    environment:
+      ROS_MASTER_URI: http://roscore:11311
+      ROS_HOSTNAME: test-subscriber-camera
+    networks:
+      - ros
   carla-simulator:
     image: carla-sim
     runtime: nvidia
