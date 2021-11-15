@@ -3,8 +3,12 @@
 
 ## Launch the Simulation + ROS Bridge
 
+
 ```sh
 xhost +
+```
+
+```sh
 docker-compose up -d
 ```
 
@@ -22,6 +26,6 @@ docker-compose exec carla-ros-bridge \
 ## Spawn Some Vehicles and Pedestrians
 
 ```sh
-docker-compose -f carla-rosbridge-compose.yml exec carla-ros-bridge \
+docker-compose exec carla-ros-bridge \
     /bin/sh -c 'cd /opt/carla/PythonAPI/examples && python spawn_npc.py -n 50 -w 100 --host carla-simulator'
 ```
