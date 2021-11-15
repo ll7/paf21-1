@@ -17,7 +17,7 @@ docker-compose -f carla-rosbridge-compose.yml up
 ## Send Ackermann Control Signals
 
 ```sh
-docker-compose exec carla-ros-bridge \
+docker-compose -f carla-rosbridge-compose.yml exec carla-ros-bridge \
     /bin/bash -c 'source /opt/carla-ros-bridge/install/setup.bash && \
         rostopic pub /carla/ego_vehicle/ackermann_cmd ackermann_msgs/AckermannDrive \
             "{steering_angle: 0.0, steering_angle_velocity: 0.0, speed: 10, acceleration: 0.0, jerk: 0.0}" -r 10'
