@@ -1,0 +1,5 @@
+<!-- -->
+<launch>
+  <node pkg="test_simple_driving" name="test_simple_driving"
+        type="main.py" output="screen" required="true" />
+</launch>

@@ -1,11 +1,6 @@
 version: '2'
 
 services:
-  test_subscriber_camera:
-    image: test_subscriber_camera
-    build:
-      context: ./test_subscriber_camera
-      
   carla-sim:
     image: carla-sim
     build:
@@ -30,3 +25,13 @@ services:
         - ROS_BRIDGE_BASE_IMG=carla-ros-bridge-base
     depends_on:
       - carla-ros-bridge-base
+
+  test_subscriber_camera:
+    image: test_subscriber_camera
+    build:
+      context: ./test_subscriber_camera
+
+  test_simple_driving:
+    image: test_simple_driving
+    build:
+      context: ./test_simple_driving
