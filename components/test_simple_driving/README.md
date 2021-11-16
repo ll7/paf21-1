@@ -1,9 +1,8 @@
 
-# Test Subscriber Camera
+# Test Simple Driving
 
 ## About
-This is just a ROS node made for testing purposes.
-Use it as a blueprint for creating new ROS nodes.
+This ROS node is capable of sending Ackermann driving signals.
 
 ## Build Node + Run Tests
 
