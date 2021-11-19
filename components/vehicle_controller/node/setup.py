@@ -1,5 +1,5 @@
 from distutils.core import setup
 from catkin_pkg.python_setup import generate_distutils_setup
 
-d = generate_distutils_setup(packages=['test_simple_driving'], package_dir={'': 'src'})
+d = generate_distutils_setup(packages=['vehicle_controller'], package_dir={'': 'src'})
 setup(**d)

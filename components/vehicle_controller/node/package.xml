@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>test_simple_driving</name>
+  <name>vehicle_controller</name>
   <version>0.0.1</version>
   <description>A test package for sending ackermann driving signals</description>
   <maintainer email="info@informatik.uni-augsburg.de">University of Augsburg - Chair of Mechatronics</maintainer>
