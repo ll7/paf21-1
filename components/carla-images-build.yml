@@ -31,7 +31,7 @@ services:
     build:
       context: ./test_subscriber_camera
 
-  test_simple_driving:
-    image: test_simple_driving
+  vehicle_controller:
+    image: vehicle_controller
     build:
-      context: ./test_simple_driving
+      context: ./vehicle_controller

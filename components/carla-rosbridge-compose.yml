@@ -58,11 +58,11 @@ services:
     networks:
       - ros
 
-  test-simple-driving:
-    image: test_simple_driving
+  vehicle-controller:
+    image: vehicle_controller
     environment:
       ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: test-simple-driving
+      ROS_HOSTNAME: vehicle-controller
     networks:
       - ros
 
