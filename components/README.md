@@ -19,7 +19,7 @@ xhost +
 Next, launch the Docker containers with the following command:
 
 ```sh
-docker-compose -f carla-rosbridge-compose.yml up -d
+docker-compose -f simulation-demo-compose.yml up -d
 ```
 
 ## Send Ackermann Control Signals
@@ -27,7 +27,7 @@ Now, everything is set up to send some driving signals to the vehicle. As a quic
 we'll be sending it a command to drive straight forward which gets repeated every 10 seconds.
 
 ```sh
-docker-compose -f carla-rosbridge-compose.yml exec carla-ros-bridge \
+docker-compose -f simulation-demo-compose.yml exec carla-ros-bridge \
     /bin/bash -c 'source /opt/carla-ros-bridge/install/setup.bash && \
         rostopic pub /carla/ego_vehicle/ackermann_cmd ackermann_msgs/AckermannDrive \
             "{steering_angle: 0.0, steering_angle_velocity: 0.0, speed: 10, acceleration: 0.0, jerk: 0.0}" -r 10'
@@ -36,7 +36,7 @@ docker-compose -f carla-rosbridge-compose.yml exec carla-ros-bridge \
 To prevemt the vehicle from crashing, send a signal to stop it like this:
 
 ```sh
-docker-compose -f carla-rosbridge-compose.yml exec carla-ros-bridge \
+docker-compose -f simulation-demo-compose.yml exec carla-ros-bridge \
     /bin/bash -c 'source /opt/carla-ros-bridge/install/setup.bash && \
         rostopic pub /carla/ego_vehicle/ackermann_cmd ackermann_msgs/AckermannDrive \
             "{steering_angle: 0.0, steering_angle_velocity: 0.0, speed: 0, acceleration: 0.0, jerk: 0.0}" -r 10'
@@ -46,6 +46,6 @@ docker-compose -f carla-rosbridge-compose.yml exec carla-ros-bridge \
 In case you need other actors, you can spawn some vehicles and pedestrians.
 
 ```sh
-docker-compose -f carla-rosbridge-compose.yml exec carla-ros-bridge \
+docker-compose -f simulation-demo-compose.yml exec carla-ros-bridge \
     /bin/sh -c 'cd /opt/carla/PythonAPI/examples && python spawn_npc.py -n 50 -w 100 --host carla-simulator'
 ```
