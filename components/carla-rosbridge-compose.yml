@@ -50,14 +50,6 @@ services:
       - ros
     command: ["/custom_rosbridge_startup.launch", "--wait"]
 
-  test-subscriber-camera:
-    image: test_subscriber_camera
-    environment:
-      ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: test-subscriber-camera
-    networks:
-      - ros
-
   vehicle-controller:
     image: vehicle_controller
     environment:

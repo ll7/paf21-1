@@ -26,11 +26,6 @@ services:
     depends_on:
       - carla-ros-bridge-base
 
-  test_subscriber_camera:
-    image: test_subscriber_camera
-    build:
-      context: ./test_subscriber_camera
-
   vehicle_controller:
     image: vehicle_controller
     build:
