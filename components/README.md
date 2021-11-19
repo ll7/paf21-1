@@ -5,7 +5,7 @@
 First, build all Docker images we'll need for launching the simulation.
 
 ```sh
-docker-compose -f carla-images-build.yml build
+docker-compose -f simulation-images-build.yml build
 ```
 
 ## Launch the Simulation + ROS Bridge
