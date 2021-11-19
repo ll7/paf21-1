@@ -23,7 +23,8 @@ RUN python -m pip install -r /app/requirements.txt
 # test + lint the source code
 ADD ./node /app/src/vehicle_controller
 WORKDIR /app/src/vehicle_controller/src
-RUN source /opt/ros/noetic/setup.bash && python -m pytest tests
+RUN source /opt/ros/noetic/setup.bash && \
+    python -m pytest tests && pylint vehicle_controller
 
 # deploy the source code to ROS using catkin
 WORKDIR /app/catkin_ws/src
