@@ -76,28 +76,7 @@ def findPosinArray(array, nubmer):
             break
         i = i + 1
     return i
-def draw_graph(graph):
 
-    # extract nodes from graph
-    nodes = set([n1 for n1, n2 in graph] + [n2 for n1, n2 in graph])
-
-    # create networkx graph
-    G=nx.Graph()
-
-    # add nodes
-    for node in nodes:
-        G.add_node(node)
-
-    # add edges
-    for edge in graph:
-        G.add_edge(edge[0], edge[1])
-
-    # draw graph
-    pos = nx.shell_layout(G)
-    nx.draw(G, pos)
-
-    # show graph
-    plt.show()
 
 def show_graph_with_labels(adjacency_matrix):
     rows, cols = np.where(adjacency_matrix == 1)
@@ -125,24 +104,33 @@ def minDistance(dist, queue):
     algorithm for a graph represented using adjacency matrix
     representation'''
 
-
+patharray = []
 def printPath(parent, j):
     # Base Case : If j is source
     if parent[j] == -1:
-        print (j),
-        return
+        print (matrix[0][j+1]),
+        patharray.append(j)
+        return j
     printPath(parent, parent[j])
-    print (j),
+    print (matrix[0][j+1]),
+    patharray.append(j)
+    return j
 
 def printSolution(dist, parent, endPoint):
     src = 0
     print("Vertex \t\tDistance from Source\tPath")
+
     for i in range(1, len(dist)):
         if i== endPoint:
             print("\n%d --> %d \t\t%d \t\t\t\t\t" % (src, i, dist[i])),
             printPath(parent, i)
+    return patharray
 
-
+def getPathIDs(path, mat):
+    pathID = []
+    for p in path:
+        pathID.append(mat[0][p+1])
+    return pathID
 def dijkstra2(graph, src):
     row = len(graph)
     col = len(graph[0])
@@ -243,8 +231,8 @@ for child in root:
 adjacency = matrix[1:,1:]
 #print(matrix)
 #print(adjacency)
-start = 100
-end = 111
+start = 131
+end = 128
 endPoint = findPosinMatrix(matrix, end)-1
 startPoint = findPosinMatrix(matrix, start)-1
 #di = dijkstra(adjacency, findPosinMatrix(matrix, start)-1)
@@ -254,4 +242,25 @@ startPoint = findPosinMatrix(matrix, start)-1
 di2 = dijkstra2(adjacency, startPoint)
 printSolution(di2[0], di2[1], endPoint)
 
+#print(patharray)
+
+lanes = getPathIDs(patharray, matrix)
+
+x_path = []
+y_path = []
+for l in lanes:
+    for child in root:
+        if child.tag == "lanelet" and int(child.attrib["id"]) == int(l):
+            for c in child:
+                if c.tag == "rightBound":
+                    for c_2 in c:
+                        if c_2.tag == "point":
+                            for c_3 in c_2:
+                                if c_3.tag == "x":
+                                   x_path.append(c_3.text)
+                                if c_3.tag == "y":
+                                    y_path.append(c_3.text)
+
+print(x_path)
+print(y_path)
 show_graph_with_labels(adjacency)
