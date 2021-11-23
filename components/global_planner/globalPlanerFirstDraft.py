@@ -1,4 +1,3 @@
-import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy import genfromtxt
@@ -64,7 +63,6 @@ def findPosinMatrix(matrix, nubmer):
     for x in matrix[0]:
         if int(x) == int(nubmer):
             break
-            #print(x, "//", i, "//", nubmer)
         i = i + 1
     return i
 
@@ -78,12 +76,13 @@ def findPosinArray(array, nubmer):
     return i
 
 
-def show_graph_with_labels(adjacency_matrix):
-    rows, cols = np.where(adjacency_matrix == 1)
+def show_graph_with_labels(adjacency_matrix, mylabels):
+    rows, cols = np.where(adjacency_matrix.astype(int) > 0)
     edges = zip(rows.tolist(), cols.tolist())
     gr = nx.Graph()
     gr.add_edges_from(edges)
-    nx.draw(gr, node_size=500, with_labels=True)
+    nx.draw(gr, node_size=500, labels=mylabels, with_labels=True)
+    #nx.draw_networkx_edges(gr, node_size=500, labels=mylabels, with_labels=True)
     plt.show()
 
 def minDistance(dist, queue):
@@ -108,21 +107,21 @@ patharray = []
 def printPath(parent, j):
     # Base Case : If j is source
     if parent[j] == -1:
-        print (matrix[0][j+1]),
+        # print (matrix[0][j+1]),
         patharray.append(j)
         return j
     printPath(parent, parent[j])
-    print (matrix[0][j+1]),
+    # print (matrix[0][j+1]),
     patharray.append(j)
     return j
 
 def printSolution(dist, parent, endPoint):
     src = 0
-    print("Vertex \t\tDistance from Source\tPath")
+    #print("Vertex \t\tDistance from Source\tPath")
 
     for i in range(1, len(dist)):
         if i== endPoint:
-            print("\n%d --> %d \t\t%d \t\t\t\t\t" % (src, i, dist[i])),
+            #print("\n%d --> %d \t\t%d \t\t\t\t\t" % (src, i, dist[i])),
             printPath(parent, i)
     return patharray
 
@@ -146,7 +145,7 @@ def dijkstra2(graph, src):
 
     # Distance of source vertex
     # from itself is always 0
-    dist[src] = 0
+    dist[src] = 0.0
 
     # Add all vertices in queue
     queue = []
@@ -159,6 +158,7 @@ def dijkstra2(graph, src):
         # Pick the minimum dist vertex
         # from the set of vertices
         # still in queue
+
         u = minDistance(dist, queue)
 
         # remove min element
@@ -178,7 +178,9 @@ def dijkstra2(graph, src):
                 if dist[u] + graph[u][i] < dist[i]:
                     dist[i] = dist[u] + graph[u][i]
                     parent[i] = u
-    return  dist, parent
+    return dist, parent
+
+
 #mydata = genfromtxt('mycsv.csv', delimiter=',')
 #print(mydata)
 #print(type(mydata))
@@ -196,18 +198,42 @@ root = tree.getroot()
 i = 1
 for child in root:
     if child.tag == "lanelet":
-        i = i +1
+        i = i + 1
 
 j = 0
-matrix = [[0 for x in range(i)] for y in range(i)]
-matrix = np.array(matrix)
-for child in root:
-    if child.tag == "lanelet":
+matrix = np.zeros(shape=(i, i))
+
+edgeweight = np.zeros(shape=(i,))
+for lanelet in root:
+    if lanelet.tag == "lanelet":
         j = j + 1
         #print(child.tag, " ->", child.attrib["id"])
-        matrix[0][j] = child.attrib["id"]
-        matrix[j][0] = child.attrib["id"]
+        matrix[0][j] = lanelet.attrib["id"]
+        matrix[j][0] = lanelet.attrib["id"]
+
+        summe = 0.0
+        index = 0
+        x=0.0
+        x_old = 0.0
+        y=0.0
+        y_old = 0.0
+        for rightBound_points in lanelet:
+            if rightBound_points.tag == "rightBound":
+                for point in rightBound_points:
+                    if index > 0:
+                        summe += np.sqrt((x-x_old)**2 + (y-y_old)**2)
+                        x_old = x
+                        y_old = y
+                    if point.tag == "point":
+                        index += 1
+                        for xy in point:
+                            if xy.tag == "x":
+                                x = float(xy.text)
+                            if xy.tag == "y":
+                                y = float(xy.text)
+        edgeweight[j] = summe
 j = 0
+#print(edgeweight)
 
 
 for child in root:
@@ -218,21 +244,22 @@ for child in root:
                 #print(preAndsuc.tag, " ->", preAndsuc.attrib)
             if(preAndsuc.tag == "predecessor"):
                     matpos2 = findPosinMatrix(matrix, int(preAndsuc.attrib["ref"]))
-                    matrix[matPos][matpos2] = 1
+                    matrix[matpos2][matPos] = edgeweight[matPos]
+                    matrix[matPos][matpos2] = edgeweight[matPos]
             if(preAndsuc.tag == "successor"):
                     matpos2 = findPosinMatrix(matrix, int(preAndsuc.attrib["ref"]))
-                    matrix[matpos2][matPos] = 1
+                    matrix[matPos][matpos2] = edgeweight[matPos]
+                    matrix[matpos2][matPos] = edgeweight[matPos]
+
+
+
 
         j = j + 1
         #print(child.tag, " ->", child.attrib["id"])
 
-
-
-adjacency = matrix[1:,1:]
-#print(matrix)
-#print(adjacency)
-start = 131
-end = 128
+adjacency = matrix[1:, 1:]
+start = 119
+end = 102
 endPoint = findPosinMatrix(matrix, end)-1
 startPoint = findPosinMatrix(matrix, start)-1
 #di = dijkstra(adjacency, findPosinMatrix(matrix, start)-1)
@@ -240,12 +267,22 @@ startPoint = findPosinMatrix(matrix, start)-1
 #print(di[endPoint])
 
 di2 = dijkstra2(adjacency, startPoint)
+print(di2[0])
+print(di2[1])
 printSolution(di2[0], di2[1], endPoint)
 
 #print(patharray)
 
 lanes = getPathIDs(patharray, matrix)
-
+print(lanes)
+print(di2[0][findPosinMatrix(matrix, 180)-1])
+print()
+for l in lanes:
+    print(edgeweight[findPosinMatrix(matrix, l)-1])
+    print(findPosinMatrix(matrix, l) - 1)
+    print()
+    pass
+print(findPosinMatrix(matrix, 180))
 x_path = []
 y_path = []
 for l in lanes:
@@ -263,4 +300,28 @@ for l in lanes:
 
 print(x_path)
 print(y_path)
-show_graph_with_labels(adjacency)
+
+#print(matrix[0][42])
+#print(edgeweight)
+lab = dict([(key, str(int(val))) for key, val in enumerate(matrix[0][1:])])
+show_graph_with_labels(adjacency, lab)
+
+
+
+x_path2 = []
+y_path2 = []
+for l in lanes:
+    for child in root:
+        if child.tag == "lanelet" and int(child.attrib["id"]) == 180:
+            for c in child:
+                if c.tag == "rightBound":
+                    for c_2 in c:
+                        if c_2.tag == "point":
+                            for c_3 in c_2:
+                                if c_3.tag == "x":
+                                   x_path2.append(c_3.text)
+                                if c_3.tag == "y":
+                                    y_path2.append(c_3.text)
+
+#print(x_path2)
+#print(y_path2)
