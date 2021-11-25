@@ -23,7 +23,7 @@ y = ['-135.51508', '-135.51531', '-135.51554', '-135.51577', '-135.51600', '-135
 j=0
 for i in x:
     if j%5==0:
-        punkt = carla.Location(x=float(i), y=float(y[j])+330, z=0.1)
+        punkt = carla.Location(x=float(i), y=-float(y[j]), z=0.1)
         draw_waypoint(punkt, life_time=20)
     j = j+1
 
