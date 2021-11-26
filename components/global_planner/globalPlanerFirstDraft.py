@@ -189,7 +189,15 @@ def dijkstra2(graph, src):
 #show_graph_with_labels(adjacency)
 
 
+def distancePoints(x, y, x2, y2):
+    return np.sqrt((x-x2)**2 + (y-y2)**2)
 
+def saveMatrix(matrix):
+    np.savetxt("foo.csv", matrix, delimiter=",")
+    print("")
+
+def loadMAtrix():
+    return genfromtxt('foo.csv', delimiter=',')
 
 
 filename='outTown01.xml'
@@ -204,6 +212,11 @@ j = 0
 matrix = np.zeros(shape=(i, i))
 
 edgeweight = np.zeros(shape=(i,))
+
+firstXY = [[]]
+lastXY = [[]]
+newNodes = [[]]
+
 for lanelet in root:
     if lanelet.tag == "lanelet":
         j = j + 1
@@ -217,9 +230,14 @@ for lanelet in root:
         x_old = 0.0
         y=0.0
         y_old = 0.0
+
+        first = True
+        last = True
+
+
         for rightBound_points in lanelet:
             if rightBound_points.tag == "rightBound":
-                for point in rightBound_points:
+                for index, point in enumerate(rightBound_points, start=1):
                     if index > 0:
                         summe += np.sqrt((x-x_old)**2 + (y-y_old)**2)
                         x_old = x
@@ -231,10 +249,101 @@ for lanelet in root:
                                 x = float(xy.text)
                             if xy.tag == "y":
                                 y = float(xy.text)
+                            if first and y!=0:
+                                first = False
+                                firstXY.append((lanelet.attrib["id"],x,y))
+                                newNodes.append((lanelet.attrib["id"],x,y))
+                                #print('First: ', int(x), ' und ', int(y))
+                            if len(rightBound_points) == index and last:
+                                last = False
+                                lastXY.append((lanelet.attrib["id"],x,y))
+                                newNodes.append((lanelet.attrib["id"],x,y))
+                                #print("Last: ", x, ' ' , y)
+
         edgeweight[j] = summe
 j = 0
+
+#Datastructure: (id, x, y)
+#print((newNodes))
+addedEdges = 0
+swap = True
+matrixNew = np.zeros(shape=(2*i, 2*i))
+for index, node in enumerate (newNodes, start=0):
+    if index == 0:
+        continue
+    matrixNew[0][index] = node[0]
+    matrixNew[index][0] = node[0]
+    '''
+    if swap:
+        matrixNew[0][index] = node[0]
+        matrixNew[index][0] = node[0]
+        swap = not swap
+    else:
+        matrixNew[0][index] = int(node[0]) +10000
+        matrixNew[index][0] = int(node[0]) +10000
+        swap = not swap
+    '''
+    for index2, node2 in enumerate(newNodes, start=0):
+        #if matrixNew[index][index]!=0:
+        #    print(matrixNew[index][index])
+        if index2 == 0:
+            continue
+        if node == node2:
+            continue
+        if node[0] == node2[0] and index == index2:
+            continue
+        if node[0] == node2[0]:
+            pos = findPosinMatrix(matrix, int(node[0]))
+            matrixNew[index][index2] = edgeweight[pos]
+        else:
+            if matrixNew[index][index2] == 0:
+                distance = distancePoints(node[1], node[2], node2[1], node2[2])
+                if distance<20:
+                    addedEdges += 1
+                    matrixNew[index][index2] = 0.1 +distance*3
+                #Teste Nachbarn in der Naehe
+
+
+print(len(matrixNew))
+print(addedEdges)
 #print(edgeweight)
 
+# Vergiess das hier :D
+'''
+for index, road in enumerate(firstXY, start=0):
+    for index2, road2 in enumerate(lastXY, start=0):
+        if index == 0 or index2 == 0:
+            continue
+        id1 = firstXY[index][0]
+        id2 = lastXY[index2][0]
+        pos1 = findPosinArray(matrix[0], id1)-1
+        pos2 = findPosinArray(matrix[0], id2)-1
+        #print(id1, ' ', id2)
+        if matrix[pos1][pos2]==0 and id1 != id2:
+            x = firstXY[index][1]
+            x2 = lastXY[index2][1]
+            y = firstXY[index][2]
+            y2 = lastXY[index2][2]
+
+
+            dist = distancePoints(x,y,x2,y2)
+            if dist < 0.1:
+                matrix[pos1][pos2] = 5 + dist*5
+
+            if pos1 !=  pos2:
+                x3 = firstXY[index2][1]
+                y3 = firstXY[index2][2]
+
+                x4 = lastXY[index][1]
+                y4 = lastXY[index][2]
+                dist = distancePoints(x, y, x3, y3)
+                if dist < 0.1:
+                    matrix[pos1][pos2] = 10
+
+                dist = distancePoints(x2, y2, x4, y4)
+                if dist < 0.1:
+                    matrix[pos1][pos2] = 10
+'''
 
 for child in root:
     if child.tag == "lanelet":
@@ -245,46 +354,49 @@ for child in root:
             if(preAndsuc.tag == "predecessor"):
                     matpos2 = findPosinMatrix(matrix, int(preAndsuc.attrib["ref"]))
                     matrix[matpos2][matPos] = edgeweight[matPos]
-                    matrix[matPos][matpos2] = edgeweight[matPos]
+                    #matrix[matPos][matpos2] = edgeweight[matPos]
             if(preAndsuc.tag == "successor"):
                     matpos2 = findPosinMatrix(matrix, int(preAndsuc.attrib["ref"]))
                     matrix[matPos][matpos2] = edgeweight[matPos]
-                    matrix[matpos2][matPos] = edgeweight[matPos]
-
-
-
+                    #matrix[matpos2][matPos] = edgeweight[matPos]
 
         j = j + 1
         #print(child.tag, " ->", child.attrib["id"])
 
-adjacency = matrix[1:, 1:]
-start = 119
-end = 102
-endPoint = findPosinMatrix(matrix, end)-1
-startPoint = findPosinMatrix(matrix, start)-1
+
+#matrix = loadMAtrix()
+adjacency = matrixNew[1:, 1:]
+#saveMatrix(matrixNew)
+
+start = 100
+end = 106
+endPoint = findPosinMatrix(matrixNew, end)-1
+startPoint = findPosinMatrix(matrixNew, start)-1
 #di = dijkstra(adjacency, findPosinMatrix(matrix, start)-1)
 #print(di)
 #print(di[endPoint])
 
+print(endPoint, ' ', startPoint)
 di2 = dijkstra2(adjacency, startPoint)
-print(di2[0])
-print(di2[1])
+#print(di2[0])
+#print(di2[1])
 printSolution(di2[0], di2[1], endPoint)
 
 #print(patharray)
 
-lanes = getPathIDs(patharray, matrix)
+lanes = getPathIDs(patharray, matrixNew)
 print(lanes)
-print(di2[0][findPosinMatrix(matrix, 180)-1])
+print(di2[0][findPosinMatrix(matrixNew, 180)-1])
 print()
 for l in lanes:
-    print(edgeweight[findPosinMatrix(matrix, l)-1])
-    print(findPosinMatrix(matrix, l) - 1)
-    print()
+    #print(edgeweight[findPosinMatrix(matrix, l)-1])
+    #print(findPosinMatrix(matrix, l) - 1)
+    #print()
     pass
 print(findPosinMatrix(matrix, 180))
 x_path = []
 y_path = []
+max_speed = []
 for l in lanes:
     for child in root:
         if child.tag == "lanelet" and int(child.attrib["id"]) == int(l):
@@ -304,8 +416,7 @@ print(y_path)
 #print(matrix[0][42])
 #print(edgeweight)
 lab = dict([(key, str(int(val))) for key, val in enumerate(matrix[0][1:])])
-show_graph_with_labels(adjacency, lab)
-
+#show_graph_with_labels(adjacency, lab)
 
 
 x_path2 = []
@@ -325,3 +436,5 @@ for l in lanes:
 
 #print(x_path2)
 #print(y_path2)
+
+
