@@ -1,9 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 from numpy import genfromtxt
 import matplotlib.pyplot as plt
 import networkx as nx
 import xml.etree.ElementTree as ET
+
 
 def dijkstra(graph, start):
     """
@@ -53,8 +55,8 @@ def dijkstra(graph, start):
 
         # Lastly, note that we are finished with this node.
         visited[shortest_index] = True
-        #print("Visited nodes: " + str(visited))
-        #print("Currently lowest distances: " + str(distances))
+        # print("Visited nodes: " + str(visited))
+        # print("Currently lowest distances: " + str(distances))
 
 
 def findPosinMatrix(matrix, nubmer):
@@ -65,6 +67,7 @@ def findPosinMatrix(matrix, nubmer):
             break
         i = i + 1
     return i
+
 
 def findPosinArray(array, nubmer):
     i = 0
@@ -82,8 +85,9 @@ def show_graph_with_labels(adjacency_matrix, mylabels):
     gr = nx.Graph()
     gr.add_edges_from(edges)
     nx.draw(gr, node_size=500, labels=mylabels, with_labels=True)
-    #nx.draw_networkx_edges(gr, node_size=500, labels=mylabels, with_labels=True)
+    # nx.draw_networkx_edges(gr, node_size=500, labels=mylabels, with_labels=True)
     plt.show()
+
 
 def minDistance(dist, queue):
     # Initialize min value and min_index as -1
@@ -104,6 +108,8 @@ def minDistance(dist, queue):
     representation'''
 
 patharray = []
+
+
 def printPath(parent, j):
     # Base Case : If j is source
     if parent[j] == -1:
@@ -115,21 +121,25 @@ def printPath(parent, j):
     patharray.append(j)
     return j
 
+
 def printSolution(dist, parent, endPoint):
     src = 0
-    #print("Vertex \t\tDistance from Source\tPath")
+    # print("Vertex \t\tDistance from Source\tPath")
 
     for i in range(1, len(dist)):
-        if i== endPoint:
-            #print("\n%d --> %d \t\t%d \t\t\t\t\t" % (src, i, dist[i])),
+        if i == endPoint:
+            # print("\n%d --> %d \t\t%d \t\t\t\t\t" % (src, i, dist[i])),
             printPath(parent, i)
     return patharray
+
 
 def getPathIDs(path, mat):
     pathID = []
     for p in path:
-        pathID.append(mat[0][p+1])
+        pathID.append(mat[0][p + 1])
     return pathID
+
+
 def dijkstra2(graph, src):
     row = len(graph)
     col = len(graph[0])
@@ -160,7 +170,7 @@ def dijkstra2(graph, src):
         # still in queue
 
         u = minDistance(dist, queue)
-        #print(queue, " ", u)
+        # print(queue, " ", u)
         # remove min element
         if u != -1:
             queue.remove(u)
@@ -184,33 +194,37 @@ def dijkstra2(graph, src):
     return dist, parent
 
 
-#mydata = genfromtxt('mycsv.csv', delimiter=',')
-#print(mydata)
-#print(type(mydata))
-#adjacency = mydata[1:,1:]
-#print(adjacency)
-#show_graph_with_labels(adjacency)
+# mydata = genfromtxt('mycsv.csv', delimiter=',')
+# print(mydata)
+# print(type(mydata))
+# adjacency = mydata[1:,1:]
+# print(adjacency)
+# show_graph_with_labels(adjacency)
 
 
 def distancePoints(x, y, x2, y2):
-    return np.sqrt((x-x2)**2 + (y-y2)**2)
+    return np.sqrt((x - x2) ** 2 + (y - y2) ** 2)
+
 
 def saveMatrix(matrix):
     np.savetxt("foo.csv", matrix, delimiter=",")
     print("")
 
-#Load Matrix from CSV
+
+# Load Matrix from CSV
 def loadMAtrix():
     return genfromtxt('foo.csv', delimiter=',')
 
-#Return start and end pos of lanelet
+
+# Return start and end pos of lanelet
 def findLaneletPoints(matrixPoints, x, y):
-    #Needs to be implemented
+    # Needs to be implemented
     startNode = matrixPoints[0]
     EndNode = matrixPoints[0]
     return (startNode, EndNode)
 
-filename='outTown01.xml'
+
+filename = 'outTown01.xml'
 tree = ET.parse(filename)
 root = tree.getroot()
 i = 1
@@ -230,26 +244,25 @@ newNodes = [[]]
 for lanelet in root:
     if lanelet.tag == "lanelet":
         j = j + 1
-        #print(child.tag, " ->", child.attrib["id"])
+        # print(child.tag, " ->", child.attrib["id"])
         matrix[0][j] = lanelet.attrib["id"]
         matrix[j][0] = lanelet.attrib["id"]
 
         summe = 0.0
         index = 0
-        x=0.0
+        x = 0.0
         x_old = 0.0
-        y=0.0
+        y = 0.0
         y_old = 0.0
 
         first = True
         last = True
 
-
         for rightBound_points in lanelet:
             if rightBound_points.tag == "rightBound":
                 for index, point in enumerate(rightBound_points, start=1):
                     if index > 0:
-                        summe += np.sqrt((x-x_old)**2 + (y-y_old)**2)
+                        summe += np.sqrt((x - x_old) ** 2 + (y - y_old) ** 2)
                         x_old = x
                         y_old = y
                     if point.tag == "point":
@@ -259,26 +272,26 @@ for lanelet in root:
                                 x = float(xy.text)
                             if xy.tag == "y":
                                 y = float(xy.text)
-                            if first and y!=0:
+                            if first and y != 0:
                                 first = False
-                                firstXY.append((lanelet.attrib["id"],x,y))
-                                newNodes.append((lanelet.attrib["id"],x,y))
-                                #print('First: ', int(x), ' und ', int(y))
+                                firstXY.append((lanelet.attrib["id"], x, y))
+                                newNodes.append((lanelet.attrib["id"], x, y))
+                                # print('First: ', int(x), ' und ', int(y))
                             if len(rightBound_points) == index and last:
                                 last = False
-                                lastXY.append((lanelet.attrib["id"],x,y))
-                                newNodes.append((lanelet.attrib["id"],x,y))
-                                #print("Last: ", x, ' ' , y)
+                                lastXY.append((lanelet.attrib["id"], x, y))
+                                newNodes.append((lanelet.attrib["id"], x, y))
+                                # print("Last: ", x, ' ' , y)
 
         edgeweight[j] = summe
 j = 0
 
-#Datastructure: (id, x, y)
-#print((newNodes))
+# Datastructure: (id, x, y)
+# print((newNodes))
 addedEdges = 0
 swap = True
-matrixNew = np.zeros(shape=(2*i, 2*i))
-for index, node in enumerate (newNodes, start=0):
+matrixNew = np.zeros(shape=(2 * i, 2 * i))
+for index, node in enumerate(newNodes, start=0):
     if index == 0:
         continue
     matrixNew[0][index] = node[0]
@@ -294,7 +307,7 @@ for index, node in enumerate (newNodes, start=0):
         swap = not swap
     '''
     for index2, node2 in enumerate(newNodes, start=0):
-        #if matrixNew[index][index]!=0:
+        # if matrixNew[index][index]!=0:
         #    print(matrixNew[index][index])
         if index2 == 0:
             continue
@@ -308,24 +321,23 @@ for index, node in enumerate (newNodes, start=0):
         else:
             if matrixNew[index][index2] == 0:
                 distance = distancePoints(node[1], node[2], node2[1], node2[2])
-                if distance<0.2:
+                if distance < 0.2:
                     addedEdges += 1
-                    matrixNew[index][index2] = 0.1+ 10*distance
-                #""" Explore Edges
-                if distance<10.0 and matrixNew[index][index2] == 0:
+                    matrixNew[index][index2] = 0.1 + 10 * distance
+                # """ Explore Edges
+                if distance < 10.0 and matrixNew[index][index2] == 0:
                     addedEdges += 1
-                    matrixNew[index][index2] = 10+10*distance
-                if distance<50.0 and matrixNew[index][index2] == 0:
+                    matrixNew[index][index2] = 10 + 10 * distance
+                if distance < 50.0 and matrixNew[index][index2] == 0:
                     addedEdges += 1
-                    matrixNew[index][index2] = 50+10*distance
+                    matrixNew[index][index2] = 50 + 10 * distance
                 if distance < 200.0 and matrixNew[index][index2] == 0:
                     addedEdges += 1
                     matrixNew[index][index2] = 200 + 10 * distance
-                 #"""
-                #Teste Nachbarn in der Naehe
+                # """
+                # Teste Nachbarn in der Naehe
 
-
-#print(len(matrixNew))
+# print(len(matrixNew))
 print(addedEdges)
 # print(edgeweight)
 
@@ -333,52 +345,51 @@ for child in root:
     if child.tag == "lanelet":
         matPos = findPosinMatrix(matrix, int(child.attrib["id"]))
         for preAndsuc in child:
-            #if (j<1):
-                #print(preAndsuc.tag, " ->", preAndsuc.attrib)
-            if(preAndsuc.tag == "predecessor"):
-                    matpos2 = findPosinMatrix(matrix, int(preAndsuc.attrib["ref"]))
-                    matrix[matpos2][matPos] = edgeweight[matPos]
-                    #matrix[matPos][matpos2] = edgeweight[matPos]
-            if(preAndsuc.tag == "successor"):
-                    matpos2 = findPosinMatrix(matrix, int(preAndsuc.attrib["ref"]))
-                    matrix[matPos][matpos2] = edgeweight[matPos]
-                    #matrix[matpos2][matPos] = edgeweight[matPos]
+            # if (j<1):
+            # print(preAndsuc.tag, " ->", preAndsuc.attrib)
+            if (preAndsuc.tag == "predecessor"):
+                matpos2 = findPosinMatrix(matrix, int(preAndsuc.attrib["ref"]))
+                matrix[matpos2][matPos] = edgeweight[matPos]
+                # matrix[matPos][matpos2] = edgeweight[matPos]
+            if (preAndsuc.tag == "successor"):
+                matpos2 = findPosinMatrix(matrix, int(preAndsuc.attrib["ref"]))
+                matrix[matPos][matpos2] = edgeweight[matPos]
+                # matrix[matpos2][matPos] = edgeweight[matPos]
 
         j = j + 1
-        #print(child.tag, " ->", child.attrib["id"])
+        # print(child.tag, " ->", child.attrib["id"])
 
-
-#matrix = loadMAtrix()
+# matrix = loadMAtrix()
 adjacency = matrixNew[1:, 1:]
-#saveMatrix(matrixNew)
+# saveMatrix(matrixNew)
 
 start = 102
 end = 150
 
-#Muss angepasst werden auf neue Matrix
-endPoint = 10#findPosinMatrix(matrixNew, end)-1
-startPoint = 150#findPosinMatrix(matrixNew, start)-1
-#di = dijkstra(adjacency, findPosinMatrix(matrix, start)-1)
-#print(di)
-#print(di[endPoint])
+# Muss angepasst werden auf neue Matrix
+endPoint = 10  # findPosinMatrix(matrixNew, end)-1
+startPoint = 150  # findPosinMatrix(matrixNew, start)-1
+# di = dijkstra(adjacency, findPosinMatrix(matrix, start)-1)
+# print(di)
+# print(di[endPoint])
 
 print(endPoint, ' ', startPoint)
 di2 = dijkstra2(adjacency, startPoint)
-#print(di2[0])
-#print(di2[1])
+# print(di2[0])
+# print(di2[1])
 printSolution(di2[0], di2[1], endPoint)
 
-#print(patharray)
+# print(patharray)
 
 lanes = getPathIDs(patharray, matrixNew)
 print(lanes)
 
-print(di2[0][findPosinMatrix(matrixNew, 180)-1])
+print(di2[0][findPosinMatrix(matrixNew, 180) - 1])
 print()
 for l in lanes:
-    #print(edgeweight[findPosinMatrix(matrix, l)-1])
-    #print(findPosinMatrix(matrix, l) - 1)
-    #print()
+    # print(edgeweight[findPosinMatrix(matrix, l)-1])
+    # print(findPosinMatrix(matrix, l) - 1)
+    # print()
     pass
 print(findPosinMatrix(matrix, 180))
 x_path = []
@@ -393,17 +404,17 @@ for l in lanes:
                         if c_2.tag == "point":
                             for c_3 in c_2:
                                 if c_3.tag == "x":
-                                   x_path.append(c_3.text)
+                                    x_path.append(c_3.text)
                                 if c_3.tag == "y":
                                     y_path.append(c_3.text)
 
 print(x_path)
 print(y_path)
-
-#print(matrix[0][42])
-#print(edgeweight)
+print()
+# print(matrix[0][42])
+# print(edgeweight)
 lab = dict([(key, str(int(val))) for key, val in enumerate(matrix[0][1:])])
-#show_graph_with_labels(adjacency, lab)
+# show_graph_with_labels(adjacency, lab)
 
 
 x_path2 = []
@@ -417,12 +428,12 @@ for l in lanes:
                         if c_2.tag == "point":
                             for c_3 in c_2:
                                 if c_3.tag == "x":
-                                   x_path2.append(c_3.text)
+                                    x_path2.append(c_3.text)
                                 if c_3.tag == "y":
                                     y_path2.append(c_3.text)
 
-#print(x_path2)
-#print(y_path2)
+# print(x_path2)
+# print(y_path2)
 nodeArray = []
 first = True
 for i in newNodes:
@@ -441,3 +452,202 @@ for i in newNodes:
 # print()
 # print(nodeArray)
 # print(nodeArray2)
+
+
+filename = 'Town01.xodr'
+root = ET.parse(filename).getroot()
+
+lanelets = []
+junctions = []
+
+num_roads = 0
+num_nodes = 0
+
+for child in root:
+    if child.tag == "road":
+        num_roads += 1
+        road_dict = {}
+        road_dict['id'] = int(child.attrib["id"])
+        road_dict['junction'] = int(child.attrib['junction'])
+        for prop in child:
+            if prop.tag == 'link':
+                for link in prop:
+                    if link.tag == "predecessor" and link.attrib['elementType']== "road":
+                        road_dict['predecessor'] = int(link.attrib['elementId'])
+                        road_dict['link_type_pre'] = link.attrib['elementType']
+                        road_dict['contactPoint_pre'] = link.attrib['contactPoint']
+                    elif link.tag == "predecessor" and link.attrib['elementType']== "road":
+                        road_dict['successor'] = int(link.attrib['elementId'])
+                        road_dict['link_type_suc'] = link.attrib['elementType']
+                        road_dict['contactPoint_suc'] = link.attrib['contactPoint']
+                    else:
+                        road_dict['successor'] = int(link.attrib['elementId'])
+                        road_dict['link_type_suc'] = link.attrib['elementType']
+            # elif prop.tag == 'type':
+            #     for speed in prop:
+            #         road_dict['speed'] = (speed.attrib['max'])
+            elif prop.tag == 'planView':
+                for planeView in prop:
+                    if planeView.tag == "geometry":
+                        # num_nodes += 2
+                        num_nodes += 1
+                        start_point = [float(planeView.attrib['x']), float(planeView.attrib['y'])]
+                        angle = float(planeView.attrib['hdg'])
+                        length = float(planeView.attrib['length'])
+                        # end_point = [start_point[0]+math.cos(angle)*length, start_point[1]+math.sin(angle)*length]
+                        if 'geometry' in road_dict.keys():
+                            tmp = road_dict['geometry']
+                            # tmp.append([start_point, end_point, length])
+                            tmp.append([start_point, angle, length])
+                            road_dict['geometry'] = tmp
+                        else:
+                            # road_dict['geometry'] = [[start_point, end_point, length]]
+                            road_dict['geometry'] = [[start_point, angle, length]]
+
+            elif prop.tag == 'lanes':
+                for lanes in prop:
+                    if lanes.tag == 'laneSection':
+                        for side in lanes:
+                            if side.tag == 'left':
+                                for lane in side:
+                                    if lane.attrib['type'] == 'driving':
+                                        if 'left_driving' in road_dict.keys():
+                                            tmp = road_dict['left_driving']
+                                            tmp.append(int(lane.attrib['id']))
+                                            road_dict['left_driving'] = tmp
+                                        else:
+                                            road_dict['left_driving'] = [int(lane.attrib['id'])]
+                            elif side.tag == 'center':
+                                for lane in side:
+                                    if lane.tag == 'lane':
+                                        for lane_type in lane:
+                                            if lane_type.tag == 'roadMark':
+                                                road_dict['line_type'] = lane_type.attrib['type']
+                            elif side.tag == 'right':
+                                for lane in side:
+                                    if lane.attrib['type'] == 'driving':
+                                        if 'right_driving' in road_dict.keys():
+                                            tmp = road_dict['right_driving']
+                                            tmp.append(int(lane.attrib['id']))
+                                            road_dict['right_driving'] = tmp
+                                        else:
+                                            road_dict['right_driving'] = [int(lane.attrib['id'])]
+            elif prop.tag == 'objects':
+                objectList = []
+                for objects in prop:
+                    # for object in objects:
+                    obj = [-1, -1, -1, -1, -1]
+                    obj[0] = objects.attrib['id']
+                    obj[1] = objects.attrib['name']
+                    obj[2] = float(objects.attrib['s'])
+                    obj[3] = float(objects.attrib['t'])
+                    obj[4] = float(objects.attrib['hdg'])
+                    objectList.append(obj)
+                road_dict['objects'] = objectList
+            # elif prop.tag == 'signals':
+            #     for signals in prop:
+            #         obj = [-1, -1, -1, -1, -1]
+            #
+            #
+            # #Punkte Nodes + Vor/ Nachfolger + Gewichtung + Speed + Linetyp + ...
+            # #print(lane.tag )
+            # #if lane.tag
+        lanelets.append(road_dict)
+
+    if child.tag == "junction":
+        junction_dict = {}
+        id = int(child.attrib['id'])
+        for junction in child:
+            if junction.tag == 'connection':
+                junction_dict = {}
+                junction_dict['junction_id'] = id
+                junction_dict['connection_id'] = int(junction.attrib['id'])
+                junction_dict['incomingRoad'] = junction.attrib['incomingRoad']
+                junction_dict['connectingRoad'] = junction.attrib['connectingRoad']
+                junction_dict['contactPoint'] = junction.attrib['contactPoint']
+                for lane_link in junction:
+                    if 'lane_links' in junction_dict.keys():
+                        tmp = junction_dict['lane_links']
+                        tmp.append([int(lane_link.attrib['from']), int(lane_link.attrib['to'])])
+                        junction_dict['lane_links'] = tmp
+                    else:
+                        junction_dict['lane_links'] = [[int(lane_link.attrib['from']), int(lane_link.attrib['to'])]]
+
+            junctions.append(junction_dict)
+
+print(junctions)
+print(lanelets)
+print()
+
+matrix = np.zeros(shape=(num_nodes, num_nodes))
+x_array = []
+y_array = []
+
+mapping = []
+
+# construct matrix
+index = 0
+
+### Link Geometry of Roads + Maping Data
+for road in lanelets:
+    lastgeoID = -1
+    geoID = 0
+    for geometry in road['geometry']:
+        if lastgeoID == road['id'] and index > 0:
+            matrix[index - 1][index] = geometry[2]
+        mapping.append((road['id'], geoID, geometry[0]))
+        index += 1
+        lastgeoID = road['id']
+        x_array.append(geometry[0][0])
+        # x_array.append(geometry[1][0])
+        y_array.append(geometry[0][1])
+        # y_array.append(geometry[1][1])
+        geoID += 1
+
+
+def findMaping(mapping, roadId, first):
+    index = 0
+    if first:
+        for map in mapping:
+            if map[0] == roadId:
+                return index
+            index += 1
+    else:
+        found = False
+        for map in mapping:
+            if map[0] == roadId:
+                index += 1
+        return index + findMaping(mapping, roadId, True)
+
+def findMapingConnectin(junctions, junction_id, first):
+    index = 0
+    if first:
+        for map in junctions:
+            if map['junction_id'] == junction_id:
+                return index
+            index += 1
+    else:
+        for map in junctions:
+            if map['junction_id'] == junction_id:
+                index += 1
+        return index + findMaping(mapping, junction_id, True)
+
+
+for road in lanelets:
+    ### Link predecessor and successor
+    suc = road['successor']
+    suc_type = road['link_type_suc']
+    if suc_type == 'road':
+        index_sucessor = findMaping(mapping, suc, True)
+        matrix[index_id][index_sucessor] = 1 #Leng of Kante -> 4 Cases
+    elif suc_type == 'junction':
+        index_sucessor = findMapingConnectin(junctions, suc, True)
+
+    index_id = findMaping(mapping, road['id'], False)
+
+    #matrix[index_id][index_sucessor] = 1
+    print(index_id, ' ', index_sucessor, ' ', suc_type)
+
+#print(mapping)
+#print(x_array)
+#print(y_array)
