@@ -369,9 +369,6 @@ end = 150
 # Muss angepasst werden auf neue Matrix
 endPoint = 10  # findPosinMatrix(matrixNew, end)-1
 startPoint = 150  # findPosinMatrix(matrixNew, start)-1
-# di = dijkstra(adjacency, findPosinMatrix(matrix, start)-1)
-# print(di)
-# print(di[endPoint])
 
 print(endPoint, ' ', startPoint)
 di2 = dijkstra2(adjacency, startPoint)
@@ -573,7 +570,7 @@ for child in root:
                     else:
                         junction_dict['lane_links'] = [[int(lane_link.attrib['from']), int(lane_link.attrib['to'])]]
 
-            junctions.append(junction_dict)
+                junctions.append(junction_dict)
 
 print(junctions)
 print(lanelets)
@@ -593,11 +590,16 @@ for road in lanelets:
     lastgeoID = -1
     geoID = 0
     for geometry in road['geometry']:
+        if index > 0:
+            matrix[index - 1][index] = 10000
+
         if lastgeoID == road['id'] and index > 0:
-            matrix[index - 1][index] = geometry[2]
+            print("hel")
+            matrix[index - 1][index] = 0.01+ geometry[2]
         mapping.append((road['id'], geoID, geometry[0]))
         index += 1
         lastgeoID = road['id']
+        x_array.append(geometry[0][0])
         x_array.append(geometry[0][0])
         # x_array.append(geometry[1][0])
         y_array.append(geometry[0][1])
@@ -612,42 +614,147 @@ def findMaping(mapping, roadId, first):
             if map[0] == roadId:
                 return index
             index += 1
+        return -1
     else:
         found = False
         for map in mapping:
             if map[0] == roadId:
                 index += 1
-        return index + findMaping(mapping, roadId, True)
+        rec = findMaping(mapping, roadId, True)
+        if rec == None or rec == -1:
+            return -1
+        else:
+            return index + rec
 
 def findMapingConnectin(junctions, junction_id, first):
     index = 0
     if first:
         for map in junctions:
-            if map['junction_id'] == junction_id:
+            if int(map['junction_id']) == int(junction_id):
                 return index
             index += 1
+        return -1
     else:
         for map in junctions:
-            if map['junction_id'] == junction_id:
+            if int(map['junction_id']) == int(junction_id):
                 index += 1
-        return index + findMaping(mapping, junction_id, True)
+        rec = findMapingConnectin(junctions, junction_id, True)
+        if rec == None or rec == -1:
+            return -1
+        else:
+            return index + rec
 
 
 for road in lanelets:
     ### Link predecessor and successor
     suc = road['successor']
+    pre = -1
+    if 'predecessor' in road.keys():
+        pre = road['predecessor']
+        pre_type = road['link_type_pre']
+        print(pre)
     suc_type = road['link_type_suc']
+
     if suc_type == 'road':
-        index_sucessor = findMaping(mapping, suc, True)
+        index_id = findMaping(mapping, road['id'], False)-1
+        index_sucessor = findMaping(mapping, suc, True)-1
+        if (index_id == -1 or index_sucessor == -1):
+            continue
+        #print(index_id, ' ',  index_sucessor)
         matrix[index_id][index_sucessor] = 1 #Leng of Kante -> 4 Cases
     elif suc_type == 'junction':
-        index_sucessor = findMapingConnectin(junctions, suc, True)
+        index_sucessor_first = findMapingConnectin(junctions, suc, True)
+        index_sucessor_last = findMapingConnectin(junctions, suc, False)
+        for i in range(index_sucessor_first, index_sucessor_last):
 
-    index_id = findMaping(mapping, road['id'], False)
+            incomingRoad = junctions[i]['incomingRoad']
+            connectingRoad = junctions[i]['connectingRoad']
+            contactPoint = junctions[i]['contactPoint']
+
+            index_id = findMaping(mapping, incomingRoad, False)
+            index_id2 = findMaping(mapping, connectingRoad, False)
+            matrix[index_id][index_id2] = 1 #Value
+        if pre!= -1:
+            index_pre_first = findMapingConnectin(junctions, pre, True)
+            index_pre_last = findMapingConnectin(junctions, pre, False)
+            for i in range(index_pre_first, index_pre_last):
+                incomingRoad = junctions[i]['incomingRoad']
+                connectingRoad = junctions[i]['connectingRoad']
+                contactPoint = junctions[i]['contactPoint']
+
+                index_id = findMaping(mapping, incomingRoad, False)
+                index_id2 = findMaping(mapping, connectingRoad, False)
+                matrix[index_id][index_id2] = 1  # Value
+
+
+        #print(junctions)
+
+
+
+
+### Distance == 0
+print(mapping)
+index = 0
+gleich = 0
+for i in mapping:
+
+    index2 = 0
+    matrix[index][index] = 0
+    for j in mapping:
+        if index != index2:
+            if matrix[index][index2] < 0.0000001:
+                distance = distancePoints(mapping[index][2][0], mapping[index][2][1], mapping[index2][2][0],mapping[index2][2][1])
+                if distance < 0.2:
+                    matrix[index][index2] = 1.0
+                    gleich+=1
+            index2 += 1
+
+    index += 1
+    #print(i)
+
+index = 0
+gleich = 0
+for i in mapping:
+
+    index2 = 0
+    matrix[index][index] = 0
+    for j in mapping:
+        if index != index2:
+            if matrix[index][index2] < 0.0000001:
+                distance = distancePoints(mapping[index][2][0], mapping[index][2][1], mapping[index2][2][0],mapping[index2][2][1])
+                if distance < 0.2:
+                    matrix[index][index2] = 1.0
+                    gleich+=1
+                    print("distance: ", distance)
+            index2 += 1
+
+    index += 1
+    #print(i)
+
+print("Gleich: " , gleich)
+
+
 
     #matrix[index_id][index_sucessor] = 1
-    print(index_id, ' ', index_sucessor, ' ', suc_type)
+    #print(index_id, ' ', index_sucessor, ' ', suc_type)
 
+print(matrix)
 #print(mapping)
 #print(x_array)
 #print(y_array)
+
+
+
+
+start = 0
+end = 150
+
+# Muss angepasst werden auf neue Matrix
+endPoint = 10  # findPosinMatrix(matrixNew, end)-1
+startPoint = 150  # findPosinMatrix(matrixNew, start)-1
+
+print(endPoint, ' ', startPoint)
+di2 = dijkstra2(matrix, startPoint)
+print(di2[0])
+print(di2[1])
+printSolution(di2[0], di2[1], endPoint)
