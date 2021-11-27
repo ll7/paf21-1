@@ -160,9 +160,12 @@ def dijkstra2(graph, src):
         # still in queue
 
         u = minDistance(dist, queue)
-
+        #print(queue, " ", u)
         # remove min element
-        queue.remove(u)
+        if u != -1:
+            queue.remove(u)
+        else:
+            queue.pop()
 
         # Update dist value and parent
         # index of the adjacent vertices of
@@ -196,9 +199,16 @@ def saveMatrix(matrix):
     np.savetxt("foo.csv", matrix, delimiter=",")
     print("")
 
+#Load Matrix from CSV
 def loadMAtrix():
     return genfromtxt('foo.csv', delimiter=',')
 
+#Return start and end pos of lanelet
+def findLaneletPoints(matrixPoints, x, y):
+    #Needs to be implemented
+    startNode = matrixPoints[0]
+    EndNode = matrixPoints[0]
+    return (startNode, EndNode)
 
 filename='outTown01.xml'
 tree = ET.parse(filename)
@@ -298,13 +308,24 @@ for index, node in enumerate (newNodes, start=0):
         else:
             if matrixNew[index][index2] == 0:
                 distance = distancePoints(node[1], node[2], node2[1], node2[2])
-                if distance<20:
+                if distance<0.2:
                     addedEdges += 1
-                    matrixNew[index][index2] = 0.1 +distance*3
+                    matrixNew[index][index2] = 0.1+ 10*distance
+                #""" Explore Edges
+                if distance<10.0 and matrixNew[index][index2] == 0:
+                    addedEdges += 1
+                    matrixNew[index][index2] = 10+10*distance
+                if distance<50.0 and matrixNew[index][index2] == 0:
+                    addedEdges += 1
+                    matrixNew[index][index2] = 50+10*distance
+                if distance < 200.0 and matrixNew[index][index2] == 0:
+                    addedEdges += 1
+                    matrixNew[index][index2] = 200 + 10 * distance
+                 #"""
                 #Teste Nachbarn in der Naehe
 
 
-print(len(matrixNew))
+#print(len(matrixNew))
 print(addedEdges)
 #print(edgeweight)
 
@@ -368,10 +389,12 @@ for child in root:
 adjacency = matrixNew[1:, 1:]
 #saveMatrix(matrixNew)
 
-start = 100
-end = 106
-endPoint = findPosinMatrix(matrixNew, end)-1
-startPoint = findPosinMatrix(matrixNew, start)-1
+start = 102
+end = 150
+
+#Muss angepasst werden auf neue Matrix
+endPoint = 10#findPosinMatrix(matrixNew, end)-1
+startPoint = 150#findPosinMatrix(matrixNew, start)-1
 #di = dijkstra(adjacency, findPosinMatrix(matrix, start)-1)
 #print(di)
 #print(di[endPoint])
@@ -386,6 +409,7 @@ printSolution(di2[0], di2[1], endPoint)
 
 lanes = getPathIDs(patharray, matrixNew)
 print(lanes)
+
 print(di2[0][findPosinMatrix(matrixNew, 180)-1])
 print()
 for l in lanes:
@@ -436,5 +460,21 @@ for l in lanes:
 
 #print(x_path2)
 #print(y_path2)
+nodeArray = []
+first = True
+for i in newNodes:
+    if first:
+        first = False
+        continue
+    nodeArray.append(i[1])
+nodeArray2 = []
 
-
+first = True
+for i in newNodes:
+    if first:
+        first = False
+        continue
+    nodeArray2.append(i[2])
+print()
+print(nodeArray)
+print(nodeArray2)
