@@ -327,44 +327,7 @@ for index, node in enumerate (newNodes, start=0):
 
 #print(len(matrixNew))
 print(addedEdges)
-#print(edgeweight)
-
-# Vergiess das hier :D
-'''
-for index, road in enumerate(firstXY, start=0):
-    for index2, road2 in enumerate(lastXY, start=0):
-        if index == 0 or index2 == 0:
-            continue
-        id1 = firstXY[index][0]
-        id2 = lastXY[index2][0]
-        pos1 = findPosinArray(matrix[0], id1)-1
-        pos2 = findPosinArray(matrix[0], id2)-1
-        #print(id1, ' ', id2)
-        if matrix[pos1][pos2]==0 and id1 != id2:
-            x = firstXY[index][1]
-            x2 = lastXY[index2][1]
-            y = firstXY[index][2]
-            y2 = lastXY[index2][2]
-
-
-            dist = distancePoints(x,y,x2,y2)
-            if dist < 0.1:
-                matrix[pos1][pos2] = 5 + dist*5
-
-            if pos1 !=  pos2:
-                x3 = firstXY[index2][1]
-                y3 = firstXY[index2][2]
-
-                x4 = lastXY[index][1]
-                y4 = lastXY[index][2]
-                dist = distancePoints(x, y, x3, y3)
-                if dist < 0.1:
-                    matrix[pos1][pos2] = 10
-
-                dist = distancePoints(x2, y2, x4, y4)
-                if dist < 0.1:
-                    matrix[pos1][pos2] = 10
-'''
+# print(edgeweight)
 
 for child in root:
     if child.tag == "lanelet":
@@ -475,6 +438,6 @@ for i in newNodes:
         first = False
         continue
     nodeArray2.append(i[2])
-print()
-print(nodeArray)
-print(nodeArray2)
+# print()
+# print(nodeArray)
+# print(nodeArray2)
