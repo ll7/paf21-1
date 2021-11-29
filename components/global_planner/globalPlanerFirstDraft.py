@@ -176,6 +176,7 @@ def dijkstra2(graph, src):
             queue.remove(u)
         else:
             queue.pop()
+        #queue.remove(u)
 
         # Update dist value and parent
         # index of the adjacent vertices of
@@ -206,249 +207,14 @@ def distancePoints(x, y, x2, y2):
     return np.sqrt((x - x2) ** 2 + (y - y2) ** 2)
 
 
-def saveMatrix(matrix):
-    np.savetxt("foo.csv", matrix, delimiter=",")
-    print("")
+def saveMatrix(matrix, name):
+    np.save(name, matrix, allow_pickle=True)
+    print("Done: ", name)
 
 
 # Load Matrix from CSV
-def loadMAtrix():
-    return genfromtxt('foo.csv', delimiter=',')
-
-
-# Return start and end pos of lanelet
-def findLaneletPoints(matrixPoints, x, y):
-    # Needs to be implemented
-    startNode = matrixPoints[0]
-    EndNode = matrixPoints[0]
-    return (startNode, EndNode)
-
-
-filename = 'outTown01.xml'
-tree = ET.parse(filename)
-root = tree.getroot()
-i = 1
-for child in root:
-    if child.tag == "lanelet":
-        i = i + 1
-
-j = 0
-matrix = np.zeros(shape=(i, i))
-
-edgeweight = np.zeros(shape=(i,))
-
-firstXY = [[]]
-lastXY = [[]]
-newNodes = [[]]
-
-for lanelet in root:
-    if lanelet.tag == "lanelet":
-        j = j + 1
-        # print(child.tag, " ->", child.attrib["id"])
-        matrix[0][j] = lanelet.attrib["id"]
-        matrix[j][0] = lanelet.attrib["id"]
-
-        summe = 0.0
-        index = 0
-        x = 0.0
-        x_old = 0.0
-        y = 0.0
-        y_old = 0.0
-
-        first = True
-        last = True
-
-        for rightBound_points in lanelet:
-            if rightBound_points.tag == "rightBound":
-                for index, point in enumerate(rightBound_points, start=1):
-                    if index > 0:
-                        summe += np.sqrt((x - x_old) ** 2 + (y - y_old) ** 2)
-                        x_old = x
-                        y_old = y
-                    if point.tag == "point":
-                        index += 1
-                        for xy in point:
-                            if xy.tag == "x":
-                                x = float(xy.text)
-                            if xy.tag == "y":
-                                y = float(xy.text)
-                            if first and y != 0:
-                                first = False
-                                firstXY.append((lanelet.attrib["id"], x, y))
-                                newNodes.append((lanelet.attrib["id"], x, y))
-                                # print('First: ', int(x), ' und ', int(y))
-                            if len(rightBound_points) == index and last:
-                                last = False
-                                lastXY.append((lanelet.attrib["id"], x, y))
-                                newNodes.append((lanelet.attrib["id"], x, y))
-                                # print("Last: ", x, ' ' , y)
-
-        edgeweight[j] = summe
-j = 0
-
-# Datastructure: (id, x, y)
-# print((newNodes))
-addedEdges = 0
-swap = True
-matrixNew = np.zeros(shape=(2 * i, 2 * i))
-for index, node in enumerate(newNodes, start=0):
-    if index == 0:
-        continue
-    matrixNew[0][index] = node[0]
-    matrixNew[index][0] = node[0]
-    '''
-    if swap:
-        matrixNew[0][index] = node[0]
-        matrixNew[index][0] = node[0]
-        swap = not swap
-    else:
-        matrixNew[0][index] = int(node[0]) +10000
-        matrixNew[index][0] = int(node[0]) +10000
-        swap = not swap
-    '''
-    for index2, node2 in enumerate(newNodes, start=0):
-        # if matrixNew[index][index]!=0:
-        #    print(matrixNew[index][index])
-        if index2 == 0:
-            continue
-        if node == node2:
-            continue
-        if node[0] == node2[0] and index == index2:
-            continue
-        if node[0] == node2[0]:
-            pos = findPosinMatrix(matrix, int(node[0]))
-            matrixNew[index][index2] = edgeweight[pos]
-        else:
-            if matrixNew[index][index2] == 0:
-                distance = distancePoints(node[1], node[2], node2[1], node2[2])
-                if distance < 0.2:
-                    addedEdges += 1
-                    matrixNew[index][index2] = 0.1 + 10 * distance
-                # """ Explore Edges
-                if distance < 10.0 and matrixNew[index][index2] == 0:
-                    addedEdges += 1
-                    matrixNew[index][index2] = 10 + 10 * distance
-                if distance < 50.0 and matrixNew[index][index2] == 0:
-                    addedEdges += 1
-                    matrixNew[index][index2] = 50 + 10 * distance
-                if distance < 200.0 and matrixNew[index][index2] == 0:
-                    addedEdges += 1
-                    matrixNew[index][index2] = 200 + 10 * distance
-                # """
-                # Teste Nachbarn in der Naehe
-
-# print(len(matrixNew))
-print(addedEdges)
-# print(edgeweight)
-
-for child in root:
-    if child.tag == "lanelet":
-        matPos = findPosinMatrix(matrix, int(child.attrib["id"]))
-        for preAndsuc in child:
-            # if (j<1):
-            # print(preAndsuc.tag, " ->", preAndsuc.attrib)
-            if (preAndsuc.tag == "predecessor"):
-                matpos2 = findPosinMatrix(matrix, int(preAndsuc.attrib["ref"]))
-                matrix[matpos2][matPos] = edgeweight[matPos]
-                # matrix[matPos][matpos2] = edgeweight[matPos]
-            if (preAndsuc.tag == "successor"):
-                matpos2 = findPosinMatrix(matrix, int(preAndsuc.attrib["ref"]))
-                matrix[matPos][matpos2] = edgeweight[matPos]
-                # matrix[matpos2][matPos] = edgeweight[matPos]
-
-        j = j + 1
-        # print(child.tag, " ->", child.attrib["id"])
-
-# matrix = loadMAtrix()
-adjacency = matrixNew[1:, 1:]
-# saveMatrix(matrixNew)
-
-start = 102
-end = 150
-
-# Muss angepasst werden auf neue Matrix
-endPoint = 10  # findPosinMatrix(matrixNew, end)-1
-startPoint = 150  # findPosinMatrix(matrixNew, start)-1
-
-print(endPoint, ' ', startPoint)
-di2 = dijkstra2(adjacency, startPoint)
-# print(di2[0])
-# print(di2[1])
-printSolution(di2[0], di2[1], endPoint)
-
-# print(patharray)
-
-lanes = getPathIDs(patharray, matrixNew)
-print(lanes)
-
-print(di2[0][findPosinMatrix(matrixNew, 180) - 1])
-print()
-for l in lanes:
-    # print(edgeweight[findPosinMatrix(matrix, l)-1])
-    # print(findPosinMatrix(matrix, l) - 1)
-    # print()
-    pass
-print(findPosinMatrix(matrix, 180))
-x_path = []
-y_path = []
-max_speed = []
-for l in lanes:
-    for child in root:
-        if child.tag == "lanelet" and int(child.attrib["id"]) == int(l):
-            for c in child:
-                if c.tag == "rightBound":
-                    for c_2 in c:
-                        if c_2.tag == "point":
-                            for c_3 in c_2:
-                                if c_3.tag == "x":
-                                    x_path.append(c_3.text)
-                                if c_3.tag == "y":
-                                    y_path.append(c_3.text)
-
-print(x_path)
-print(y_path)
-print()
-# print(matrix[0][42])
-# print(edgeweight)
-lab = dict([(key, str(int(val))) for key, val in enumerate(matrix[0][1:])])
-# show_graph_with_labels(adjacency, lab)
-
-
-x_path2 = []
-y_path2 = []
-for l in lanes:
-    for child in root:
-        if child.tag == "lanelet" and int(child.attrib["id"]) == 180:
-            for c in child:
-                if c.tag == "rightBound":
-                    for c_2 in c:
-                        if c_2.tag == "point":
-                            for c_3 in c_2:
-                                if c_3.tag == "x":
-                                    x_path2.append(c_3.text)
-                                if c_3.tag == "y":
-                                    y_path2.append(c_3.text)
-
-# print(x_path2)
-# print(y_path2)
-nodeArray = []
-first = True
-for i in newNodes:
-    if first:
-        first = False
-        continue
-    nodeArray.append(i[1])
-nodeArray2 = []
-
-first = True
-for i in newNodes:
-    if first:
-        first = False
-        continue
-    nodeArray2.append(i[2])
-# print()
-# print(nodeArray)
-# print(nodeArray2)
+def loadMatrix(name):
+    return np.load(name, allow_pickle=True)
 
 
 filename = 'Town01.xodr'
@@ -469,20 +235,18 @@ for child in root:
         for prop in child:
             if prop.tag == 'link':
                 for link in prop:
-                    if link.tag == "predecessor" and link.attrib['elementType']== "road":
+                    if link.tag == "predecessor":
                         road_dict['predecessor'] = int(link.attrib['elementId'])
                         road_dict['link_type_pre'] = link.attrib['elementType']
                         road_dict['contactPoint_pre'] = link.attrib['contactPoint']
                     elif link.tag == "predecessor" and link.attrib['elementType']== "road":
                         road_dict['successor'] = int(link.attrib['elementId'])
                         road_dict['link_type_suc'] = link.attrib['elementType']
-                        road_dict['contactPoint_suc'] = link.attrib['contactPoint']
-                    else:
-                        road_dict['successor'] = int(link.attrib['elementId'])
-                        road_dict['link_type_suc'] = link.attrib['elementType']
-            # elif prop.tag == 'type':
-            #     for speed in prop:
-            #         road_dict['speed'] = (speed.attrib['max'])
+                        if link.attrib['elementType'] == "road":
+                            road_dict['contactPoint_suc'] = link.attrib['contactPoint']
+            elif prop.tag == 'type':
+                for speed in prop:
+                    road_dict['speed'] = (speed.attrib['max'])
             elif prop.tag == 'planView':
                 for planeView in prop:
                     if planeView.tag == "geometry":
@@ -495,11 +259,11 @@ for child in root:
                         if 'geometry' in road_dict.keys():
                             tmp = road_dict['geometry']
                             # tmp.append([start_point, end_point, length])
-                            tmp.append([start_point, angle, length])
+                            tmp.append([start_point, angle, length, end_point])
                             road_dict['geometry'] = tmp
                         else:
                             # road_dict['geometry'] = [[start_point, end_point, length]]
-                            road_dict['geometry'] = [[start_point, angle, length]]
+                            road_dict['geometry'] = [[start_point, angle, length, end_point]]
 
             elif prop.tag == 'lanes':
                 for lanes in prop:
@@ -570,16 +334,10 @@ for child in root:
                     else:
                         junction_dict['lane_links'] = [[int(lane_link.attrib['from']), int(lane_link.attrib['to'])]]
 
-                junctions.append(junction_dict)
-
-print(junctions)
-print(lanelets)
-print()
+                if junction_dict['incomingRoad'] and junction_dict['connectingRoad'] in [lane['id'] for lane in lanelets]:
+                    junctions.append(junction_dict)
 
 matrix = np.zeros(shape=(num_nodes, num_nodes))
-x_array = []
-y_array = []
-
 mapping = []
 
 # construct matrix
@@ -590,21 +348,23 @@ for road in lanelets:
     lastgeoID = -1
     geoID = 0
     for geometry in road['geometry']:
-        if index > 0:
-            matrix[index - 1][index] = 10000
+        #if index > 0:
+        #    matrix[index - 1][index] = 10000
 
         if lastgeoID == road['id'] and index > 0:
-            print("hel")
-            matrix[index - 1][index] = 0.01+ geometry[2]
+            #TODO Checken ob richtung passt
+            #if 'right_driving' in road.keys():
+                matrix[index - 1][index] = 0.0001
+            #if 'left_driving' in road.keys():
+                matrix[index][index - 1] = 0.0001
+
+        matrix[index][index + 1] = geometry[2]
+        matrix[index + 1][index] = geometry[2]
         mapping.append((road['id'], geoID, geometry[0]))
-        index += 1
+        mapping.append((road['id'], geoID+1, geometry[3]))
+        index += 2
+        geoID += 2
         lastgeoID = road['id']
-        x_array.append(geometry[0][0])
-        x_array.append(geometry[0][0])
-        # x_array.append(geometry[1][0])
-        y_array.append(geometry[0][1])
-        # y_array.append(geometry[1][1])
-        geoID += 1
 
 
 def findMaping(mapping, roadId, first):
@@ -614,7 +374,7 @@ def findMaping(mapping, roadId, first):
             if map[0] == roadId:
                 return index
             index += 1
-        return -1
+        return np.nan
     else:
         found = False
         for map in mapping:
@@ -622,9 +382,9 @@ def findMaping(mapping, roadId, first):
                 index += 1
         rec = findMaping(mapping, roadId, True)
         if rec == None or rec == -1:
-            return -1
+            return np.nan
         else:
-            return index + rec
+            return index + rec -1
 
 def findMapingConnectin(junctions, junction_id, first):
     index = 0
@@ -642,119 +402,119 @@ def findMapingConnectin(junctions, junction_id, first):
         if rec == None or rec == -1:
             return -1
         else:
-            return index + rec
+            return index + rec -1
 
 
 for road in lanelets:
     ### Link predecessor and successor
-    suc = road['successor']
-    pre = -1
+    # suc = road['successor']
+    # pre = -1
     if 'predecessor' in road.keys():
         pre = road['predecessor']
         pre_type = road['link_type_pre']
-        print(pre)
-    suc_type = road['link_type_suc']
+        index_pre = -1
 
-    if suc_type == 'road':
-        index_id = findMaping(mapping, road['id'], False)-1
-        index_sucessor = findMaping(mapping, suc, True)-1
-        if (index_id == -1 or index_sucessor == -1):
-            continue
-        #print(index_id, ' ',  index_sucessor)
-        matrix[index_id][index_sucessor] = 1 #Leng of Kante -> 4 Cases
-    elif suc_type == 'junction':
-        index_sucessor_first = findMapingConnectin(junctions, suc, True)
-        index_sucessor_last = findMapingConnectin(junctions, suc, False)
-        for i in range(index_sucessor_first, index_sucessor_last):
+        if pre_type == 'road':
+            if road['contactPoint_pre'] == 'start':
+                # Letzter Eintrag Pre
+                index_pre = findMaping(mapping, pre, True)
+            elif road['contactPoint_pre'] == 'end':
+                # index_id = findMaping(mapping, road['id'], False)
+                index_pre = findMaping(mapping, pre, False)
 
-            incomingRoad = junctions[i]['incomingRoad']
-            connectingRoad = junctions[i]['connectingRoad']
-            contactPoint = junctions[i]['contactPoint']
+            # Last Eintrag Road
+            index_id = findMaping(mapping, road['id'], True)
+            # TODO Prüfen ob beidseitig
+            matrix[index_pre][index_id] = 0.0001
+            matrix[index_id][index_pre] = 0.0001
 
-            index_id = findMaping(mapping, incomingRoad, False)
-            index_id2 = findMaping(mapping, connectingRoad, False)
-            matrix[index_id][index_id2] = 1 #Value
-        if pre!= -1:
+        elif pre_type == 'junction':
             index_pre_first = findMapingConnectin(junctions, pre, True)
             index_pre_last = findMapingConnectin(junctions, pre, False)
-            for i in range(index_pre_first, index_pre_last):
-                incomingRoad = junctions[i]['incomingRoad']
-                connectingRoad = junctions[i]['connectingRoad']
-                contactPoint = junctions[i]['contactPoint']
+            for i in range(index_pre_first, index_pre_last+1):
+                if int(junctions[i]['incomingRoad']) == road['id']:
 
-                index_id = findMaping(mapping, incomingRoad, False)
-                index_id2 = findMaping(mapping, connectingRoad, False)
-                matrix[index_id][index_id2] = 1  # Value
+                    connectingRoad = int(junctions[i]['connectingRoad'])
+                    contactPoint = junctions[i]['contactPoint']
 
+                    index_id = findMaping(mapping, road['id'], True)
+                    if contactPoint == 'start':
+                        index_id2 = findMaping(mapping, connectingRoad, True)
+                    else:
+                        index_id2 = findMaping(mapping, connectingRoad, False)
 
-        #print(junctions)
+                    matrix[index_id2][index_id] = 0.0001
 
+    if 'successor' in road.keys():
+        suc = road['successor']
+        suc_type = road['link_type_suc']
 
+        if suc_type == 'road':
+            index_sucessor = -1
+            if road['contactPoint_suc'] == 'start':
+                # Erster Eintrag Succ
+                index_sucessor = findMaping(mapping, suc, True)
+            elif road['contactPoint_suc'] == 'end':
+                # Last Eintrag Road
+                index_sucessor = findMaping(mapping, suc, False)
 
+            index_id = findMaping(mapping, road['id'], False)
+            #TODO Prüfen ob beidseitig
+            matrix[index_id][index_sucessor] = 0.0001
+            matrix[index_sucessor][index_id] = 0.0001
 
-### Distance == 0
-print(mapping)
-index = 0
-gleich = 0
-for i in mapping:
+        elif suc_type == 'junction':
+            index_sucessor_first = findMapingConnectin(junctions, suc, True)
+            index_sucessor_last = findMapingConnectin(junctions, suc, False)
+            for i in range(index_sucessor_first, index_sucessor_last+1):
+                if int(junctions[i]['incomingRoad']) == road['id']:
+                    connectingRoad = int(junctions[i]['connectingRoad'])
+                    contactPoint = junctions[i]['contactPoint']
 
-    index2 = 0
-    matrix[index][index] = 0
-    for j in mapping:
-        if index != index2:
-            if matrix[index][index2] < 0.0000001:
-                distance = distancePoints(mapping[index][2][0], mapping[index][2][1], mapping[index2][2][0],mapping[index2][2][1])
-                if distance < 0.2:
-                    matrix[index][index2] = 1.0
-                    gleich+=1
-            index2 += 1
+                    index_id = findMaping(mapping, road['id'], False)
 
-    index += 1
-    #print(i)
-
-index = 0
-gleich = 0
-for i in mapping:
-
-    index2 = 0
-    matrix[index][index] = 0
-    for j in mapping:
-        if index != index2:
-            if matrix[index][index2] < 0.0000001:
-                distance = distancePoints(mapping[index][2][0], mapping[index][2][1], mapping[index2][2][0],mapping[index2][2][1])
-                if distance < 0.2:
-                    matrix[index][index2] = 1.0
-                    gleich+=1
-                    print("distance: ", distance)
-            index2 += 1
-
-    index += 1
-    #print(i)
-
-print("Gleich: " , gleich)
+                    if contactPoint == 'start':
+                        index_id2 = findMaping(mapping, connectingRoad, True)
+                    else:
+                        index_id2 = findMaping(mapping, connectingRoad, False)
+                    # TODO Prüfen ob beidseitig
+                    matrix[index_id][index_id2] = 0.0001
 
 
-
-    #matrix[index_id][index_sucessor] = 1
-    #print(index_id, ' ', index_sucessor, ' ', suc_type)
-
-print(matrix)
-#print(mapping)
-#print(x_array)
-#print(y_array)
-
-
-
+# print(junctions)
+# print(matrix)
+# print(mapping)
+# print(x_array)
+# print(y_array)
 
 start = 0
-end = 150
+end = 1
 
-# Muss angepasst werden auf neue Matrix
-endPoint = 10  # findPosinMatrix(matrixNew, end)-1
-startPoint = 150  # findPosinMatrix(matrixNew, start)-1
+startPoint = findMaping(mapping, 75, True)
+endPoint = findMaping(mapping, 18, True)
 
-print(endPoint, ' ', startPoint)
 di2 = dijkstra2(matrix, startPoint)
-print(di2[0])
-print(di2[1])
+print(di2[0][endPoint])
+#print(di2[1])
 printSolution(di2[0], di2[1], endPoint)
+
+list_lanes = []
+list_waypoints = []
+#print(matrix.shape, " ", len(mapping))
+#print(patharray)
+
+for path in patharray:
+    if int(mapping[path][1]) % 2 == 0:
+        list_waypoints.append({'x': mapping[path][2][0], 'y': mapping[path][2][1]})
+        list_lanes.append([mapping[path][0], mapping[path][1]])
+
+print(startPoint, ' ', endPoint)
+print(mapping)
+print(list_lanes)
+print()
+print(list_waypoints)
+
+
+saveMatrix(matrix, "mat.npy")
+# matrix = loadMatrix("mat.npy")
+
