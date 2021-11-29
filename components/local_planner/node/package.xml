@@ -2,12 +2,13 @@
 <package format="3">
   <name>local_planner</name>
   <version>0.0.1</version>
-  <description>A test package for route planning based on global map routing information fused with local sensor data</description>
+  <description>A package for route planning based on global map routing information fused with local sensor data</description>
   <maintainer email="info@informatik.uni-augsburg.de">University of Augsburg - Chair of Mechatronics</maintainer>
   <license>MIT</license>
 
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
   <!-- <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>derived_object_msgs</exec_depend>
   <exec_depend>shape_msgs</exec_depend>
@@ -20,7 +21,6 @@
   <exec_depend>carla_msgs</exec_depend>
   <exec_depend>carla_spawn_objects</exec_depend>
   <exec_depend>carla_manual_control</exec_depend>
-  <exec_depend>cv_bridge</exec_depend>
   <exec_depend>python-transforms3d-pip</exec_depend>
   <exec_depend>ros_compatibility</exec_depend> -->
 

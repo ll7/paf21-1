@@ -26,7 +26,12 @@ services:
     depends_on:
       - carla-ros-bridge-base
 
-  vehicle_controller:
+  vehicle-controller:
     image: vehicle_controller
     build:
       context: ./vehicle_controller
+
+  local-planner:
+    image: local_planner
+    build:
+      context: ./local_planner

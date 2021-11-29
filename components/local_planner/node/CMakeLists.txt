@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(local_planner)
 
 find_package(ros_environment REQUIRED)
-find_package(catkin REQUIRED COMPONENTS rospy sensor_msgs roslaunch)
+find_package(catkin REQUIRED COMPONENTS rospy std_msgs sensor_msgs cv_bridge roslaunch)
 
 catkin_python_setup()
 catkin_package()

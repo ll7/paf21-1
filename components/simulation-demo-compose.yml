@@ -58,6 +58,16 @@ services:
     networks:
       - ros
 
+  local-planner:
+    image: local_planner
+    volumes:
+      - './logs:/app/logs'
+    environment:
+      ROS_MASTER_URI: http://roscore:11311
+      ROS_HOSTNAME: local-planner
+    networks:
+      - ros
+
 networks:
   carla:
   ros:

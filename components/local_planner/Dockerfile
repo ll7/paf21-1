@@ -11,6 +11,11 @@ RUN apt-get update && apt-get install -y python3-pip \
 RUN apt-get update && apt-get install -y python-is-python3 \
     && rm -rf /var/lib/apt/lists/*
 
+# alias python3 as python
+RUN apt-get update && apt-get install -y \
+        ros-noetic-cv-bridge ros-noetic-vision-opencv \
+    && rm -rf /var/lib/apt/lists/*
+
 # install pip dependencies
 RUN python -m pip install pip --upgrade
 ADD ./requirements.txt /app/requirements.txt
