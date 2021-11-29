@@ -1,3 +1,4 @@
+import os.path
 import numpy as np
 import networkx as nx
 import xml.etree.ElementTree as eTree
@@ -114,13 +115,84 @@ class GlobalPlanner:
 
 class XODRConverter:
     def __init__(self):
-        self.filename = ''
+        self.filepath = ''
+        self.lane_lets = []
+        self.connections = []
+        self.num_nodes = 0
+        self.road = None
+
+    def get_lane_sec(self):
+        return self.road.find('lanes').find('laneSection')
+
+    def get_line_type(self):
+        lane_sec = self.get_lane_sec()
+        return lane_sec.find('center').find('lane').find('roadMark').get('type')
+
+    def get_lane_id(self):
+        directions = ['left', 'right']
+        return_ids = [[],[]]
+
+        lane_sec = self.get_lane_sec()
+        for i, direction in enumerate(directions):
+            if lane_sec.find(direction) is not None:
+                for lane in lane_sec.find(direction).findall('lane'):
+                    if lane.get('type') == 'driving':
+                        return_ids[i].append(lane.get('id'))
+        return return_ids
+
+    def get_traffic_signs(self):
+        objects = []
+        if self.road.find('objects') is not None:
+            for obj in self.road.find('objects').findall('object'):
+                objects.append([obj.get('name'), obj.get('s'), obj.get('t')])
+        return objects
+
+    def read_xodr(self, filepath):
+        # check if file exist
+        if not os.path.isfile(filepath):
+            return FileNotFoundError
+        self.filepath = filepath
+
+        # get the root of the xml file
+        root = eTree.parse(self.filepath).getroot()
+
+        # parse all roads
+        for road in root.findall('road'):
+            self.road = road
+            road_dict = dict()
+            road_dict['road_id'] = self.road.get('id')
+            road_dict['junction'] = int(self.road.get('junction'))
+
+            # parse the successor
+            suc = self.road.find('link').find('successor')
+            road_dict['suc_type'] = suc.get('elementType')
+            road_dict['suc_id'] = int(suc.get('elementId'))
+            road_dict['contact_point'] = suc.get('contactPoint')
+
+            # get the lane ids and the line type
+            ids = self.get_lane_id()
+            road_dict['left_ids'] = ids[0]
+            road_dict['right_ids'] = ids[1]
+            road_dict['line_type'] = self.get_line_type()
+
+            # parse objects
+            road_dict['traffic_signs'] = self.get_traffic_signs()
+
+            # parse all geometries
+            for i, geometry in enumerate(road.find('planView').findall('geometry')):
+                pass
+
+            print(road_dict)
+            # add new dict to lane_lets
+            self.lane_lets.append(road_dict)
+
+        # parse all junctions
+        for junction in root.findall('junction'):
+            pass
 
 
 if __name__ == "__main__":
     filename = 'Town01.xodr'
-    root = eTree.parse(filename).getroot()
-    i = 0
-    for child in root:
-        if child.tag == 'road':
-            i = i + 1
+
+    xodr = XODRConverter()
+    xodr.read_xodr(filename)
