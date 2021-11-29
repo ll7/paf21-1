@@ -44,19 +44,21 @@ services:
       ROS_HOSTNAME: carla-ros-bridge
       CARLA_SIM_HOST: carla-simulator
       CARLA_SIM_WAIT_SECS: 20
+      CARLA_OPENSCENARIO_FILE: /opt/scenario_runner/srunner/examples/FollowLeadingVehicle.xosc
+      SCENARIO_RUNNER_PATH: /opt/scenario_runner
       # EGO_VEHICLE_SENSORS: /ego_vehicle_sensors.json
     networks:
       - carla
       - ros
     command: ["/custom_rosbridge_startup.launch", "--wait"]
 
-  vehicle-controller:
-    image: vehicle_controller
-    environment:
-      ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: vehicle-controller
-    networks:
-      - ros
+  # vehicle-controller:
+  #   image: vehicle_controller
+  #   environment:
+  #     ROS_MASTER_URI: http://roscore:11311
+  #     ROS_HOSTNAME: vehicle-controller
+  #   networks:
+  #     - ros
 
 networks:
   carla:

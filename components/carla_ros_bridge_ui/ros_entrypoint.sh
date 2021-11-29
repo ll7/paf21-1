@@ -8,4 +8,7 @@ source "/opt/carla-ros-bridge/install/setup.bash"
 sleep $CARLA_SIM_WAIT_SECS
 
 # launch the CARLA ROS bridge
-roslaunch $@
+roslaunch $@ &
+sleep 10 && rosservice call /scenario_runner/execute_scenario \
+    "{ 'scenario': { 'scenario_file': '$CARLA_OPENSCENARIO_FILE' } }" &
+wait
