@@ -1,0 +1,5 @@
+<!-- -->
+<launch>
+  <node pkg="local_planner" name="local_planner"
+        type="main.py" output="screen" required="true" />
+</launch>
