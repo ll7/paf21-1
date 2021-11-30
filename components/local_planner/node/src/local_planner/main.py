@@ -6,8 +6,9 @@ from dataclasses import dataclass
 
 import rospy
 from std_msgs.msg import String as StringMsg
-from sensor_msgs.msg import Image as ImageMsg
+from sensor_msgs.msg import Image as ImageMsg, NavSatFix as GpsMsg
 from local_planner.preprocessing import RgbCameraPreprocessor
+from local_planner.route_planner import RoutePlanner
 
 
 @dataclass
@@ -19,6 +20,7 @@ class LocalPlannerNode:
     publish_rate_in_hz: int
     local_route_publisher: rospy.Publisher = None
     image_preprocessor: RgbCameraPreprocessor = RgbCameraPreprocessor()
+    route_planner: RoutePlanner = RoutePlanner()
 
     def run_node(self):
         """Launch the ROS node to receive globally planned routes
@@ -28,22 +30,27 @@ class LocalPlannerNode:
         rate = rospy.Rate(self.publish_rate_in_hz)
 
         while not rospy.is_shutdown():
-            signal = None
-            self.local_route_publisher.publish(signal)
+            local_route = self.route_planner.compute_local_route()
+            self.local_route_publisher.publish(local_route)
             rate.sleep()
 
     def init_ros(self):
         """Initialize the ROS node's publishers and subscribers"""
         rospy.init_node(f'local_planner_{self.vehicle_name}', anonymous=True)
         self.local_route_publisher = self.init_local_route_publisher()
+        self.init_gps_subscriber()
         self.init_global_route_subscriber()
         self.init_front_camera_subscriber()
 
     def init_global_route_subscriber(self):
         """Initialize the ROS subscriber receiving global routes"""
-        callback = lambda msg: msg
         in_topic = f"/drive/{self.vehicle_name}/global_route"
-        rospy.Subscriber(in_topic, StringMsg, callback)
+        rospy.Subscriber(in_topic, StringMsg, self.route_planner.update_global_route)
+
+    def init_gps_subscriber(self):
+        """Initialize the ROS subscriber receiving GPS data"""
+        in_topic = f"/carla/{self.vehicle_name}/gnss/gnss1/fix"
+        rospy.Subscriber(in_topic, GpsMsg, self.route_planner.update_gps)
 
     def init_front_camera_subscriber(self):
         """Initialize the ROS subscriber receiving camera images"""
