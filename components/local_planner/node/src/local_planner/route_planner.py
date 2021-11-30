@@ -11,9 +11,8 @@ class RoutePlanner:
     """A route planner based on map and sensor data"""
 
     vehicle_position: Tuple[float, float]
-    global_route: List[Tuple[float, float]]
-    cached_local_route: List[Tuple[float, float]]
-    # next_target_position: Tuple[float, float]
+    global_route: List[Tuple[float, float]] = None
+    cached_local_route: List[Tuple[float, float]] = None
 
     def update_gps(self, msg: GpsMsg):
         """Update the GPS position of the vehicle"""
@@ -27,6 +26,9 @@ class RoutePlanner:
     def compute_local_route(self):
         """Modifies the global route based on sensor data
         to fit the current diving circumstances"""
+
+        if self.global_route is None:
+            return []
 
         # interpolate the route such that the route points are closely aligned
 

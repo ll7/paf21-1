@@ -29,6 +29,8 @@ class RgbCameraPreprocessor: # pylint: disable=too-few-public-methods
         projections = LaneDetection.highlight_lines(orig_image)
         highl_image = LaneDetection.augment_image_with_lines(orig_image, projections)
 
+        # figure out which squeeze causes the callback to crash
+
         if self.step % 30 == 0:
             cv2.imwrite(f"/app/logs/img_{self.step}_orig.png", orig_image)
             cv2.imwrite(f"/app/logs/img_{self.step}_line.png", highl_image)
