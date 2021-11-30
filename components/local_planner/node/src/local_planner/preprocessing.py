@@ -1,10 +1,9 @@
 """Module for preprocessing CARLA sensor data"""
 
 from cv2 import cv2
-
 from sensor_msgs.msg import Image as ImageMsg
 from cv_bridge import CvBridge
-from local_planner.line_highlighting import LineHighlighter
+from local_planner.lane_detection import LaneDetection
 
 # @dataclass
 class RgbCameraPreprocessor: # pylint: disable=too-few-public-methods
@@ -19,14 +18,19 @@ class RgbCameraPreprocessor: # pylint: disable=too-few-public-methods
 
         # load image from the ROS message
         bridge = CvBridge()
-        rgb_image = bridge.imgmsg_to_cv2(
+        orig_image = bridge.imgmsg_to_cv2(
             msg, desired_encoding='passthrough')
-        rgb_image = rgb_image[:, :, :3]
+
+        # remove the alpha channel and resize the image
+        orig_image = orig_image[:, :, :3]
+        orig_image = cv2.resize(orig_image, [1200, 600])
 
         # highlight the road surface markings
-        img = LineHighlighter.highlight_lines(rgb_image)
+        projections = LaneDetection.highlight_lines(orig_image)
+        highl_image = LaneDetection.augment_image_with_lines(orig_image, projections)
 
         if self.step % 30 == 0:
-            cv2.imwrite(f"/app/logs/img_{self.step}.png", img)
+            cv2.imwrite(f"/app/logs/img_{self.step}_orig.png", orig_image)
+            cv2.imwrite(f"/app/logs/img_{self.step}_line.png", highl_image)
 
-        return img
+        return highl_image
