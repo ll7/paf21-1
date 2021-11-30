@@ -12,8 +12,8 @@ from local_planner.preprocessing import RgbCameraPreprocessor
 
 @dataclass
 class LocalPlannerNode:
-    """A class representing a ROS node that's capable of controlling a vehicle
-    and make it drive according to a given route the node is constantly receiving."""
+    """A class representing a ROS node that's processing route and
+    local sensor data to handle the interaction with other vehicles, etc."""
 
     vehicle_name: str
     publish_rate_in_hz: int
@@ -37,7 +37,7 @@ class LocalPlannerNode:
         rospy.init_node(f'local_planner_{self.vehicle_name}', anonymous=True)
         self.local_route_publisher = self.init_local_route_publisher()
         self.init_global_route_subscriber()
-        self.init_rgb_camera_subscriber()
+        self.init_front_camera_subscriber()
 
     def init_global_route_subscriber(self):
         """Initialize the ROS subscriber receiving global routes"""
@@ -45,11 +45,10 @@ class LocalPlannerNode:
         in_topic = f"/drive/{self.vehicle_name}/global_route"
         rospy.Subscriber(in_topic, StringMsg, callback)
 
-    def init_rgb_camera_subscriber(self):
+    def init_front_camera_subscriber(self):
         """Initialize the ROS subscriber receiving camera images"""
-        in_topic = f"/carla/{self.vehicle_name}/camera/rgb/front/image_color"
-        print(in_topic)
-        print("/carla/ego_vehicle/camera/rgb/front/image")
+        camera_type = "semantic_segmentation/front/image_segmentation"
+        in_topic = f"/carla/{self.vehicle_name}/camera/{camera_type}"
         rospy.Subscriber(in_topic, ImageMsg, self.image_preprocessor.process_image)
 
     def init_local_route_publisher(self):
