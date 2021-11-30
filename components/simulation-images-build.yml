@@ -11,7 +11,7 @@ services:
   carla-ros-bridge:
     image: carla-ros-bridge
     build:
-      context: ./carla_ros_bridge_ui
+      context: ./carla_ros_bridge
       args:
         - CARLA_VERSION=0.9.10.1
 
