@@ -35,6 +35,8 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix
       # - ./ego_vehicle_sensors.json:/ego_vehicle_sensors.json
       - ./custom_rosbridge_startup.launch:/custom_rosbridge_startup.launch
+      - ./carla_ad_demo.rviz:/config/carla_ad_demo.rviz
+      - ./FollowLeadingVehicle.xosc:/config/FollowLeadingVehicle.xosc
     environment:
       SDL_VIDEODRIVER: x11
       SDL_HINT_CUDA_DEVICE: 0
@@ -44,7 +46,8 @@ services:
       ROS_HOSTNAME: carla-ros-bridge
       CARLA_SIM_HOST: carla-simulator
       CARLA_SIM_WAIT_SECS: 20
-      CARLA_OPENSCENARIO_FILE: /opt/scenario_runner/srunner/examples/FollowLeadingVehicle.xosc
+      CARLA_OPENSCENARIO_FILE: /config/FollowLeadingVehicle.xosc
+      CARLA_RVIZ_FILE: /config/carla_ad_demo.rviz
       SCENARIO_RUNNER_PATH: /opt/scenario_runner
       # EGO_VEHICLE_SENSORS: /ego_vehicle_sensors.json
     networks:
