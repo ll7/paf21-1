@@ -28,7 +28,7 @@ ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
 ENV PYTHONPATH=$PYTHONPATH:/opt/ros/noetic/lib/python3/dist-packages
 ENV PYTHONPATH=$PYTHONPATH:/opt/carla/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg:/opt/carla/PythonAPI/carla
 
-# install pip and wget
+# install pip, wget, git and some ROS dependencies for building the CARLA ROS bridge
 RUN apt-get update && apt-get install -y python3-pip wget git python-is-python3 \
         ros-noetic-ackermann-msgs \ros-noetic-derived-object-msgs \
         ros-noetic-carla-msgs ros-noetic-pcl-conversions \
