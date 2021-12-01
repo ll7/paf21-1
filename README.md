@@ -23,7 +23,14 @@ is not bound to a single map that was learnt by heart.
 - Tröster, Marco
 
 ## Quick Start
-TODO: add all instructions to make the project run
+0. Before you start, make sure that your PC runs a NVIDIA GPU that supports nvidia-docker.
+1. First, set up your PC according to this
+   [tutorial](https://github.com/ll7/paf21-1/wiki/Development-Machine-Setup-(NVIDIA-Docker)).
+   It assists you at installing docker with GPU support.
+2. Clone this GitHub repository, e.g. use '*git clone https://github.com/ll7/paf21-1*'
+3. Next, build all components required to run self-driving car scenarios, see [docs](./components/README.md).
+4. Finally, go to one of the scenarios (e.g. the [default scenario](./scenarios/default_scenario)
+   and launch it with docker-compose.
 
 ## Repository Structure
 TODO: add some information on where the different parts of the project are located at
