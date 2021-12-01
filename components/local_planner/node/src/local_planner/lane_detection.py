@@ -1,7 +1,7 @@
 """This module highlights road surface markings"""
-import cv2
+from cv2 import cv2
 import numpy as np
-import glob
+
 
 class LaneDetection: # pylint: disable=too-few-public-methods
     """This module highlights road surface markings"""
@@ -14,7 +14,6 @@ class LaneDetection: # pylint: disable=too-few-public-methods
         lines = LaneDetection._preprocess_lines(image)
         proj = LaneDetection._get_lane_boundary_projections(
             lines, image.shape[0], image.shape[1])
-
         return proj
 
     @staticmethod
@@ -97,11 +96,11 @@ class LaneDetection: # pylint: disable=too-few-public-methods
 
         if len(left_half) >= 1:
             left_projections = [LaneDetection._get_projection(
-                line, img_height, img_width) for line in left_half]
+                line, img_height) for line in left_half]
             left_proj = left_projections[np.argmax([line[0] for line in left_projections])]
         if len(right_half) >= 1:
             right_projections = [LaneDetection._get_projection(
-                line, img_height, img_width) for line in right_half]
+                line, img_height) for line in right_half]
             right_proj = right_projections[np.argmin([line[0] for line in right_projections])]
 
         return [right_proj, left_proj]
@@ -113,7 +112,7 @@ class LaneDetection: # pylint: disable=too-few-public-methods
         return (height - intercept) / grad
 
     @staticmethod
-    def _get_projection(line, height, width):
+    def _get_projection(line, height):
         return [
             int(LaneDetection._cross_line_at_y(
                 line[0], line[2], line[1], line[3], height)),
@@ -122,4 +121,3 @@ class LaneDetection: # pylint: disable=too-few-public-methods
                 line[0], line[2], line[1], line[3], height / 2)),
             int(height / 2)
         ]
-
