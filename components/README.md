@@ -1,8 +1,9 @@
 
-# Dockerized Simulation Environment
+# Dockerized Components
 
-## Build the CARLA ROS Docker Images
-First, build all Docker images we'll need for launching the simulation.
+## Build all Docker Images
+Use following command to build all Docker images you'll need for launching
+the CARLA simulation and the driving components.
 
 ```sh
 docker-compose -f simulation-images-build.yml build
