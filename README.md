@@ -32,6 +32,16 @@ is not bound to a single map that was learnt by heart.
 4. Finally, go to one of the scenarios (e.g. the [default scenario](./scenarios/default_scenario))
    and launch it with docker-compose.
 
+Running steps 2-4 could look something like this (see the README files for further information):
+
+```sh
+cd components
+docker-compose -f simulation-images-build.yml build
+cd ../scenarios/default_scenario
+xhost +
+docker-compose up -d
+```
+
 ## Repository Structure
 This GitHub repository consists of following parts:
 
