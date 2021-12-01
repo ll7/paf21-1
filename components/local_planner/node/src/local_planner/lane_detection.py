@@ -1,6 +1,7 @@
 """This module highlights road surface markings"""
-from cv2 import cv2
+import cv2
 import numpy as np
+import glob
 
 class LaneDetection: # pylint: disable=too-few-public-methods
     """This module highlights road surface markings"""
@@ -11,9 +12,9 @@ class LaneDetection: # pylint: disable=too-few-public-methods
         image = LaneDetection._preprocess_image(orig_image)
         image = LaneDetection._cut_roi_patch(image)
         lines = LaneDetection._preprocess_lines(image)
-
         proj = LaneDetection._get_lane_boundary_projections(
             lines, image.shape[0], image.shape[1])
+
         return proj
 
     @staticmethod
@@ -43,8 +44,8 @@ class LaneDetection: # pylint: disable=too-few-public-methods
     @staticmethod
     def _preprocess_image(orig_image: np.ndarray):
         hsv = cv2.cvtColor(orig_image, cv2.COLOR_BGR2HSV)
-        lower_bound = np.array([20, 40, 40])
-        upper_bound = np.array([37, 255, 255])
+        lower_bound = np.array([150, 100, 100])
+        upper_bound = np.array([151, 150, 150])
         image = cv2.inRange(hsv, lower_bound, upper_bound)
         return cv2.Canny(image, 50, 150)
 
@@ -68,7 +69,7 @@ class LaneDetection: # pylint: disable=too-few-public-methods
     def _preprocess_lines(image: np.ndarray):
         lines = cv2.HoughLinesP(image, rho=6, theta=np.pi / 180, threshold=30,
                                 lines=np.array([]), minLineLength=20, maxLineGap=25)
-        if not lines or len(lines) == 0:
+        if lines is None or len(lines) == 0:
             return np.array([])
         lines = np.squeeze(lines, axis=1)
         return LaneDetection._filter_relevant_lines(lines)
@@ -81,9 +82,8 @@ class LaneDetection: # pylint: disable=too-few-public-methods
             length = np.sqrt(vector[0] ** 2 + vector[1] ** 2)
             angle = np.arccos(vector[0] / length)
             angle = np.rad2deg(angle)
-            if 70 < angle < 75 or 105 < angle < 110:
+            if 30 < angle < 60:
                 cleared_lines.append(list([line]))
-
         if len(cleared_lines) == 0:
             return np.array([])
         return np.squeeze(np.array(cleared_lines),axis=1)
@@ -118,6 +118,8 @@ class LaneDetection: # pylint: disable=too-few-public-methods
             int(LaneDetection._cross_line_at_y(
                 line[0], line[2], line[1], line[3], height)),
             height,
-            int(width / 2),
+            int(LaneDetection._cross_line_at_y(
+                line[0], line[2], line[1], line[3], height / 2)),
             int(height / 2)
         ]
+
