@@ -23,7 +23,6 @@ class RgbCameraPreprocessor: # pylint: disable=too-few-public-methods
 
         # remove the alpha channel and resize the image
         orig_image = orig_image[:, :, :3]
-        orig_image = cv2.resize(orig_image, [1200, 600])
 
         # highlight the road surface markings
         projections = LaneDetection.highlight_lines(orig_image)
