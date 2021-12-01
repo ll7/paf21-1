@@ -29,7 +29,7 @@ is not bound to a single map that was learnt by heart.
    It assists you at installing Docker with GPU support.
 2. Clone this GitHub repository, e.g. use '*git clone https://github.com/ll7/paf21-1*'
 3. Next, build all components required to run self-driving car scenarios, see [docs](./components/README.md).
-4. Finally, go to one of the scenarios (e.g. the [default scenario](./scenarios/default_scenario)
+4. Finally, go to one of the scenarios (e.g. the [default scenario](./scenarios/default_scenario))
    and launch it with docker-compose.
 
 ## Repository Structure
