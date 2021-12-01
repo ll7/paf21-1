@@ -68,6 +68,8 @@ class LaneDetection: # pylint: disable=too-few-public-methods
     def _preprocess_lines(image: np.ndarray):
         lines = cv2.HoughLinesP(image, rho=6, theta=np.pi / 180, threshold=30,
                                 lines=np.array([]), minLineLength=20, maxLineGap=25)
+        if not lines or len(lines) == 0:
+            return np.array([])
         lines = np.squeeze(lines, axis=1)
         return LaneDetection._filter_relevant_lines(lines)
 
@@ -81,6 +83,9 @@ class LaneDetection: # pylint: disable=too-few-public-methods
             angle = np.rad2deg(angle)
             if 70 < angle < 75 or 105 < angle < 110:
                 cleared_lines.append(list([line]))
+
+        if len(cleared_lines) == 0:
+            return np.array([])
         return np.squeeze(np.array(cleared_lines),axis=1)
 
     @staticmethod
