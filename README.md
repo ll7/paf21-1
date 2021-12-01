@@ -33,11 +33,23 @@ is not bound to a single map that was learnt by heart.
    and launch it with docker-compose.
 
 ## Repository Structure
-TODO: add some information on where the different parts of the project are located at
-and what they are supposed to be doing
+This GitHub repository consists of following parts:
 
-## Components
-TODO: add some information on the data flow between system components and the architecture
+### Components
+This section is all about the components required to launch a scenario such as the CARLA simulator,
+the CARLA ROS bridge and not to mention also our own self-driving car software components.
+
+As you might have already noticed, the technical part is heavily based on Docker / ROS, so each
+component is provided as a Docker image, abstracting the ROS runtime in a self-contained manner.
+
+See the [wiki](https://github.com/ll7/paf21-1/wiki/Architecture-Models) for further information.
+
+### Scenarios
+The scenarios section contains a set of scenario definitions. It's supposed the be self-contained,
+meaning that each scenario can be run in an infrastructure-as-code like manner. This allows to run
+the exact same scenario over and over again on various PCs.
+
+See the [wiki](https://github.com/ll7/paf21-1/wiki/Technical-Architecture-Approach) for further information.
 
 ## AI Training
 TODO: add some information on how to train the AI components
