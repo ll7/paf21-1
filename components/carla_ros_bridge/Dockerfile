@@ -59,6 +59,10 @@ RUN cd /opt && wget $SCENARIO_RUNNER_URL -O $SCENARIO_RUNNER_TAR && \
 RUN echo 'pexpect' >> $SCENARIO_RUNNER_ROOT/requirements.txt && \
     python -m pip install -r $SCENARIO_RUNNER_ROOT/requirements.txt
 
+# TODO: don't run the container as root user
+# RUN useradd worker
+# USER worker
+
 ENV CARLA_SIM_HOST=localhost
 ENV CARLA_SIM_WAIT_SECS=20
 ENV SCENARIO_RUNNER_PATH=/opt/scenario_runner
