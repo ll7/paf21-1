@@ -63,6 +63,9 @@ ENV CARLA_SIM_HOST=localhost
 ENV CARLA_SIM_WAIT_SECS=20
 ENV SCENARIO_RUNNER_PATH=/opt/scenario_runner
 
+COPY ./sensors.json /config/sensors.json
+ENV EGO_VEHICLE_SENSORS=/config/sensors.json
+
 COPY ./rosbridge_with_rviz_scenario.launch /rosbridge_with_rviz_scenario.launch
 COPY ./ros_entrypoint.sh /ros_entrypoint.sh
 ENTRYPOINT [ "/ros_entrypoint.sh" ]

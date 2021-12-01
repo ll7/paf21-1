@@ -18,6 +18,7 @@
   <arg name="role_name" default="ego_vehicle"/> <!-- role name of the ego vehicle (used for identification in many nodes) -->
   <arg name="vehicle_filter" default="vehicle.tesla.model3"/> <!-- which vehicle type to use for the ego. See blueprint library for others -->
   <arg name="avoid_risk" default="True"/> <!-- should the agent avoid crashs and respect red traffic lights? -->
+  <arg name="sensor_definition_file" default="$(env EGO_VEHICLE_SENSORS)"/>
 
   <!-- spectator camera parameter -->
   <arg name='resolution_x' default='800'/> <!-- width of the spectator camera image -->
