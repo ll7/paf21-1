@@ -1,1 +1,0 @@
-lanelet-convert Town01.xodr -o outTown01.xml

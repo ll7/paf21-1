@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>global_planner</name>
+  <version>0.0.1</version>
+  <description>A package for route planning based on the xodr map</description>
+  <maintainer email="info@informatik.uni-augsburg.de">University of Augsburg - Chair of Mechatronics</maintainer>
+  <license>MIT</license>
+
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <!-- <exec_depend>cv_bridge</exec_depend> -->
+  <!-- <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>derived_object_msgs</exec_depend>
+  <exec_depend>shape_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>tf2_msgs</exec_depend>
+  <exec_depend>rosgraph_msgs</exec_depend> -->
+  <!-- <exec_depend>ackermann_msgs</exec_depend> -->
+  <!-- <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>carla_common</exec_depend>
+  <exec_depend>carla_msgs</exec_depend>
+  <exec_depend>carla_spawn_objects</exec_depend>
+  <exec_depend>carla_manual_control</exec_depend>
+  <exec_depend>python-transforms3d-pip</exec_depend>
+  <exec_depend>ros_compatibility</exec_depend> -->
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roslaunch</build_depend>
+  <exec_depend>rospy</exec_depend>
+  <!-- <exec_depend condition="$ROS_VERSION == 1">tf</exec_depend>
+  <exec_depend condition="$ROS_VERSION == 1">tf2</exec_depend>
+  <exec_depend condition="$ROS_VERSION == 1">rosbag_storage</exec_depend>
+  <exec_depend condition="$ROS_VERSION == 1">rviz</exec_depend> -->
+
+  <export>
+    <build_type>catkin</build_type>
+  </export>
+</package>
