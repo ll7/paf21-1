@@ -23,14 +23,50 @@ is not bound to a single map that was learnt by heart.
 - Tröster, Marco
 
 ## Quick Start
-TODO: add all instructions to make the project run
+0. Before you start, make sure that your PC runs a NVIDIA GPU supporting nvidia-docker.
+1. First, set up your PC according to this
+   [tutorial](https://github.com/ll7/paf21-1/wiki/Development-Machine-Setup-(NVIDIA-Docker)).
+   It assists you at installing Docker with GPU support.
+2. Clone this GitHub repository, e.g. use '*git clone https://github.com/ll7/paf21-1*'
+3. Next, build all components required to run self-driving car scenarios, see [docs](./components/README.md).
+4. Finally, go to one of the scenarios (e.g. the [default scenario](./scenarios/default_scenario))
+   and launch it with docker-compose.
+
+Running steps 2-4 could look something like this (see the README files for further information):
+
+```sh
+# clone the GitHub repo
+git clone https://github.com/ll7/paf21-1
+cd paf21-1
+
+# build the components
+cd components
+docker-compose -f simulation-images-build.yml build
+
+# launch the default scenario
+cd ../scenarios/default_scenario
+xhost +
+docker-compose up -d
+```
 
 ## Repository Structure
-TODO: add some information on where the different parts of the project are located at
-and what they are supposed to be doing
+This GitHub repository consists of following parts:
 
-## Components
-TODO: add some information on the data flow between system components and the architecture
+### Components
+This section is all about the components required to launch a scenario such as the CARLA simulator,
+the CARLA ROS bridge and not to mention also our own self-driving car software components.
+
+As you might have already noticed, the technical part is heavily based on Docker / ROS, so each
+component is provided as a Docker image, abstracting the ROS runtime in a self-contained manner.
+
+See the [wiki](https://github.com/ll7/paf21-1/wiki/Architecture-Models) for further information.
+
+### Scenarios
+The scenarios section contains a set of scenario definitions. It's supposed the be self-contained,
+meaning that each scenario can be run in an infrastructure-as-code like manner. This allows to run
+the exact same scenario over and over again on various PCs.
+
+See the [wiki](https://github.com/ll7/paf21-1/wiki/Technical-Architecture-Approach) for further information.
 
 ## AI Training
 TODO: add some information on how to train the AI components

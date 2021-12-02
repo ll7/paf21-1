@@ -2,11 +2,14 @@
 # Default Simulation Scenario
 
 ## Launch the Simulation + ROS Bridge
-
+Now, before you launch the Docker containers, you need to allow the x11 server on the host system
+to be accessed by the rviz application inside the Docker container like this:
 
 ```sh
 xhost +
 ```
+
+Next, launch the Docker containers with the following command:
 
 ```sh
 docker-compose up -d

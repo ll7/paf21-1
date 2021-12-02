@@ -33,8 +33,7 @@ services:
       - seccomp:unconfined
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
-      # - ./ego_vehicle_sensors.json:/ego_vehicle_sensors.json
-      - ./config/custom_rosbridge_startup.launch:/custom_rosbridge_startup.launch
+      - ./FollowLeadingVehicle.xosc:/config/FollowLeadingVehicle.xosc
     environment:
       SDL_VIDEODRIVER: x11
       SDL_HINT_CUDA_DEVICE: 0
@@ -43,18 +42,26 @@ services:
       ROS_MASTER_URI: http://roscore:11311
       ROS_HOSTNAME: carla-ros-bridge
       CARLA_SIM_HOST: carla-simulator
-      CARLA_SIM_WAIT_SECS: 20
-      # EGO_VEHICLE_SENSORS: /ego_vehicle_sensors.json
+      CARLA_OPENSCENARIO_FILE: /config/FollowLeadingVehicle.xosc
     networks:
       - carla
       - ros
-    command: ["/custom_rosbridge_startup.launch", "--wait"]
 
-  test-subscriber-camera:
-    image: test_subscriber_camera
+  vehicle-controller:
+    image: vehicle_controller
     environment:
       ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: test-subscriber-camera
+      ROS_HOSTNAME: vehicle-controller
+    networks:
+      - ros
+
+  local-planner:
+    image: local_planner
+    volumes:
+      - './logs:/app/logs'
+    environment:
+      ROS_MASTER_URI: http://roscore:11311
+      ROS_HOSTNAME: local-planner
     networks:
       - ros
 

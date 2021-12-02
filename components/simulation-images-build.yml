@@ -8,25 +8,19 @@ services:
       args:
         - CARLA_VERSION=0.9.10.1
 
-  carla-ros-bridge-base:
-    image: carla-ros-bridge-base
-    build:
-      context: https://github.com/carla-simulator/ros-bridge.git#0.9.10.1
-      dockerfile: docker/Dockerfile
-      args:
-        - ROS_VERSION=noetic
-        - CARLA_VERSION=0.9.10.1
-
   carla-ros-bridge:
     image: carla-ros-bridge
     build:
-      context: ./carla_ros_bridge_ui
+      context: ./carla_ros_bridge
       args:
-        - ROS_BRIDGE_BASE_IMG=carla-ros-bridge-base
-    depends_on:
-      - carla-ros-bridge-base
+        - CARLA_VERSION=0.9.10.1
 
-  vehicle_controller:
+  vehicle-controller:
     image: vehicle_controller
     build:
       context: ./vehicle_controller
+
+  local-planner:
+    image: local_planner
+    build:
+      context: ./local_planner
