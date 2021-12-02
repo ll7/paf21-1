@@ -24,3 +24,8 @@ services:
     image: local_planner
     build:
       context: ./local_planner
+
+  global-planner:
+    image: global_planner
+    build:
+      context: ./global_planner
