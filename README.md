@@ -23,7 +23,7 @@ is not bound to a single map that was learnt by heart.
 - Tröster, Marco
 
 ## Quick Start
-0. Before you start, make sure that your PC runs a NVIDIA GPU that supports nvidia-docker.
+0. Before you start, make sure that your PC runs a NVIDIA GPU supporting nvidia-docker.
 1. First, set up your PC according to this
    [tutorial](https://github.com/ll7/paf21-1/wiki/Development-Machine-Setup-(NVIDIA-Docker)).
    It assists you at installing Docker with GPU support.
@@ -35,8 +35,15 @@ is not bound to a single map that was learnt by heart.
 Running steps 2-4 could look something like this (see the README files for further information):
 
 ```sh
+# clone the GitHub repo
+git clone https://github.com/ll7/paf21-1
+cd paf21-1
+
+# build the components
 cd components
 docker-compose -f simulation-images-build.yml build
+
+# launch the default scenario
 cd ../scenarios/default_scenario
 xhost +
 docker-compose up -d
