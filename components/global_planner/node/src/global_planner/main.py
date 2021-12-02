@@ -7,8 +7,8 @@ from dataclasses import dataclass
 import rospy
 from std_msgs.msg import String as StringMsg
 from sensor_msgs.msg import Image as ImageMsg, NavSatFix as GpsMsg
-from local_planner.preprocessing import RgbCameraPreprocessor
-from local_planner.route_planner import RoutePlanner
+# from local_planner.preprocessing import RgbCameraPreprocessor
+from global_planner.route_planner import RoutePlanner
 
 
 @dataclass
@@ -19,7 +19,7 @@ class LocalPlannerNode:
     vehicle_name: str
     publish_rate_in_hz: int
     local_route_publisher: rospy.Publisher = None
-    image_preprocessor: RgbCameraPreprocessor = RgbCameraPreprocessor()
+    # image_preprocessor: RgbCameraPreprocessor = RgbCameraPreprocessor()
     route_planner: RoutePlanner = RoutePlanner()
 
     def run_node(self):
@@ -40,7 +40,7 @@ class LocalPlannerNode:
         self.local_route_publisher = self.init_local_route_publisher()
         self.init_gps_subscriber()
         self.init_global_route_subscriber()
-        self.init_front_camera_subscriber()
+        # self.init_front_camera_subscriber()
 
     def init_global_route_subscriber(self):
         """Initialize the ROS subscriber receiving global routes"""
@@ -52,11 +52,12 @@ class LocalPlannerNode:
         in_topic = f"/carla/{self.vehicle_name}/gnss/gnss1/fix"
         rospy.Subscriber(in_topic, GpsMsg, self.route_planner.update_gps)
 
-    def init_front_camera_subscriber(self):
-        """Initialize the ROS subscriber receiving camera images"""
-        camera_type = "semantic_segmentation/front/image_segmentation"
-        in_topic = f"/carla/{self.vehicle_name}/camera/{camera_type}"
-        rospy.Subscriber(in_topic, ImageMsg, self.image_preprocessor.process_image)
+    # def init_front_camera_subscriber(self):
+    #     """Initialize the ROS subscriber receiving camera images"""
+    #     camera_type = "semantic_segmentation/front/image_segmentation"
+    #     in_topic = f"/carla/{self.vehicle_name}/camera/{camera_type}"
+    #     # rospy.Subscriber(in_topic, ImageMsg, self.image_preprocessor.process_image)
+        
 
     def init_local_route_publisher(self):
         """Initialize the ROS publisher for submitting local routes"""
