@@ -22,10 +22,11 @@ ADD ./requirements.txt /app/requirements.txt
 RUN python -m pip install -r /app/requirements.txt
 
 # test + lint the source code
-ADD ./node /app/src/local_planner
-WORKDIR /app/src/local_planner/src
-RUN source /opt/ros/noetic/setup.bash && \
-    python -m pytest tests && pylint local_planner --extension-pkg-whitelist=cv2
+ADD ./node /app/src/global_planner
+WORKDIR /app/src/global_planner/src
+# TODO add linter
+# RUN source /opt/ros/noetic/setup.bash && \
+#     python -m pytest tests && pylint global_planner --extension-pkg-whitelist=cv2
 
 # deploy the source code to ROS using catkin
 WORKDIR /app/catkin_ws/src
