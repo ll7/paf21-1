@@ -1,8 +1,9 @@
 
-# Vehicle Controller
+# Local Planner
 
 ## About
-This ROS node is capable of sending Ackermann driving signals to control an ego vehicle.
+This ROS node processes route data from the global planner and integrates
+it into the vehicle's environments using e.g. camera sensors, gps.
 
 ## Build Node + Run Tests
 
