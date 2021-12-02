@@ -65,6 +65,16 @@ services:
     networks:
       - ros
 
+  global-planner:
+    image: global_planner
+    # volumes:
+    #   - './logs:/app/logs'
+    environment:
+      ROS_MASTER_URI: http://roscore:11311
+      ROS_HOSTNAME: global-planner
+    networks:
+      - ros
+
 networks:
   carla:
   ros:
