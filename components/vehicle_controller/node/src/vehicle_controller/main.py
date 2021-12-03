@@ -48,21 +48,21 @@ class VehicleControllerNode:
         in_topic = f"/drive/{self.vehicle_name}/local_route"
         msg_to_route = RosDrivingAdapter.message_to_waypoints
         process_route = self.signal_converter.update_route
-        callback: lambda msg: process_route(msg_to_route(msg))
+        callback = lambda msg: process_route(msg_to_route(msg))
         rospy.Subscriber(in_topic, StringMsg, callback)
 
     def _init_target_velocity_subscriber(self):
         in_topic = f"/drive/{self.vehicle_name}/target_velocity"
         msg_to_velocity = RosDrivingAdapter.message_to_target_velocity
         process_velocity = self.signal_converter.update_target_velocity
-        callback: lambda msg: process_velocity(msg_to_velocity(msg))
+        callback = lambda msg: process_velocity(msg_to_velocity(msg))
         rospy.Subscriber(in_topic, FloatMsg, callback)
 
     def _init_gps_subscriber(self):
         in_topic = f"/carla/{self.vehicle_name}/gnss/gnss1/fix"
         msg_to_position = RosDrivingAdapter.message_to_vehicle_position
         process_position = self.signal_converter.update_vehicle_position
-        callback: lambda msg: process_position(msg_to_position(msg))
+        callback = lambda msg: process_position(msg_to_position(msg))
         rospy.Subscriber(in_topic, GpsMsg, callback)
 
     def _init_driving_signal_publisher(self):
