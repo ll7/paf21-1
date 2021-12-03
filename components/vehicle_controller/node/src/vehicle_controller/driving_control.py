@@ -1,7 +1,7 @@
 """Module for transitioning a fine-grained, idealistic route
-into Ackermann driving signals"""
+and other driving metadata into actionable driving signals"""
 
-import math
+from math import dist as euclid_dist
 from datetime import datetime
 from typing import Tuple, List
 from dataclasses import dataclass, field
@@ -13,8 +13,10 @@ class DrivingSignal:
     target_velocity_mps: float
 
 @dataclass
-class SimpleDrivingSignalConverter:
-    """A class converting a route into AckermannDrive signals"""
+class SimpleDrivingController:
+    """A class for processing waypoints and
+    driving metadata into driving signals
+    regarding velocity and steering control"""
     route_waypoints: List[Tuple[float, float]] = field(default_factory=list)
     target_velocity_mps: float = 0.0
     actual_velocity_mps: float = 0.0
@@ -39,7 +41,7 @@ class SimpleDrivingSignalConverter:
         new_timestamp = datetime.utcnow()
 
         if old_pos is not None:
-            dist = math.dist(old_pos, new_pos)
+            dist = euclid_dist(old_pos, new_pos)
             time = (new_timestamp - old_timestamp).total_seconds()
             self.actual_velocity_mps = dist / time
 
@@ -57,3 +59,8 @@ class SimpleDrivingSignalConverter:
         # source: https://dingyan89.medium.com/three-methods-of-vehicle-lateral-control-pure-pursuit-stanley-and-mpc-db8cc1d32081 # pylint: disable=line-too-long
         # source: http://www.shuffleai.blog/blog/Simple_Understanding_of_Kinematic_Bicycle_Model.html # pylint: disable=line-too-long
         return 0.0
+
+    # @staticmethod
+    # def _compute_turn_circle_radius(waypoints: List[Tuple[float, float]]):
+    #     near_points = filter(lambda wp: euclid_dist(waypoints[0], wp) <= 20, waypoints)
+        # interpolate the curve, e.g. with a taylor polynomial
