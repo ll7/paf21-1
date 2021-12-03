@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 """Main script defining the ROS node"""
 
-import json
 from dataclasses import dataclass
-
 import rospy
 from ackermann_msgs.msg import AckermannDrive
-from std_msgs.msg import String as StringMsg
+from std_msgs.msg import String as StringMsg, Float32 as FloatMsg
+from sensor_msgs.msg import NavSatFix as GpsMsg
+
 from vehicle_controller.driving import SimpleDrivingSignalConverter
 
 
@@ -16,14 +16,14 @@ class VehicleControllerNode:
     and make it drive according to a given route the node is constantly receiving."""
 
     vehicle_name: str
-    publish_rate_in_hz: int
+    publish_rate_in_hz: float
     signal_converter = SimpleDrivingSignalConverter()
     driving_signal_publisher: rospy.Publisher = None
 
     def run_node(self):
         """Launch the ROS node to receive planned routes
         and convert them into AckermannDrive signals"""
-        self.init_ros()
+        self._init_ros()
         rate = rospy.Rate(self.publish_rate_in_hz)
 
         while not rospy.is_shutdown():
@@ -31,29 +31,28 @@ class VehicleControllerNode:
             self.driving_signal_publisher.publish(signal)
             rate.sleep()
 
-    def init_ros(self):
-        """Initialize the ROS node's publishers and subscribers"""
+    def _init_ros(self):
         rospy.init_node(f'test_simple_driving_{self.vehicle_name}', anonymous=True)
-        self.driving_signal_publisher = self.init_driving_signal_publisher()
-        self.init_route_subscriber()
+        self.driving_signal_publisher = self._init_driving_signal_publisher()
+        self._init_route_subscriber()
+        self._init_target_velocity_subscriber()
+        self._init_gps_subscriber()
 
-    def init_route_subscriber(self):
-        """Initialize the ROS subscriber receiving route information"""
-        callback = lambda msg: self.signal_converter \
-            .update_route(self.parse_route(msg))
-        in_topic = f"/drive/{self.vehicle_name}/planned_route"
-        rospy.Subscriber(in_topic, StringMsg, callback)
+    def _init_route_subscriber(self):
+        in_topic = f"/drive/{self.vehicle_name}/local_route"
+        rospy.Subscriber(in_topic, StringMsg, self.signal_converter.update_route)
 
-    def init_driving_signal_publisher(self):
-        """Initialize the ROS publisher for submitting AckermannDrive signals"""
+    def _init_target_velocity_subscriber(self):
+        in_topic = f"/drive/{self.vehicle_name}/target_velocity"
+        rospy.Subscriber(in_topic, FloatMsg, self.signal_converter.update_target_velocity)
+
+    def _init_gps_subscriber(self):
+        in_topic = f"/carla/{self.vehicle_name}/gnss/gnss1/fix"
+        rospy.Subscriber(in_topic, GpsMsg, self.signal_converter.update_vehicle_position)
+
+    def _init_driving_signal_publisher(self):
         out_topic = f"/carla/{self.vehicle_name}/ackermann_cmd"
         return rospy.Publisher(out_topic, AckermannDrive, queue_size=100)
-
-    @classmethod
-    def parse_route(cls, route_json: StringMsg):
-        """Parse the route from JSON given a ROS message"""
-        json_data = route_json.data
-        return json.load(json_data)
 
 
 def main():
