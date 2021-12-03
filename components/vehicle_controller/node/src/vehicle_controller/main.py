@@ -1,16 +1,15 @@
 #!/usr/bin/env python
-"""Main script defining the ROS node"""
+"""Main script defining and running the ROS node"""
 
-import json
 from dataclasses import dataclass
-from typing import Tuple, List
 
 import rospy
 from ackermann_msgs.msg import AckermannDrive
 from std_msgs.msg import String as StringMsg, Float32 as FloatMsg
 from sensor_msgs.msg import NavSatFix as GpsMsg
 
-from vehicle_controller.driving import DrivingSignal, SimpleDrivingSignalConverter
+from vehicle_controller.driving_control import SimpleDrivingController
+from vehicle_controller.ros_msg_adapter import RosDrivingMessagesAdapter
 
 
 @dataclass
@@ -20,7 +19,7 @@ class VehicleControllerNode:
 
     vehicle_name: str
     publish_rate_in_hz: float
-    signal_converter = SimpleDrivingSignalConverter()
+    signal_converter = SimpleDrivingController()
     driving_signal_publisher: rospy.Publisher = None
 
     def run_node(self):
@@ -33,7 +32,7 @@ class VehicleControllerNode:
         rate = rospy.Rate(self.publish_rate_in_hz)
         while not rospy.is_shutdown():
             signal = self.signal_converter.next_signal()
-            msg = RosDrivingAdapter.signal_to_message(signal)
+            msg = RosDrivingMessagesAdapter.signal_to_message(signal)
             self.driving_signal_publisher.publish(msg)
             rate.sleep()
 
@@ -46,21 +45,21 @@ class VehicleControllerNode:
 
     def _init_route_subscriber(self):
         in_topic = f"/drive/{self.vehicle_name}/local_route"
-        msg_to_route = RosDrivingAdapter.message_to_waypoints
+        msg_to_route = RosDrivingMessagesAdapter.message_to_waypoints
         process_route = self.signal_converter.update_route
         callback = lambda msg: process_route(msg_to_route(msg))
         rospy.Subscriber(in_topic, StringMsg, callback)
 
     def _init_target_velocity_subscriber(self):
         in_topic = f"/drive/{self.vehicle_name}/target_velocity"
-        msg_to_velocity = RosDrivingAdapter.message_to_target_velocity
+        msg_to_velocity = RosDrivingMessagesAdapter.message_to_target_velocity
         process_velocity = self.signal_converter.update_target_velocity
         callback = lambda msg: process_velocity(msg_to_velocity(msg))
         rospy.Subscriber(in_topic, FloatMsg, callback)
 
     def _init_gps_subscriber(self):
         in_topic = f"/carla/{self.vehicle_name}/gnss/gnss1/fix"
-        msg_to_position = RosDrivingAdapter.message_to_vehicle_position
+        msg_to_position = RosDrivingMessagesAdapter.message_to_vehicle_position
         process_position = self.signal_converter.update_vehicle_position
         callback = lambda msg: process_position(msg_to_position(msg))
         rospy.Subscriber(in_topic, GpsMsg, callback)
@@ -68,37 +67,6 @@ class VehicleControllerNode:
     def _init_driving_signal_publisher(self):
         out_topic = f"/carla/{self.vehicle_name}/ackermann_cmd"
         return rospy.Publisher(out_topic, AckermannDrive, queue_size=100)
-
-
-class RosDrivingAdapter:
-    """Convert between ROS messages and driving data"""
-
-    @staticmethod
-    def message_to_waypoints(msg: StringMsg) -> List[Tuple[float, float]]:
-        """Convert a ROS message into waypoints"""
-        json_list = json.loads(msg.data)
-        waypoints = [(wp.x, wp.y) for wp in json_list]
-        return waypoints
-
-    @staticmethod
-    def message_to_target_velocity(msg: FloatMsg) -> float:
-        """Convert a ROS message into the target velocity"""
-        return msg.data
-
-    @staticmethod
-    def message_to_vehicle_position(msg: GpsMsg) -> Tuple[float, float]:
-        """Convert a ROS message into the vehicle position"""
-        return (msg.longitude, msg.latitude)
-
-    @staticmethod
-    def signal_to_message(signal: DrivingSignal) -> AckermannDrive:
-        """Convert a driving signal into a ROS message"""
-        return AckermannDrive(
-            steering_angle=signal.steering_angle_rad,
-            steering_angle_velocity=0.0,
-            speed=signal.target_velocity_mps,
-            acceleration=0.0,
-            jerk=0.0)
 
 
 def main():
