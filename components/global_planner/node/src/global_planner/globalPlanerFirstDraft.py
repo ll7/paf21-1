@@ -238,7 +238,7 @@ for child in root:
                     if link.tag == "predecessor":
                         road_dict['predecessor'] = int(link.attrib['elementId'])
                         road_dict['link_type_pre'] = link.attrib['elementType']
-                        road_dict['contactPoint_pre'] = link.attrib['contactPoint']
+                        road_dict['contactPoint_pre'] = link.get('contactPoint')
                     elif link.tag == "predecessor" and link.attrib['elementType']== "road":
                         road_dict['successor'] = int(link.attrib['elementId'])
                         road_dict['link_type_suc'] = link.attrib['elementType']
@@ -255,7 +255,7 @@ for child in root:
                         start_point = [float(planeView.attrib['x']), float(planeView.attrib['y'])]
                         angle = float(planeView.attrib['hdg'])
                         length = float(planeView.attrib['length'])
-                        # end_point = [start_point[0]+math.cos(angle)*length, start_point[1]+math.sin(angle)*length]
+                        end_point = [start_point[0]+math.cos(angle)*length, start_point[1]+math.sin(angle)*length]
                         if 'geometry' in road_dict.keys():
                             tmp = road_dict['geometry']
                             # tmp.append([start_point, end_point, length])
