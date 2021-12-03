@@ -6,14 +6,15 @@
   <maintainer email="info@informatik.uni-augsburg.de">University of Augsburg - Chair of Mechatronics</maintainer>
   <license>MIT</license>
 
-  <!-- <exec_depend>std_msgs</exec_depend>
+  <!--
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>derived_object_msgs</exec_depend>
   <exec_depend>shape_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
   <exec_depend>tf2_msgs</exec_depend>
   <exec_depend>rosgraph_msgs</exec_depend> -->
-  <!-- <exec_depend>sensor_msgs</exec_depend> -->
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>ackermann_msgs</exec_depend>
   <!-- <exec_depend>visualization_msgs</exec_depend>
   <exec_depend>carla_common</exec_depend>
