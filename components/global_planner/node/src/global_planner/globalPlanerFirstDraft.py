@@ -51,11 +51,9 @@ def printPath(parent, j):
 
 def printSolution(dist, parent, endPoint):
     src = 0
-    # print("Vertex \t\tDistance from Source\tPath")
 
     for i in range(1, len(dist)):
         if i == endPoint:
-            # print("\n%d --> %d \t\t%d \t\t\t\t\t" % (src, i, dist[i])),
             printPath(parent, i)
     return patharray
 
@@ -97,12 +95,10 @@ def dijkstra2(graph, src):
         # still in queue
 
         u = minDistance(dist, queue)
-        # print(queue, " ", u)
         # remove min element
-        if u != -1:
-            queue.remove(u)
-        else:
-            queue.pop()
+        if u == -1:
+            return dist, parent
+        queue.remove(u)
         #queue.remove(u)
 
         # Update dist value and parent
@@ -128,7 +124,6 @@ def distancePoints(x, y, x2, y2):
 
 def saveMatrix(matrix, name):
     np.save(name, matrix, allow_pickle=True)
-    print("Done: ", name)
 
 
 # Load Matrix from CSV
@@ -335,7 +330,10 @@ def findMapingConnectin(junctions, junction_id, first):
         else:
             return index + rec -1
 
-
+i = 0
+j = 0
+i2 = 0
+j2 = 0
 for road in lanelets:
     ### Link predecessor and successor
     # suc = road['successor']
@@ -346,6 +344,7 @@ for road in lanelets:
         index_pre = -1
 
         if pre_type == 'road':
+            j += 1
             if road['contactPoint_pre'] == 'start':
                 # Letzter Eintrag Pre
                 index_pre = findMaping(mapping, pre, True)
@@ -360,6 +359,7 @@ for road in lanelets:
             matrix[index_id][index_pre] = 0.0001
 
         elif pre_type == 'junction':
+            i += 1
             index_pre_first = findMapingConnectin(junctions, pre, True)
             index_pre_last = findMapingConnectin(junctions, pre, False)
             for i in range(index_pre_first, index_pre_last+1):
@@ -381,6 +381,7 @@ for road in lanelets:
         suc_type = road['link_type_suc']
 
         if suc_type == 'road':
+            j2 += 1
             index_sucessor = -1
             if road['contactPoint_suc'] == 'start':
                 # Erster Eintrag Succ
@@ -395,6 +396,7 @@ for road in lanelets:
             matrix[index_sucessor][index_id] = 0.0001
 
         elif suc_type == 'junction':
+            i2 += 1
             index_sucessor_first = findMapingConnectin(junctions, suc, True)
             index_sucessor_last = findMapingConnectin(junctions, suc, False)
             for i in range(index_sucessor_first, index_sucessor_last+1):
@@ -412,39 +414,30 @@ for road in lanelets:
                     matrix[index_id][index_id2] = 0.0001
 
 
-# print(junctions)
-# print(matrix)
-# print(mapping)
-# print(x_array)
-# print(y_array)
 
 start = 0
 end = 1
 
-startPoint = findMaping(mapping, 75, True)
+startPoint = findMaping(mapping, 0, True)
 endPoint = findMaping(mapping, 18, True)
 
 di2 = dijkstra2(matrix, startPoint)
-print(di2[0][endPoint])
-#print(di2[1])
+print(di2[0])
 printSolution(di2[0], di2[1], endPoint)
 
 list_lanes = []
 list_waypoints = []
-#print(matrix.shape, " ", len(mapping))
-#print(patharray)
+
 
 for path in patharray:
     if int(mapping[path][1]) % 2 == 0:
         list_waypoints.append({'x': mapping[path][2][0], 'y': mapping[path][2][1]})
         list_lanes.append([mapping[path][0], mapping[path][1]])
 
-print(startPoint, ' ', endPoint)
-print(mapping)
-print(list_lanes)
-print()
-print(list_waypoints)
 
 
 saveMatrix(matrix, "mat.npy")
 # matrix = loadMatrix("mat.npy")
+print("Kanten Pre: ", i, ' ', j)
+print("Kanten Suc: ", i2, ' ', j2)
+print(len(matrix))
