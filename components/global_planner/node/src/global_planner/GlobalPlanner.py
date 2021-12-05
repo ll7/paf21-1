@@ -2,7 +2,7 @@ import os.path
 import numpy as np
 import networkx as nx
 import xml.etree.ElementTree as eTree
-
+import math
 
 class GlobalPlanner:
     def __init__(self, num_nodes):
@@ -120,6 +120,7 @@ class XODRConverter:
         self.connections = []
         self.num_nodes = 0
         self.road = None
+        self.junctions = []
 
     def get_lane_sec(self):
         return self.road.find('lanes').find('laneSection')
@@ -147,6 +148,36 @@ class XODRConverter:
                 objects.append([obj.get('name'), obj.get('s'), obj.get('t')])
         return objects
 
+    def calculateEndPoint(self, startPoint, angle, length):
+        return (startPoint[0] + math.cos(angle) * length, startPoint[1] + math.sin(angle) * length)
+
+    def get_geometry(self):
+        objects = []
+        if self.road.find('planView') is not None:
+            for obj in self.road.find('planView').findall('geometry'):
+                start_point = [float(obj.attrib['x']), float(obj.attrib['y'])]
+                angle = float(obj.attrib['hdg'])
+                length = float(obj.attrib['length'])
+                end_point = self.calculateEndPoint(start_point, angle, length)
+                objects.append([start_point, angle, length, end_point])
+
+        return objects
+
+    def get_junctionDic(self, allJunctions):
+
+        for junction in allJunctions:
+            for connection in junction:
+                if connection.tag == 'connection':
+                    junction_dict = {}
+                    junction_dict['junction_id'] = id
+                    junction_dict['connection_id'] = int(connection.attrib['id'])
+                    junction_dict['incomingRoad'] = int(connection.attrib['incomingRoad'])
+                    junction_dict['connectingRoad'] = int(connection.attrib['connectingRoad'])
+                    junction_dict['contactPoint'] = connection.attrib['contactPoint']
+                    self.junctions.append(junction_dict)
+
+        return self.junctions
+
     def read_xodr(self, filepath):
         # check if file exist
         if not os.path.isfile(filepath):
@@ -160,14 +191,24 @@ class XODRConverter:
         for road in root.findall('road'):
             self.road = road
             road_dict = dict()
-            road_dict['road_id'] = self.road.get('id')
+            road_dict['road_id'] = int(self.road.get('id'))
             road_dict['junction'] = int(self.road.get('junction'))
 
             # parse the successor
             suc = self.road.find('link').find('successor')
-            road_dict['suc_type'] = suc.get('elementType')
             road_dict['suc_id'] = int(suc.get('elementId'))
-            road_dict['contact_point'] = suc.get('contactPoint')
+            road_dict['suc_type'] = suc.get('elementType')
+            #road_dict['contact_point'] = suc.get('contactPoint')
+            if suc.attrib['elementType'] == "road":
+                road_dict['contactPoint_suc'] = suc.attrib['contactPoint']
+
+            # parse the predecessor
+            pre = self.road.find('link').find('predecessor')
+            road_dict['pre_id'] = int(pre.get('elementId'))
+            road_dict['pre_type'] = pre.get('elementType')
+            #road_dict['contact_point'] = pre.get('contactPoint')
+            if pre.attrib['elementType'] == "road":
+                road_dict['contactPoint_pre'] = pre.attrib['contactPoint']
 
             # get the lane ids and the line type
             ids = self.get_lane_id()
@@ -179,16 +220,16 @@ class XODRConverter:
             road_dict['traffic_signs'] = self.get_traffic_signs()
 
             # parse all geometries
-            for i, geometry in enumerate(road.find('planView').findall('geometry')):
-                pass
-
-            print(road_dict)
+            geometry = self.get_geometry()
+            road_dict['geometry'] = geometry
+            self.num_nodes += len(geometry)*2
+            #print(road_dict)
             # add new dict to lane_lets
             self.lane_lets.append(road_dict)
 
         # parse all junctions
-        for junction in root.findall('junction'):
-            pass
+        self.get_junctionDic(root.findall('junction'))
+        print(self.junctions)
 
 
 if __name__ == "__main__":
