@@ -149,6 +149,7 @@ class XODRConverter:
         return objects
 
     def calculateEndPoint(self, startPoint, angle, length):
+        #ToDo Check Implementatiuon
         return (startPoint[0] + math.cos(angle) * length, startPoint[1] + math.sin(angle) * length)
 
     def get_geometry(self):
@@ -231,6 +232,8 @@ class XODRConverter:
         self.get_junctionDic(root.findall('junction'))
         print(self.junctions)
 
+    def link_geometry(self):
+        pass
 
 if __name__ == "__main__":
     filename = 'Town01.xodr'
