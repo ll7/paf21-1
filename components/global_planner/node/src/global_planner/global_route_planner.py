@@ -18,6 +18,7 @@ class GlobalRoutePlanner:
         self.matrix_pos = 0
         # graph with
         self.graph = np.zeros(shape=(num_nodes, num_nodes))
+        self.graph_start_end = np.zeros(shape=(num_nodes+2, num_nodes+2))
         # initialize all distances with inf.
         self.dist = [float("Inf")] * num_nodes
         # array for the parents to store shortest path tree
@@ -168,28 +169,35 @@ class GlobalRoutePlanner:
         nx.draw(gr, node_size=500, labels=list(self.nodes.keys()), with_labels=True)
 
     def find_nearest_road(self, point):
-
         ids = []
+        self.graph_start_end = np.append(np.copy(self.graph), np.zeros((4, self.num_nodes)), axis=0)
+        self.graph_start_end = np.append(self.graph_start_end, np.zeros((self.num_nodes+4, 4)), axis=1)
+        print(self.graph_start_end.shape)
+        print()
 
         for i in range(0, len(self.mapping), 2):
             start_point = self.mapping[i][2]
             end_point = self.mapping[i+1][2]
 
-            # TODO only approx -> calculate right box
-            left_lower_corner = start_point[1] - self.road_width
-            left_upper_corner = start_point[1] + self.road_width
-            right_lower_corner = end_point[1] - self.road_width
-            right_upper_corner = end_point[1] + self.road_width
+            alpha = np.arctan((end_point[1]-start_point[1]) / (end_point[0]-start_point[0]))
+            beta = math.pi + alpha + math.pi/2
 
-            polygon = Polygon([(start_point[0], left_lower_corner),
-                               (start_point[0], left_upper_corner),
-                               (end_point[0], right_lower_corner),
-                               (end_point[0], right_upper_corner)])
+            offset_x = math.cos(beta) * self.road_width
+            offset_y = math.sin(beta) * self.road_width
+            ll_corner = (start_point[0] + offset_x, start_point[1] - offset_y)
+            lu_corner = (start_point[0] - offset_x, start_point[1] + offset_y)
+            rl_corner = (end_point[0] + offset_x, end_point[1] - offset_y)
+            ru_corner = (end_point[0] - offset_x, end_point[1] + offset_y)
 
-            if polygon.contains(point):
+            polygon = Polygon([ll_corner, lu_corner, ru_corner, rl_corner])
+            if polygon.contains(Point(point[0], point[1])):
+
                 ids.append([self.mapping[i][0], self.mapping[i][1]])
-
+        print(ids)
         return ids
+
+    def calculate_distance(self, point):
+        pass
 
     def compute_route(self):
         # 0. prüfen ob die map daten vorhanden sind
@@ -198,6 +206,7 @@ class GlobalRoutePlanner:
         # 1. load and set map
             # Done
         # 2. start and endpoint
+
             # 2.05 Finde Punkte
                 # done
             # 2.1 StartPunkt in Matrix einfuegen --> n-2  /  gefundener punkt

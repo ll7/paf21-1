@@ -314,3 +314,6 @@ if __name__ == "__main__":
     gp.set_matrix(xodr.matrix)
     gp.set_mapping(xodr.mapping)
     gp.compute_route()
+    #gp.set_gps()
+    #gp.set_targetDestionation()
+    gp.find_nearest_road((163.0, 0.004))
