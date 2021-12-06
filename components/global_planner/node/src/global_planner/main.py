@@ -54,8 +54,8 @@ class GlobalPlannerNode:
 
     def init_global_route_publisher(self):
         """Initialize the ROS publisher for submitting local routes"""
-        out_topic = f"/drive/{self.vehicle_name}/local_route"
-        return rospy.Publisher(out_topic, StringMsg, queue_size=100)
+        out_topic = f"/drive/{self.vehicle_name}/global_route"
+        return rospy.Publisher(out_topic, StringMsg, queue_size=1)
 
     @classmethod
     def parse_hmi_msg(cls, hmi_json: StringMsg):
