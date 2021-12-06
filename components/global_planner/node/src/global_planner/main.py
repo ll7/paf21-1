@@ -7,68 +7,60 @@ from dataclasses import dataclass
 import rospy
 from std_msgs.msg import String as StringMsg
 from sensor_msgs.msg import Image as ImageMsg, NavSatFix as GpsMsg
-# from local_planner.preprocessing import RgbCameraPreprocessor
-from global_planner.route_planner import RoutePlanner
+
+from global_route_planner import GlobalRoutePlanner
 
 
 @dataclass
-class LocalPlannerNode:
-    """A class representing a ROS node that's processing route and
-    local sensor data to handle the interaction with other vehicles, etc."""
+class GlobalPlannerNode:
+    """A class representing a ROS node that's planning a global route."""
 
     vehicle_name: str
     publish_rate_in_hz: int
-    local_route_publisher: rospy.Publisher = None
+    global_route_publisher: rospy.Publisher = None
     # image_preprocessor: RgbCameraPreprocessor = RgbCameraPreprocessor()
-    route_planner: RoutePlanner = RoutePlanner()
+    global_route_planner: GlobalRoutePlanner = GlobalRoutePlanner()
 
     def run_node(self):
-        """Launch the ROS node to receive globally planned routes
-        and convert them into locally planned routes using sensors"""
-
+        """Launch the ROS node to receive the map, the start and
+         end position and convert them into a global planned route."""
         self.init_ros()
         rate = rospy.Rate(self.publish_rate_in_hz)
 
         while not rospy.is_shutdown():
-            local_route = self.route_planner.compute_local_route()
-            self.local_route_publisher.publish(local_route)
+            if self.global_route_planner.update:
+                global_route = self.global_route_planner.compute_route()
+                self.global_route_publisher.publish(global_route)
+                self.global_route_planner.update = False
+
             rate.sleep()
 
     def init_ros(self):
         """Initialize the ROS node's publishers and subscribers"""
-        rospy.init_node(f'local_planner_{self.vehicle_name}', anonymous=True)
-        self.local_route_publisher = self.init_local_route_publisher()
+        rospy.init_node(f'global_planner_{self.vehicle_name}', anonymous=True)
+        self.global_route_publisher = self.init_global_route_publisher()
+        self.init_hmi_route_subscriber()
         self.init_gps_subscriber()
-        self.init_global_route_subscriber()
-        # self.init_front_camera_subscriber()
 
-    def init_global_route_subscriber(self):
-        """Initialize the ROS subscriber receiving global routes"""
-        in_topic = f"/drive/{self.vehicle_name}/global_route"
-        rospy.Subscriber(in_topic, StringMsg, self.route_planner.update_global_route)
+    def init_hmi_route_subscriber(self):
+        """Initialize the ROS subscriber receiving map and end"""
+        in_topic = f"/drive/{self.vehicle_name}/hmi"
+        rospy.Subscriber(in_topic, StringMsg, self.global_route_planner.set_map_end)
 
     def init_gps_subscriber(self):
         """Initialize the ROS subscriber receiving GPS data"""
         in_topic = f"/carla/{self.vehicle_name}/gnss/gnss1/fix"
-        rospy.Subscriber(in_topic, GpsMsg, self.route_planner.update_gps)
+        rospy.Subscriber(in_topic, GpsMsg, self.global_route_planner.set_gps)
 
-    # def init_front_camera_subscriber(self):
-    #     """Initialize the ROS subscriber receiving camera images"""
-    #     camera_type = "semantic_segmentation/front/image_segmentation"
-    #     in_topic = f"/carla/{self.vehicle_name}/camera/{camera_type}"
-    #     # rospy.Subscriber(in_topic, ImageMsg, self.image_preprocessor.process_image)
-        
-
-    def init_local_route_publisher(self):
+    def init_global_route_publisher(self):
         """Initialize the ROS publisher for submitting local routes"""
         out_topic = f"/drive/{self.vehicle_name}/local_route"
         return rospy.Publisher(out_topic, StringMsg, queue_size=100)
 
     @classmethod
-    def parse_route(cls, route_json: StringMsg):
-        """Parse the route from JSON given a ROS message"""
-        json_data = route_json.data
-        return json.load(json_data)
+    def parse_hmi_msg(cls, hmi_json: StringMsg):
+        """Parse the hmi message from JSON given a ROS message"""
+        return json.load(hmi_json.data)
 
 
 def main():
@@ -76,9 +68,9 @@ def main():
     with specific configuration parameters"""
 
     vehicle_name = "ego_vehicle"
-    publish_rate_hz = 10
+    publish_rate_in_hz = 1
 
-    node = LocalPlannerNode(vehicle_name, publish_rate_hz)
+    node = GlobalPlannerNode(vehicle_name, publish_rate_in_hz)
     node.run_node()
 
 
