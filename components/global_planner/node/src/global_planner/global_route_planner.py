@@ -172,9 +172,6 @@ class GlobalRoutePlanner:
         ids = []
 
         for i in range(0, len(self.mapping), 2):
-            #mapping.append((road['road_id'], geoID, geometry[0]))
-            #mapping.append((road['road_id'], geoID + 1, geometry[3]))
-            #(id, goeid, (x,y))
             start_point = self.mapping[i][2]
             end_point = self.mapping[i+1][2]
 
@@ -202,7 +199,9 @@ class GlobalRoutePlanner:
             # Done
         # 2. start and endpoint
             # 2.05 Finde Punkte
+                # done
             # 2.1 StartPunkt in Matrix einfuegen --> n-2  /  gefundener punkt
+
             # 2.2 EndPunkt in Matrix einfuegen --> n-1  /  gefundener punkt
 
         # from start and end point get id
