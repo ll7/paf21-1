@@ -113,6 +113,7 @@ class XODRConverter:
 
             # parse the successor
             suc = self.road.find('link').find('successor')
+            #Fettes ToDo: AttributeError: 'NoneType' object has no attribute 'get'
             road_dict['suc_id'] = int(suc.get('elementId'))
             road_dict['suc_type'] = suc.get('elementType')
             # road_dict['contact_point'] = suc.get('contactPoint')
@@ -299,7 +300,7 @@ class XODRConverter:
 
 if __name__ == "__main__":
 
-    filename = 'Town01.xodr'
+    filename = 'Town03.xodr'
 
     xodr = XODRConverter()
     xodr.read_xodr(filename)
