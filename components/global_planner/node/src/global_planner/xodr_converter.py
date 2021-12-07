@@ -113,20 +113,22 @@ class XODRConverter:
 
             # parse the successor
             suc = self.road.find('link').find('successor')
-            #Fettes ToDo: AttributeError: 'NoneType' object has no attribute 'get'
-            road_dict['suc_id'] = int(suc.get('elementId'))
-            road_dict['suc_type'] = suc.get('elementType')
-            # road_dict['contact_point'] = suc.get('contactPoint')
-            if suc.attrib['elementType'] == "road":
-                road_dict['contactPoint_suc'] = suc.attrib['contactPoint']
+            if (suc != None):
+                #Fettes ToDo: AttributeError: 'NoneType' object has no attribute 'get'
+                road_dict['suc_id'] = int(suc.get('elementId'))
+                road_dict['suc_type'] = suc.get('elementType')
+                # road_dict['contact_point'] = suc.get('contactPoint')
+                if suc.attrib['elementType'] == "road":
+                    road_dict['contactPoint_suc'] = suc.attrib['contactPoint']
 
             # parse the predecessor
             pre = self.road.find('link').find('predecessor')
-            road_dict['pre_id'] = int(pre.get('elementId'))
-            road_dict['pre_type'] = pre.get('elementType')
-            # road_dict['contact_point'] = pre.get('contactPoint')
-            if pre.attrib['elementType'] == "road":
-                road_dict['contactPoint_pre'] = pre.attrib['contactPoint']
+            if (pre != None):
+                road_dict['pre_id'] = int(pre.get('elementId'))
+                road_dict['pre_type'] = pre.get('elementType')
+                # road_dict['contact_point'] = pre.get('contactPoint')
+                if pre.attrib['elementType'] == "road":
+                    road_dict['contactPoint_pre'] = pre.attrib['contactPoint']
 
             # get the lane ids and the line type
             ids = self.get_lane_id()
@@ -317,4 +319,4 @@ if __name__ == "__main__":
     gp.compute_route()
     #gp.set_gps()
     #gp.set_targetDestionation()
-    gp.find_nearest_road((163.0, 0.004))
+

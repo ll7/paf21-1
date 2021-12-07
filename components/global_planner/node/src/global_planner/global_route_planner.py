@@ -20,9 +20,9 @@ class GlobalRoutePlanner:
         self.graph = np.zeros(shape=(num_nodes, num_nodes))
         self.graph_start_end = np.zeros(shape=(num_nodes+2, num_nodes+2))
         # initialize all distances with inf.
-        self.dist = [float("Inf")] * num_nodes
+        self.dist = [float("Inf")] * (num_nodes+2)
         # array for the parents to store shortest path tree
-        self.parent = [-1] * num_nodes
+        self.parent = [-1] * (num_nodes+2)
         # path
         self.path = []
         #mapping
@@ -123,11 +123,11 @@ class GlobalRoutePlanner:
     def dijkstra2(self, src):
         row = len(self.graph)
         col = len(self.graph[0])
-        dist = [float("Inf")] * row
+        dist = [float("Inf")] * (row+2)
         dist[src] = 0.0
         queue = []
         #Fill queue 0- x
-        for i in range(row):
+        for i in range(row+2):
             queue.append(i)
 
         while queue:
@@ -136,9 +136,9 @@ class GlobalRoutePlanner:
                 return
             queue.remove(u)
             for i in range(col):
-                if self.graph[u][i] and i in queue:
-                    if dist[u] + self.graph[u][i] < dist[i]:
-                        dist[i] = dist[u] + self.graph[u][i]
+                if self.graph_start_end[u][i] and i in queue:
+                    if dist[u] + self.graph_start_end[u][i] < dist[i]:
+                        dist[i] = dist[u] + self.graph_start_end[u][i]
                         self.parent[i] = u
             self.dist = dist
 
@@ -168,18 +168,25 @@ class GlobalRoutePlanner:
         gr.add_edges_from(edges)
         nx.draw(gr, node_size=500, labels=list(self.nodes.keys()), with_labels=True)
 
-    def find_nearest_road(self, point):
-        ids = []
-        self.graph_start_end = np.append(np.copy(self.graph), np.zeros((4, self.num_nodes)), axis=0)
-        self.graph_start_end = np.append(self.graph_start_end, np.zeros((self.num_nodes+4, 4)), axis=1)
+    def find_nearest_road(self):
+        ids_Start = []
+        ids_End = []
+        point = self.start_pos
+        point2 = self.end_pos
+        self.graph_start_end = np.append(np.copy(self.graph), np.zeros((2, self.num_nodes)), axis=0)
+        self.graph_start_end = np.append(self.graph_start_end, np.zeros((self.num_nodes+2, 2)), axis=1)
         print(self.graph_start_end.shape)
         print()
+        self.mapping.append((-1, 0, self.start_pos))
+        self.mapping.append((-2, 0, self.end_pos))
 
         for i in range(0, len(self.mapping), 2):
             start_point = self.mapping[i][2]
             end_point = self.mapping[i+1][2]
-
-            alpha = np.arctan((end_point[1]-start_point[1]) / (end_point[0]-start_point[0]))
+            div = (end_point[0]-start_point[0])
+            if div == 0:
+                div = 0.000000000001
+            alpha = np.arctan((end_point[1]-start_point[1]) / div)
             beta = math.pi + alpha + math.pi/2
 
             offset_x = math.cos(beta) * self.road_width
@@ -191,10 +198,18 @@ class GlobalRoutePlanner:
 
             polygon = Polygon([ll_corner, lu_corner, ru_corner, rl_corner])
             if polygon.contains(Point(point[0], point[1])):
+                ids_Start.append([self.mapping[i][0], self.mapping[i][1]])
+                # ToDo Gewichtung setzten zu start und ende (Abstand)
+                self.graph_start_end[i][self.num_nodes] = 10
+                self.graph_start_end[self.num_nodes][i] = 10
+                print('start road:', self.mapping[i][0] , ' i:', i)
 
-                ids.append([self.mapping[i][0], self.mapping[i][1]])
-        print(ids)
-        return ids
+            if polygon.contains(Point(point2[0], point2[1])):
+                ids_End.append([self.mapping[i][0], self.mapping[i][1]])
+                self.graph_start_end[i][self.num_nodes+1] = 10
+                self.graph_start_end[self.num_nodes+1][i] = 10
+                print('end road:', self.mapping[i][0], ' i:', i)
+        return ids_Start, ids_End
 
     def calculate_distance(self, point):
         pass
@@ -206,9 +221,10 @@ class GlobalRoutePlanner:
         # 1. load and set map
             # Done
         # 2. start and endpoint
-
+        self.start_pos = (20.0, 0.004)
+        self.end_pos = (250.0, -0.004)
             # 2.05 Finde Punkte
-                # done
+        self.find_nearest_road()
             # 2.1 StartPunkt in Matrix einfuegen --> n-2  /  gefundener punkt
 
             # 2.2 EndPunkt in Matrix einfuegen --> n-1  /  gefundener punkt
@@ -218,9 +234,14 @@ class GlobalRoutePlanner:
 
         # 3. start dijkstra
         # ToDo
-        self.dijkstra2(0)
+        print('start: ', self.graph_start_end[14][self.num_nodes])
+        print('start: ', self.graph_start_end[15][self.num_nodes])
+        print('end: ', self.graph_start_end[6][self.num_nodes+1])
+        print('end: ', self.graph_start_end[7][self.num_nodes+1])
+        self.dijkstra2(self.num_nodes)
+        print(self.dist)
         # TODO
-        self.calculate_route(5)
+        self.calculate_route(6)
         list_lanes = []
         list_waypoints = []
         print(self.path)
