@@ -2,21 +2,43 @@
 
 from math import dist
 from typing import List, Tuple
-
+import rospy
 from numpy.core.fromnumeric import argsort
 from std_msgs.msg import String as StringMsg
-from sensor_msgs.msg import NavSatFix as GpsMsg
+from sensor_msgs.msg import NavSatFix as GpsMsg, Imu as ImuMsg
 
-class RoutePlanner:
-    """A route planner based on map and sensor data"""
 
-    vehicle_position: Tuple[float, float]
+class RouteInfoMeta(type):
+    """
+    Makes sure every module uses the same data
+    """
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            instance = super().__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+        return cls._instances[cls]
+
+
+class RouteInfo(metaclass=RouteInfoMeta):
+    """A class that keeps all the necessary information needed by all the modules,
+    this class should be expanded if needed"""
+    vehicle_vector: Tuple[float, float] = None
+    vehicle_position: Tuple[float, float] = None
     global_route: List[Tuple[float, float]] = None
     cached_local_route: List[Tuple[float, float]] = None
+
+    def update_vehicle_vector(self, msg: ImuMsg):
+        """Calculates the vektor the car is currently driving"""
+        length = (msg.orientation.x ** 2 + msg.orientation.x ** 2)**0.5
+        self.vehicle_vector = [msg.orientation.x / length, msg.orientation.y / length]
+        rospy.loginfo(self.vehicle_vector)
 
     def update_gps(self, msg: GpsMsg):
         """Update the GPS position of the vehicle"""
         self.vehicle_position = (msg.longitude, msg.latitude)
+        rospy.loginfo(self.vehicle_position)
 
     def update_global_route(self, msg: StringMsg):
         """Update the global route to follow"""
@@ -33,10 +55,9 @@ class RoutePlanner:
         # interpolate the route such that the route points are closely aligned
 
         # filter the parts of the global route of the near future
-        neihgbour_ids = argsort([dist(p, self.vehicle_position) for p in self.global_route])
-        self.cached_local_route = self.global_route[max(neihgbour_ids[0], neihgbour_ids[1]):]
-        self.cached_local_route = self.cached_local_route[:min(10, len(self.cached_local_route))]
-
+        neighbour_ids = argsort([dist(p, self.vehicle_position) for p in self.global_route])
+        cached_local_route = self.global_route[max(neighbour_ids[0], neighbour_ids[1]):]
+        cached_local_route = cached_local_route[:min(10, len(cached_local_route))]
         # put more sophisticated route computation here ...
 
-        return self.cached_local_route
+        return cached_local_route

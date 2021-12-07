@@ -3,12 +3,11 @@
 
 import json
 from dataclasses import dataclass
-
 import rospy
 from std_msgs.msg import String as StringMsg
-from sensor_msgs.msg import Image as ImageMsg, NavSatFix as GpsMsg
+from sensor_msgs.msg import Image as ImageMsg, NavSatFix as GpsMsg, Imu as ImuMsg
 from local_planner.preprocessing import RgbCameraPreprocessor
-from local_planner.route_planner import RoutePlanner
+from local_planner.route_planner import RouteInfo
 
 
 @dataclass
@@ -20,7 +19,7 @@ class LocalPlannerNode:
     publish_rate_in_hz: int
     local_route_publisher: rospy.Publisher = None
     image_preprocessor: RgbCameraPreprocessor = RgbCameraPreprocessor()
-    route_planner: RoutePlanner = RoutePlanner()
+    route_planner: RouteInfo = RouteInfo()
 
     def run_node(self):
         """Launch the ROS node to receive globally planned routes
@@ -31,6 +30,7 @@ class LocalPlannerNode:
 
         while not rospy.is_shutdown():
             local_route = self.route_planner.compute_local_route()
+            local_route = json.dumps(local_route)
             self.local_route_publisher.publish(local_route)
             rate.sleep()
 
@@ -39,6 +39,7 @@ class LocalPlannerNode:
         rospy.init_node(f'local_planner_{self.vehicle_name}', anonymous=True)
         self.local_route_publisher = self.init_local_route_publisher()
         self.init_gps_subscriber()
+        self.init_vehicle_orientation_subscriber()
         self.init_global_route_subscriber()
         self.init_front_camera_subscriber()
 
@@ -51,6 +52,11 @@ class LocalPlannerNode:
         """Initialize the ROS subscriber receiving GPS data"""
         in_topic = f"/carla/{self.vehicle_name}/gnss/gnss1/fix"
         rospy.Subscriber(in_topic, GpsMsg, self.route_planner.update_gps)
+
+    def init_vehicle_orientation_subscriber(self):
+        """Initialize the ROS subscriber receiving GPS data"""
+        in_topic = f"/carla/{self.vehicle_name}/imu/imu1"
+        rospy.Subscriber(in_topic, ImuMsg, self.route_planner.update_vehicle_vector)
 
     def init_front_camera_subscriber(self):
         """Initialize the ROS subscriber receiving camera images"""
