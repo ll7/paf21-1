@@ -9,14 +9,14 @@ def test_should_parse_route_waypoints():
     waypoints_json = '[ { "x": 0.0, "y": 0.0 }, { "x": 0.0, "y": 1.0 }, { "x": 0.2, "y": 1.7 } ]'
     exp_waypoints = [(0.0, 0.0), (0.0, 1.0), (0.2, 1.7)]
     msg = StringMsg(data=waypoints_json)
-    waypoints = RosDrivingMessagesAdapter.message_to_waypoints(msg)
+    waypoints = RosDrivingMessagesAdapter.json_message_to_waypoints(msg)
     assert(waypoints == exp_waypoints)
 
 def test_should_parse_route_waypoints_and_ignore_metadata():
     waypoints_json = '[ { "x": 0.0, "y": 0.0, "foo": "bar" }, { "some": "thing", "x": 0.0, "y": 1.0 }, { "x": 0.2, "y": 1.7 } ]'
     exp_waypoints = [(0.0, 0.0), (0.0, 1.0), (0.2, 1.7)]
     msg = StringMsg(data=waypoints_json)
-    waypoints = RosDrivingMessagesAdapter.message_to_waypoints(msg)
+    waypoints = RosDrivingMessagesAdapter.json_message_to_waypoints(msg)
     assert(waypoints == exp_waypoints)
 
 def test_should_parse_target_velocity():

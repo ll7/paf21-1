@@ -5,8 +5,10 @@ from dataclasses import dataclass
 
 import rospy
 from ackermann_msgs.msg import AckermannDrive
-from std_msgs.msg import String as StringMsg, Float32 as FloatMsg
+# from std_msgs.msg import String as StringMsg
+from std_msgs.msg import Float32 as FloatMsg
 from sensor_msgs.msg import NavSatFix as GpsMsg
+from nav_msgs.msg import Path as WaypointsMsg
 
 from vehicle_controller.driving_control import SimpleDrivingController
 from vehicle_controller.ros_msg_adapter import RosDrivingMessagesAdapter
@@ -19,7 +21,7 @@ class VehicleControllerNode:
 
     vehicle_name: str
     publish_rate_in_hz: float
-    signal_converter = SimpleDrivingController()
+    driving_controller = SimpleDrivingController()
     driving_signal_publisher: rospy.Publisher = None
 
     def run_node(self):
@@ -27,11 +29,14 @@ class VehicleControllerNode:
         and convert them into AckermannDrive signals"""
         self._init_publishers_and_subscribers()
         self._send_driving_signals_until_node_shutdown()
+        self.driving_controller.target_velocity_mps = 10.0
+        print(self.driving_controller)
 
     def _send_driving_signals_until_node_shutdown(self):
         rate = rospy.Rate(self.publish_rate_in_hz)
         while not rospy.is_shutdown():
-            signal = self.signal_converter.next_signal()
+            signal = self.driving_controller.next_signal()
+            rospy.loginfo(signal)
             msg = RosDrivingMessagesAdapter.signal_to_message(signal)
             self.driving_signal_publisher.publish(msg)
             rate.sleep()
@@ -44,23 +49,28 @@ class VehicleControllerNode:
         self._init_gps_subscriber()
 
     def _init_route_subscriber(self):
-        in_topic = f"/drive/{self.vehicle_name}/local_route"
-        msg_to_route = RosDrivingMessagesAdapter.message_to_waypoints
-        process_route = self.signal_converter.update_route
+        # in_topic = f"/drive/{self.vehicle_name}/local_route"
+        # msg_to_route = RosDrivingMessagesAdapter.json_message_to_waypoints
+        # process_route = self.signal_converter.update_route
+        # callback = lambda msg: process_route(msg_to_route(msg))
+        # rospy.Subscriber(in_topic, StringMsg, callback)
+        in_topic = f"/carla/{self.vehicle_name}/waypoints"
+        msg_to_route = RosDrivingMessagesAdapter.nav_message_to_waypoints
+        process_route = self.driving_controller.update_route
         callback = lambda msg: process_route(msg_to_route(msg))
-        rospy.Subscriber(in_topic, StringMsg, callback)
+        rospy.Subscriber(in_topic, WaypointsMsg, callback)
 
     def _init_target_velocity_subscriber(self):
         in_topic = f"/drive/{self.vehicle_name}/target_velocity"
         msg_to_velocity = RosDrivingMessagesAdapter.message_to_target_velocity
-        process_velocity = self.signal_converter.update_target_velocity
+        process_velocity = self.driving_controller.update_target_velocity
         callback = lambda msg: process_velocity(msg_to_velocity(msg))
         rospy.Subscriber(in_topic, FloatMsg, callback)
 
     def _init_gps_subscriber(self):
         in_topic = f"/carla/{self.vehicle_name}/gnss/gnss1/fix"
         msg_to_position = RosDrivingMessagesAdapter.message_to_vehicle_position
-        process_position = self.signal_converter.update_vehicle_position
+        process_position = self.driving_controller.update_vehicle_position
         callback = lambda msg: process_position(msg_to_position(msg))
         rospy.Subscriber(in_topic, GpsMsg, callback)
 

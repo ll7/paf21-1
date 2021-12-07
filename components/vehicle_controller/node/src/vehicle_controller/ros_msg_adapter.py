@@ -6,6 +6,7 @@ from typing import Tuple, List
 from ackermann_msgs.msg import AckermannDrive
 from std_msgs.msg import String as StringMsg, Float32 as FloatMsg
 from sensor_msgs.msg import NavSatFix as GpsMsg
+from nav_msgs.msg import Path as WaypointsMsg
 
 from vehicle_controller.driving_control import DrivingSignal
 
@@ -14,10 +15,16 @@ class RosDrivingMessagesAdapter:
     """Convert between ROS messages and driving data"""
 
     @staticmethod
-    def message_to_waypoints(msg: StringMsg) -> List[Tuple[float, float]]:
+    def json_message_to_waypoints(msg: StringMsg) -> List[Tuple[float, float]]:
         """Convert a ROS message into waypoints"""
         json_list = json.loads(msg.data)
         waypoints = [(wp['x'], wp['y']) for wp in json_list]
+        return waypoints
+
+    @staticmethod
+    def nav_message_to_waypoints(msg: WaypointsMsg) -> List[Tuple[float, float]]:
+        """Convert a ROS message into waypoints"""
+        waypoints = [(p.pose.position.x, p.pose.position.y) for p in msg.poses]
         return waypoints
 
     @staticmethod
