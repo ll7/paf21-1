@@ -12,4 +12,4 @@ hough_max_line_gap: 25
 angle_lower_bound: 30
 angle_upper_bound: 60
 deviation_threshold: 1
-create_visualisation: False
+create_visualisation: True

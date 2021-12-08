@@ -31,8 +31,12 @@ class RouteInfo(metaclass=RouteInfoMeta):
 
     def update_vehicle_vector(self, msg: ImuMsg):
         """Calculates the vektor the car is currently driving"""
-        length = (msg.orientation.x ** 2 + msg.orientation.x ** 2)**0.5
-        self.vehicle_vector = [msg.orientation.x / length, msg.orientation.y / length]
+        rospy.loginfo(msg.orientation)
+        length = (msg.orientation.x ** 2 + msg.orientation.y ** 2)**0.5
+        if length > 0:
+            self.vehicle_vector = [msg.orientation.x / length, msg.orientation.y / length]
+        else:
+            self.vehicle_vector = [msg.orientation.x, msg.orientation.y]
         rospy.loginfo(self.vehicle_vector)
 
     def update_gps(self, msg: GpsMsg):
