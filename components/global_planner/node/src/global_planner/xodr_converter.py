@@ -332,8 +332,9 @@ class XODRConverter:
 
 
 if __name__ == "__main__":
+    from pathlib import Path
 
-    filename = 'Town03.xodr'
+    filename = Path("./../../../xodr/Town01.xodr")
 
     xodr = XODRConverter()
     xodr.read_xodr(filename)
