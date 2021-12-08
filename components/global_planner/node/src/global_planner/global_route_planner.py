@@ -43,10 +43,18 @@ class GlobalRoutePlanner:
         self.road_width = 4.0
 
     def set_matrix(self, matrix: np.ndarray):
+        """Set the graph with a matrix (numpy array)."""
         self.graph = matrix
 
     def set_mapping(self, mapping: list):
+        """Set the mapping and the nodes."""
         self.mapping = mapping
+        self._set_nodes()
+
+    def _set_nodes(self):
+        """Set the dictionary nodes with the mapping."""
+        for index, entry in enumerate(self.mapping):
+            self.nodes["{}_{}".format(entry[0], entry[1])] = index
 
     def load_map_data(self):
         """Load the data from the file with the map
@@ -62,7 +70,7 @@ class GlobalRoutePlanner:
 
     # def set_map_end(self, msg: StringMsg):
     def set_map_end(self, msg):
-        """Update the current map name"""
+        """Update the current map name."""
         if self.map_name != msg.map:
             self.map_name = msg.map
             self.load_map_data()
@@ -88,7 +96,7 @@ class GlobalRoutePlanner:
 
     def get_pos(self, node_id: str) -> int or KeyError:
         """Get the position for the node id."""
-        if node_id not in self.num_nodes:
+        if node_id not in self.nodes:
             return KeyError
 
         return self.nodes[node_id]
@@ -113,10 +121,10 @@ class GlobalRoutePlanner:
         # return the index
         return min_index
 
-    def dijkstra(self, start_id: str):
+    def dijkstra(self, start_pos: int):
         """Implementation of the Dijkstra algorithm."""
         # distance of source to itself is 0
-        start_pos = self.get_pos(start_id)
+        # start_pos = self.get_pos(start_id)
         self.dist[start_pos] = 0.0
 
         # add all nodes_id in queue
@@ -139,7 +147,7 @@ class GlobalRoutePlanner:
                         self.parent[num] = index_min
 
     def _append_pos2path(self, pos: int) -> int:
-        """Append the position to the path"""
+        """Append the position to the path."""
         self.path.append(pos)
         # check if pos has a parent
         if self.parent[pos] != -1:
@@ -149,7 +157,7 @@ class GlobalRoutePlanner:
         return pos
 
     def _append_id2path(self, target_id: str):
-
+        """Append the pos of the id to the path."""
         # get the position
         pos = self.get_pos(target_id)
         # append the position to the path
@@ -197,7 +205,7 @@ class GlobalRoutePlanner:
             polygon = Polygon([ll_corner, lu_corner, ru_corner, rl_corner])
             if polygon.contains(Point(self.start_pos[0], self.start_pos[1])):
                 ids_start.append([self.mapping[i][0], self.mapping[i][1]])
-                # ToDo Gewichtung setzten zu start und ende (Abstand)
+                # TODO set weights for start and end (distance)
                 self.graph_start_end[i][self.num_nodes] = 10
                 self.graph_start_end[self.num_nodes][i] = 10
                 print('start road:', self.mapping[i][0], ' i:', i)
@@ -230,15 +238,16 @@ class GlobalRoutePlanner:
         # from start and end point get id
 
         # 3. start dijkstra
-        # ToDo
+        # TODO
         print('start: ', self.graph_start_end[14][self.num_nodes])
         print('start: ', self.graph_start_end[15][self.num_nodes])
         print('end: ', self.graph_start_end[6][self.num_nodes+1])
         print('end: ', self.graph_start_end[7][self.num_nodes+1])
-        self.dijkstra(self.num_nodes)
+
+        self.dijkstra(self.num_nodes-1)
         print(self.dist)
         # TODO
-        self._append_id2path('6')
+        self._append_id2path('6_0')
         list_lanes = []
         list_waypoints = []
         print(self.path)
