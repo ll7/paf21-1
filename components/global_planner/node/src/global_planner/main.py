@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import rospy
 from std_msgs.msg import String as StringMsg
-from sensor_msgs.msg import Image as ImageMsg, NavSatFix as GpsMsg
+from sensor_msgs.msg import NavSatFix as GpsMsg
 
 from global_route_planner import GlobalRoutePlanner
 
@@ -45,12 +45,12 @@ class GlobalPlannerNode:
     def init_hmi_route_subscriber(self):
         """Initialize the ROS subscriber receiving map and end"""
         in_topic = f"/drive/{self.vehicle_name}/hmi"
-        rospy.Subscriber(in_topic, StringMsg, self.global_route_planner.set_map_end)
+        rospy.Subscriber(in_topic, StringMsg, self.global_route_planner.update_map_end_pos)
 
     def init_gps_subscriber(self):
         """Initialize the ROS subscriber receiving GPS data"""
         in_topic = f"/carla/{self.vehicle_name}/gnss/gnss1/fix"
-        rospy.Subscriber(in_topic, GpsMsg, self.global_route_planner.set_gps)
+        rospy.Subscriber(in_topic, GpsMsg, self.global_route_planner.update_gps)
 
     def init_global_route_publisher(self):
         """Initialize the ROS publisher for submitting local routes"""

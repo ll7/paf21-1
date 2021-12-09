@@ -18,10 +18,6 @@ class GlobalRoutePlanner:
         self.num_nodes = num_nodes
         # base filepath to the maps
         self.filepath = r"../../../maps"
-        # dict with lane-let ids and matrix pos
-        self.nodes = {}
-        # counter for number of nodes
-        self.matrix_pos = 0
         # graph with
         self.graph = np.zeros(shape=(num_nodes, num_nodes))
         self.graph_start_end = np.zeros(shape=(num_nodes+2, num_nodes+2))
@@ -31,13 +27,12 @@ class GlobalRoutePlanner:
         self.parent = np.ones(shape=(num_nodes+2,)).astype('int32') * (-1)
         # path
         self.path = []
-        # mapping
-        self.mapping = []
+        # dict with lane-let ids and matrix pos
+        self.mapping = {}
 
-        self.world_radius = 6378137
         self.map_name = ''
-        self.end_pos = (0.0, 0.0)
-        self.start_pos = (0.0, 0.0)
+        self.end_pos = np.zeros(shape=(2,))
+        self.start_pos = np.zeros(shape=(2,))
         self.update = False
         # TODO read from data
         self.road_width = 4.0
@@ -46,15 +41,9 @@ class GlobalRoutePlanner:
         """Set the graph with a matrix (numpy array)."""
         self.graph = matrix
 
-    def set_mapping(self, mapping: list):
+    def set_mapping(self, mapping: dict):
         """Set the mapping and the nodes."""
         self.mapping = mapping
-        self._set_nodes()
-
-    def _set_nodes(self):
-        """Set the dictionary nodes with the mapping."""
-        for index, entry in enumerate(self.mapping):
-            self.nodes["{}_{}".format(entry[0], entry[1])] = index
 
     def load_map_data(self):
         """Load the data from the file with the map
@@ -68,8 +57,8 @@ class GlobalRoutePlanner:
             self.set_mapping(data['mapping'])
             self.set_matrix(data['matrix'])
 
-    # def set_map_end(self, msg: StringMsg):
-    def set_map_end(self, msg):
+    # def set_map_end_pos(self, msg: StringMsg):
+    def update_map_end_pos(self, msg):
         """Update the current map name."""
         if self.map_name != msg.map:
             self.map_name = msg.map
@@ -79,27 +68,29 @@ class GlobalRoutePlanner:
         self.update = True
 
     # def set_gps(self, msg: GpsMsg):
-    def set_gps(self, msg):
+    def update_gps(self, msg):
         """Update the GPS position of the vehicle."""
-        longitude = msg.longitude
-        latitude = msg.latitude
-
-        x = self.world_radius * math.sin(latitude) * math.cos(longitude)
-        y = self.world_radius * math.sin(latitude) * math.sin(longitude)
-
-        x2 = self.world_radius * longitude * math.cos(latitude)
-        y2 = self.world_radius * latitude
-
-        print(x, '  ', y)
-        print(x2, '  ', y2)
-        self.start_pos = (x, y)
+        # TODO Switch to odometry message
+        # longitude = msg.longitude
+        # latitude = msg.latitude
+        #
+        # x = self.world_radius * math.sin(latitude) * math.cos(longitude)
+        # y = self.world_radius * math.sin(latitude) * math.sin(longitude)
+        #
+        # x2 = self.world_radius * longitude * math.cos(latitude)
+        # y2 = self.world_radius * latitude
+        #
+        # print(x, '  ', y)
+        # print(x2, '  ', y2)
+        # self.start_pos = (x, y)
+        pass
 
     def get_pos(self, node_id: str) -> int or KeyError:
         """Get the position for the node id."""
-        if node_id not in self.nodes:
+        if node_id not in self.mapping:
             return KeyError
 
-        return self.nodes[node_id]
+        return self.mapping[node_id][0]
 
     def _min_distance(self, queue: list) -> int or AttributeError:
         """Calculate the index with the minimum distance."""
@@ -164,7 +155,7 @@ class GlobalRoutePlanner:
         self._append_pos2path(pos)
 
     def get_path_ids(self) -> list:
-        key_list = list(self.nodes.keys())
+        key_list = list(self.mapping.keys())
         return [key_list[pos] for pos in self.path]
 
     def show_graph_with_labels(self):
@@ -174,7 +165,7 @@ class GlobalRoutePlanner:
         # add all edges
         gr.add_edges_from(edges)
         # draw the graph
-        nx.draw(gr, node_size=500, labels=list(self.nodes.keys()), with_labels=True)
+        nx.draw(gr, node_size=500, labels=list(self.mapping.keys()), with_labels=True)
 
     def find_nearest_road(self) -> (list, list):
         ids_start = []
@@ -183,12 +174,14 @@ class GlobalRoutePlanner:
         self.graph_start_end = np.append(self.graph_start_end, np.zeros((self.num_nodes+2, 2)), axis=1)
         print(self.graph_start_end.shape)
         print()
-        self.mapping.append((-1, 0, self.start_pos))
-        self.mapping.append((-2, 0, self.end_pos))
+        self.mapping['-1_0'] = self.num_nodes+1, self.start_pos
+        self.mapping['-2_0'] = self.num_nodes+2,  self.end_pos
 
-        for i in range(0, len(self.mapping), 2):
-            start_point = self.mapping[i][2]
-            end_point = self.mapping[i+1][2]
+        key_list = list(self.mapping.keys())
+
+        for i in range(0, self.num_nodes+2, 2):
+            start_point = self.mapping[key_list[i]][1]
+            end_point = self.mapping[key_list[i+1]][1]
             div = (end_point[0]-start_point[0])
             if div == 0:
                 div = 0.000000000001
@@ -204,17 +197,17 @@ class GlobalRoutePlanner:
 
             polygon = Polygon([ll_corner, lu_corner, ru_corner, rl_corner])
             if polygon.contains(Point(self.start_pos[0], self.start_pos[1])):
-                ids_start.append([self.mapping[i][0], self.mapping[i][1]])
+                ids_start.append(key_list[i])
                 # TODO set weights for start and end (distance)
                 self.graph_start_end[i][self.num_nodes] = 10
                 self.graph_start_end[self.num_nodes][i] = 10
-                print('start road:', self.mapping[i][0], ' i:', i)
+                print('start road:', key_list[i], ' i:', i)
 
             if polygon.contains(Point(self.end_pos[0], self.end_pos[1])):
-                ids_end.append([self.mapping[i][0], self.mapping[i][1]])
+                ids_end.append(key_list[i])
                 self.graph_start_end[i][self.num_nodes+1] = 10
                 self.graph_start_end[self.num_nodes+1][i] = 10
-                print('end road:', self.mapping[i][0], ' i:', i)
+                print('end road:', key_list[i], ' i:', i)
         return ids_start, ids_end
 
     def calculate_distance(self, point):
@@ -252,10 +245,13 @@ class GlobalRoutePlanner:
         list_waypoints = []
         print(self.path)
 
+        key_list = list(self.mapping.keys())
+
         for path in self.path:
-            if int(self.mapping[path][1]) % 2 == 0:
-                list_waypoints.append({'x': self.mapping[path][2][0], 'y': self.mapping[path][2][1]})
-                list_lanes.append([self.mapping[path][0], self.mapping[path][1]])
+            if int(self.mapping[key_list[path]][0]) % 2 == 0:
+                list_waypoints.append({'x': self.mapping[key_list[path]][1][0],
+                                       'y': self.mapping[key_list[path]][1][1]})
+                list_lanes.append(key_list[path])
         print(list_waypoints)
 
         # 4. convert to list of dic
