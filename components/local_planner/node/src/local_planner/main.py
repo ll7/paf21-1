@@ -5,9 +5,11 @@ import json
 from dataclasses import dataclass
 import rospy
 from std_msgs.msg import String as StringMsg
-from sensor_msgs.msg import Image as ImageMsg, NavSatFix as GpsMsg, Imu as ImuMsg
+from sensor_msgs.msg import Image as ImageMsg, Imu as ImuMsg
+from nav_msgs.msg import Odometry as OdometryMsg
 from local_planner.preprocessing import SensorCameraPreprocessor
 from local_planner.route_planner import RouteInfo
+
 
 
 @dataclass
@@ -36,6 +38,7 @@ class LocalPlannerNode:
 
     def init_ros(self):
         """Initialize the ROS node's publishers and subscribers"""
+
         rospy.init_node(f'local_planner_{self.vehicle_name}', anonymous=True)
         self.local_route_publisher = self.init_local_route_publisher()
         self.init_gps_subscriber()
@@ -50,11 +53,12 @@ class LocalPlannerNode:
 
     def init_gps_subscriber(self):
         """Initialize the ROS subscriber receiving GPS data"""
-        in_topic = f"/carla/{self.vehicle_name}/gnss/gnss1/fix"
-        rospy.Subscriber(in_topic, GpsMsg, self.route_planner.update_gps)
+        in_topic = f"/carla/{self.vehicle_name}/odometry"
+        rospy.Subscriber(in_topic, OdometryMsg, self.route_planner.update_gps)
+
 
     def init_vehicle_orientation_subscriber(self):
-        """Initialize the ROS subscriber receiving GPS data"""
+        """Initialize the ROS subscriber receiving the orientation of the vehicle"""
         in_topic = f"/carla/{self.vehicle_name}/imu/imu1"
         rospy.Subscriber(in_topic, ImuMsg, self.route_planner.update_vehicle_vector)
 
@@ -99,7 +103,6 @@ def main():
 
     vehicle_name = "ego_vehicle"
     publish_rate_hz = 10
-
     node = LocalPlannerNode(vehicle_name, publish_rate_hz)
     node.run_node()
 
