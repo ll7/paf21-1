@@ -25,11 +25,11 @@ def test_should_parse_target_velocity():
     exp_target_velocity = 1.7
     assert(target_velocity == exp_target_velocity)
 
-def test_should_parse_vehicle_position():
-    msg = GpsMsg(longitude=1.7, latitude=0.3)
-    vehicle_pos = RosDrivingMessagesAdapter.message_to_vehicle_position(msg)
-    exp_vehicle_pos = (1.7, 0.3)
-    assert(vehicle_pos == exp_vehicle_pos)
+# def test_should_parse_vehicle_position():
+#     msg = GpsMsg(longitude=1.7, latitude=0.3)
+#     vehicle_pos = RosDrivingMessagesAdapter.message_to_vehicle_position(msg)
+#     exp_vehicle_pos = (1.7, 0.3)
+#     assert(vehicle_pos == exp_vehicle_pos)
 
 def test_should_generate_ackermann_message_from_signal():
     signal = DrivingSignal(0.7, 30.7)

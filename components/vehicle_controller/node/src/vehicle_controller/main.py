@@ -7,10 +7,10 @@ import rospy
 from ackermann_msgs.msg import AckermannDrive
 # from std_msgs.msg import String as StringMsg
 from std_msgs.msg import Float32 as FloatMsg
-from sensor_msgs.msg import NavSatFix as GpsMsg
 from nav_msgs.msg import Path as WaypointsMsg
+from nav_msgs.msg import Odometry as OdometryMsg
 
-from vehicle_controller.driving_control import SimpleDrivingController
+from vehicle_controller.driving_control import DrivingController
 from vehicle_controller.ros_msg_adapter import RosDrivingMessagesAdapter
 
 
@@ -21,7 +21,7 @@ class VehicleControllerNode:
 
     vehicle_name: str
     publish_rate_in_hz: float
-    driving_controller = SimpleDrivingController()
+    driving_controller = DrivingController()
     driving_signal_publisher: rospy.Publisher = None
 
     def run_node(self):
@@ -68,11 +68,13 @@ class VehicleControllerNode:
         rospy.Subscriber(in_topic, FloatMsg, callback)
 
     def _init_gps_subscriber(self):
-        in_topic = f"/carla/{self.vehicle_name}/gnss/gnss1/fix"
-        msg_to_position = RosDrivingMessagesAdapter.message_to_vehicle_position
-        process_position = self.driving_controller.update_vehicle_position
-        callback = lambda msg: process_position(msg_to_position(msg))
-        rospy.Subscriber(in_topic, GpsMsg, callback)
+        in_topic = f"/carla/{self.vehicle_name}/odometry"
+        callback = self._callback_odometry
+        rospy.Subscriber(in_topic, OdometryMsg, callback)
+
+    def _callback_odometry(self, msg):
+        pos, orient = RosDrivingMessagesAdapter.message_to_vehicle_position(msg)
+        self.driving_controller.update_vehicle_position(pos, orient)
 
     def _init_driving_signal_publisher(self):
         out_topic = f"/carla/{self.vehicle_name}/ackermann_cmd"
