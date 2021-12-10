@@ -1,45 +1,62 @@
 """Module for preprocessing CARLA sensor data"""
-
 from cv2 import cv2
-import yaml
-
 
 from sensor_msgs.msg import Image as ImageMsg
 from cv_bridge import CvBridge
-from local_planner.lane_detection import LaneDetection
 
 
-# @dataclass
-class RgbCameraPreprocessor:  # pylint: disable=too-few-public-methods
-    """A class for preprocessing RGB image data"""
+class SensorCameraPreprocessor:  # pylint: disable=too-few-public-methods
+    """A class for preprocessing image data from sensors"""
+    semantic_image = None
+    depth_image = None
+    rgb_image = None
 
-    step: int = 0
+    step_semantic : int  = 0
+    step_rgb: int = 0
+    step_depth: int = 0
 
-    def process_image(self, msg: ImageMsg):
-        """Preprocess the image"""
-        config = {}
-        with open("/app/src/local_planner/config/config.yml", encoding='utf-8') as file:
-            config = yaml.safe_load(file)
-        lane_detecter = LaneDetection(config)
+    def process_semantic_image(self, msg: ImageMsg):
+        """Preprocess the semantic image"""
+        #config = {}
+        #path = "/app/src/local_planner/config/config_lane_detection.yml"
 
-        self.step += 1
-        # load image from the ROS message
+        #lane_detecter = LaneDetection(config)
+
+        self.step_semantic += 1
+        orig_image = SensorCameraPreprocessor.load_image(msg)
+        # figure out which squeeze causes the callback to crash
+        if self.step_semantic % 30 == 0:
+            cv2.imwrite(f"/app/logs/img_{self.step_semantic}_semantic.png", orig_image)
+
+        self.semantic_image = orig_image
+
+    def process_depth_image(self, msg: ImageMsg):
+        """Preprocess the depth image"""
+
+        self.step_depth += 1
+        orig_image = SensorCameraPreprocessor.load_image(msg)
+        # figure out which squeeze causes the callback to crash
+        if self.step_depth % 30 == 0:
+            cv2.imwrite(f"/app/logs/img_{self.step_depth}_depth.png", orig_image)
+
+        self.depth_image = orig_image
+
+    def process_rgb_image(self, msg: ImageMsg):
+        """Preprocess the RGB image"""
+
+        self.step_rgb += 1
+        orig_image = SensorCameraPreprocessor.load_image(msg)
+        # figure out which squeeze causes the callback to crash
+        if self.step_rgb % 30 == 0:
+            cv2.imwrite(f"/app/logs/img_{self.step_rgb}_rgb.png", orig_image)
+
+        self.rgb_image = orig_image
+
+
+    @staticmethod
+    def load_image(msg):
+        """Loads image from ROS message"""
         bridge = CvBridge()
         orig_image = bridge.imgmsg_to_cv2(
             msg, desired_encoding='passthrough')
-
-        # remove the alpha channel and resize the image
-        orig_image = orig_image[:, :, :3]
-
-
-        # highlight the road surface markings
-        projections, _, _ = lane_detecter.highlight_lines(orig_image)
-
-        highl_image = LaneDetection.augment_image_with_lines(orig_image, projections)
-
-        # figure out which squeeze causes the callback to crash
-
-        if self.step % 30 == 0 and config['create_visualisation']:
-            cv2.imwrite(f"/app/logs/img_{self.step}_line.png", highl_image)
-
-        return highl_image
+        return orig_image

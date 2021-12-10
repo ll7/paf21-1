@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import rospy
 from std_msgs.msg import String as StringMsg
 from sensor_msgs.msg import Image as ImageMsg, NavSatFix as GpsMsg, Imu as ImuMsg
-from local_planner.preprocessing import RgbCameraPreprocessor
+from local_planner.preprocessing import SensorCameraPreprocessor
 from local_planner.route_planner import RouteInfo
 
 
@@ -18,7 +18,7 @@ class LocalPlannerNode:
     vehicle_name: str
     publish_rate_in_hz: int
     local_route_publisher: rospy.Publisher = None
-    image_preprocessor: RgbCameraPreprocessor = RgbCameraPreprocessor()
+    image_preprocessor: SensorCameraPreprocessor = SensorCameraPreprocessor()
     route_planner: RouteInfo = RouteInfo()
 
     def run_node(self):
@@ -59,10 +59,27 @@ class LocalPlannerNode:
         rospy.Subscriber(in_topic, ImuMsg, self.route_planner.update_vehicle_vector)
 
     def init_front_camera_subscriber(self):
-        """Initialize the ROS subscriber receiving camera images"""
-        camera_type = "semantic_segmentation/front/image_segmentation"
-        in_topic = f"/carla/{self.vehicle_name}/camera/{camera_type}"
-        rospy.Subscriber(in_topic, ImageMsg, self.image_preprocessor.process_image)
+        """Initialize the ROS subscriber receiving camera images with following sensors :
+
+        - semantic
+        - depth
+        -rgb
+        """
+        camera_semantic_seg = "semantic_segmentation/front/image_segmentation"
+        in_semantic_topic = f"/carla/{self.vehicle_name}/camera/{camera_semantic_seg}"
+
+        camera_rgb = 'rgb/front/image_color'
+        in_rgb_topic = f"/carla/{self.vehicle_name}/camera/{camera_rgb}"
+
+        camera_depth = 'depth/front/image_depth'
+        in_depth_topic = f"/carla/{self.vehicle_name}/camera/{camera_depth}"
+
+        rospy.Subscriber(in_semantic_topic, ImageMsg,
+                         self.image_preprocessor.process_semantic_image)
+        rospy.Subscriber(in_depth_topic, ImageMsg,
+                         self.image_preprocessor.process_depth_image)
+        rospy.Subscriber(in_rgb_topic, ImageMsg,
+                         self.image_preprocessor.process_rgb_image)
 
     def init_local_route_publisher(self):
         """Initialize the ROS publisher for submitting local routes"""

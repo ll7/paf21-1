@@ -1,6 +1,7 @@
 """This module highlights road surface markings"""
 from cv2 import cv2
 import numpy as np
+import yaml
 
 
 class LaneDetection:  # pylint: disable=too-few-public-methods
@@ -20,21 +21,30 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
     angle_lower_bound: int
     angle_upper_bound: int
 
-    def __init__(self, config):
-        self.lower_bound = config['lower_bound']
-        self.upper_bound = config['upper_bound']
-        self.lower_bound_car = config['lower_bound_car']
-        self.upper_bound_car = config['upper_bound_car']
-        self.canny_lower = config['canny_lower']
-        self.canny_upper = config['canny_upper']
-        self.fov = config['fov']
-        self.hough_rho = config['hough_rho']
-        self.hough_threshold = config['hough_threshold']
-        self.hough_min_line_length = config['hough_min_line_length']
-        self.hough_max_line_gap = config['hough_max_line_gap']
-        self.angle_lower_bound = config['angle_lower_bound']
-        self.angle_upper_bound = config['angle_upper_bound']
-        self.deviation_threshold = config['deviation_threshold']
+    def __init__(self, config_path):
+        with open(config_path, encoding='utf-8') as file:
+            config = yaml.safe_load(file)
+            self.lower_bound = config['lower_bound']
+            self.upper_bound = config['upper_bound']
+            self.lower_bound_car = config['lower_bound_car']
+            self.upper_bound_car = config['upper_bound_car']
+            self.canny_lower = config['canny_lower']
+            self.canny_upper = config['canny_upper']
+            self.fov = config['fov']
+            self.hough_rho = config['hough_rho']
+            self.hough_threshold = config['hough_threshold']
+            self.hough_min_line_length = config['hough_min_line_length']
+            self.hough_max_line_gap = config['hough_max_line_gap']
+            self.angle_lower_bound = config['angle_lower_bound']
+            self.angle_upper_bound = config['angle_upper_bound']
+            self.deviation_threshold = config['deviation_threshold']
+
+    def detect_lanes(self, image):
+        """Detect lanes"""
+        projections, _, _ = self.highlight_lines(image)
+        highl_image = LaneDetection.augment_image_with_lines(image, projections)
+        #modify this to return recalculation of driving vector
+        return highl_image
 
     def highlight_lines(self, orig_image: np.ndarray):
         """Highlight road surface markings"""
