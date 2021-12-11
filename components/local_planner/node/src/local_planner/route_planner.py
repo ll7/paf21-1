@@ -24,7 +24,7 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
     vehicle_position: Tuple[float, float] = None
     global_route: List[Tuple[float, float]] = None
     cached_local_route: List[Tuple[float, float]] = []
-    vehicle_yaw: float
+    vehicle_yaw: float = 0
     step_semantic: int = 0
 
     def update_vehicle_vector(self, msg: ImuMsg):
