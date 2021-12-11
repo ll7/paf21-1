@@ -32,8 +32,9 @@ class LocalPlannerNode:
 
         while not rospy.is_shutdown():
             local_route = self.route_planner.compute_local_route()
-            local_route = json.dumps(local_route)
-            self.local_route_publisher.publish(local_route)
+            route_as_json = [{ 'x': pos[0], 'y': pos[1] } for pos in local_route]
+            msg = StringMsg(data=json.dumps(route_as_json))
+            self.local_route_publisher.publish(msg)
             rate.sleep()
 
     def init_ros(self):
