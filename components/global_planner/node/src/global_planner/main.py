@@ -8,7 +8,7 @@ import rospy
 from std_msgs.msg import String as StringMsg
 from sensor_msgs.msg import NavSatFix as GpsMsg
 
-from global_route_planner import GlobalRoutePlanner
+from global_planner.global_route_planner import GlobalRoutePlanner
 
 
 @dataclass
@@ -18,7 +18,7 @@ class GlobalPlannerNode:
     vehicle_name: str
     publish_rate_in_hz: int
     global_route_publisher: rospy.Publisher = None
-    # TODO Change the num_nodes 
+    # TODO Change the num_nodes
     global_route_planner: GlobalRoutePlanner = GlobalRoutePlanner(700)
 
     def run_node(self):

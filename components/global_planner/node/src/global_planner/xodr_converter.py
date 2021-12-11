@@ -1,10 +1,10 @@
+"""A xodr converter based on xodr files."""
 import os.path
-import numpy as np
 import xml.etree.ElementTree as eTree
 from pathlib import Path
 from typing import List
-
-from global_route_planner import GlobalRoutePlanner
+import numpy as np
+from global_planner.global_route_planner import GlobalRoutePlanner
 
 
 class XODRConverter:
@@ -53,7 +53,8 @@ class XODRConverter:
         return objects
 
     @staticmethod
-    def calculate_end_point(start_point: np.ndarray, angle: float, length: float, arc: float) -> np.ndarray:
+    def calculate_end_point(start_point: np.ndarray,angle: float,
+                            length: float, arc: float) -> np.ndarray:
         """Calculate the end point based on the start point, angle, length and arc."""
         # ToDo check implementation and add arc
         # https://www.delftstack.com/howto/numpy/curvature-formula-numpy/
@@ -115,10 +116,10 @@ class XODRConverter:
             # iterate over all geometries
             for index, geometry in enumerate(road['geometry']):
                 # insert the start point of the geometry in the dict
-                self.mapping["{}_{}".format(road['road_id'], index*2)] = counter, geometry[0]
+                self.mapping[f"{road['road_id']}_{index*2}"] = counter, geometry[0]
 
                 # insert the end point of the geometry in the dict
-                self.mapping["{}_{}".format(road['road_id'], (index*2)+1)] = counter + 1, geometry[1]
+                self.mapping[f"{road['road_id']}_{(index*2)+1}"] = counter + 1, geometry[1]
 
                 counter += 2
 
@@ -135,7 +136,7 @@ class XODRConverter:
         # parse all roads
         for road in root.findall('road'):
             self.road = road
-            road_dict = dict()
+            road_dict = {}
             road_dict['road_id'] = int(self.road.get('id'))
             road_dict['junction'] = int(self.road.get('junction'))
 
@@ -178,6 +179,8 @@ class XODRConverter:
         # parse all junctions
         self._get_junction_dic(root.findall('junction'))
 
+        return None
+
     # TODO refactor
     def link_geometry(self):
         """Link the geometries between each other."""
@@ -207,16 +210,16 @@ class XODRConverter:
         """Get the index to the corresponding road id."""
         if first:
             try:
-                return self.mapping['{}_0'.format(road_id)][0]
+                return self.mapping[f"{road_id}_0"][0]
             except KeyError:
                 return AttributeError
         else:
-            founded_keys = [[k, v[0]] for k, v in self.mapping.items() if k.startswith('{}_'.format(road_id))]
+            founded_keys = [v[0] for k, v in self.mapping.items() if k.startswith(f"{road_id}_")]
             # if no element in the list
             if not founded_keys:
                 return AttributeError
 
-            return founded_keys[-1][1]
+            return founded_keys[-1]
 
     def junc_id2index(self, junction_id: int) -> List[int]:
         """Get the list of indices to the corresponding junction id"""
@@ -228,10 +231,10 @@ class XODRConverter:
         return founded_junc
 
     def _road_connection(self, road, link: str):
-        first_element = True if road[link+'_contact_point'] == 'start' else False
+        first_element = road[link+'_contact_point'] == 'start'
         index_link = self.road_id2index(road[link+'_id'], first_element)
         # first entry road
-        index_road = self.road_id2index(road['road_id'], True if link == 'pre' else False)
+        index_road = self.road_id2index(road['road_id'], link == 'pre')
 
         # TODO check if both sides are necessary
         if index_link != index_road:
@@ -246,8 +249,8 @@ class XODRConverter:
             connecting_road = int(self.junctions[i]['connecting_road'])
             contact_point = self.junctions[i]['contact_point']
 
-            index_incoming = self.road_id2index(road['road_id'], True if link == 'pre' else False)
-            first_element = True if contact_point == 'start' else False
+            index_incoming = self.road_id2index(road['road_id'], link == 'pre')
+            first_element = contact_point == 'start'
             index_connecting = self.road_id2index(connecting_road, first_element)
             # TODO check if both sides are necessary
             if index_incoming != index_connecting:
@@ -268,6 +271,7 @@ class XODRConverter:
                     self._junction_connection(road, link)
 
     def create_links(self):
+        """Link geometry, predecessor and successor in the weighted matrix."""
         self.matrix = np.zeros(shape=(self.num_nodes, self.num_nodes))
         print(self.matrix.shape)
         self.link_geometry()

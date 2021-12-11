@@ -1,8 +1,9 @@
+"""A global route planner based on map and hmi data."""
 import math
 import json
+import os.path
 import numpy as np
 import networkx as nx
-import os.path
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 # for ROS connection
@@ -45,17 +46,18 @@ class GlobalRoutePlanner:
         """Set the mapping and the nodes."""
         self.mapping = mapping
 
-    def load_map_data(self):
+    def load_map_data(self) -> None or FileNotFoundError:
         """Load the data from the file with the map
             name and set the mapping and the matrix."""
         map_path = os.path.join(self.filepath, self.map_name, ".json")
         if not os.path.isfile(map_path):
             return FileNotFoundError
 
-        with open(map_path) as json_file:
+        with open(map_path, encoding="utf-8") as json_file:
             data = json.load(json_file)
             self.set_mapping(data['mapping'])
             self.set_matrix(data['matrix'])
+            return None
 
     # def set_map_end_pos(self, msg: StringMsg):
     def update_map_end_pos(self, msg):
@@ -83,7 +85,6 @@ class GlobalRoutePlanner:
         # print(x, '  ', y)
         # print(x2, '  ', y2)
         # self.start_pos = (x, y)
-        pass
 
     def get_pos(self, node_id: str) -> int or KeyError:
         """Get the position for the node id."""
@@ -155,23 +156,27 @@ class GlobalRoutePlanner:
         self._append_pos2path(pos)
 
     def get_path_ids(self) -> list:
+        """Get the ids for the path."""
         key_list = list(self.mapping.keys())
         return [key_list[pos] for pos in self.path]
 
     def show_graph_with_labels(self):
+        """Draw a graph with labeled nodes."""
         # get all edges out of the graph with value greater 0
         edges = np.where(self.graph > 0)
-        gr = nx.Graph()
+        graph = nx.Graph()
         # add all edges
-        gr.add_edges_from(edges)
+        graph.add_edges_from(edges)
         # draw the graph
-        nx.draw(gr, node_size=500, labels=list(self.mapping.keys()), with_labels=True)
+        nx.draw(graph, node_size=500, labels=list(self.mapping.keys()), with_labels=True)
 
     def find_nearest_road(self) -> (list, list):
+        """Find the nearest road to the start and end point."""
         ids_start = []
         ids_end = []
         self.graph_start_end = np.append(np.copy(self.graph), np.zeros((2, self.num_nodes)), axis=0)
-        self.graph_start_end = np.append(self.graph_start_end, np.zeros((self.num_nodes+2, 2)), axis=1)
+        self.graph_start_end = np.append(self.graph_start_end,
+                                         np.zeros((self.num_nodes+2, 2)), axis=1)
         print(self.graph_start_end.shape)
         print()
         self.mapping['-1_0'] = self.num_nodes+1, self.start_pos
@@ -190,12 +195,12 @@ class GlobalRoutePlanner:
 
             offset_x = math.cos(beta) * self.road_width
             offset_y = math.sin(beta) * self.road_width
-            ll_corner = (start_point[0] + offset_x, start_point[1] - offset_y)
-            lu_corner = (start_point[0] - offset_x, start_point[1] + offset_y)
-            rl_corner = (end_point[0] + offset_x, end_point[1] - offset_y)
-            ru_corner = (end_point[0] - offset_x, end_point[1] + offset_y)
+            polygon = Polygon([(start_point[0] + offset_x, start_point[1] - offset_y),
+                               (start_point[0] - offset_x, start_point[1] + offset_y),
+                               (end_point[0] + offset_x, end_point[1] - offset_y),
+                               (end_point[0] - offset_x, end_point[1] + offset_y)
+                               ])
 
-            polygon = Polygon([ll_corner, lu_corner, ru_corner, rl_corner])
             if polygon.contains(Point(self.start_pos[0], self.start_pos[1])):
                 ids_start.append(key_list[i])
                 # TODO set weights for start and end (distance)
@@ -211,9 +216,10 @@ class GlobalRoutePlanner:
         return ids_start, ids_end
 
     def calculate_distance(self, point):
-        pass
+        """Calculate the distance from the point to the road."""
 
-    def compute_route(self):
+    def compute_route(self) -> list:
+        """Compute the route."""
         # 0. check map data is available
         # reload if new mapp
 
@@ -257,4 +263,4 @@ class GlobalRoutePlanner:
         # 4. convert to list of dic
 
         # 5. output thr route
-        pass
+        return [0]
