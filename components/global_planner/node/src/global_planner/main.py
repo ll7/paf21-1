@@ -18,8 +18,8 @@ class GlobalPlannerNode:
     vehicle_name: str
     publish_rate_in_hz: int
     global_route_publisher: rospy.Publisher = None
-    # image_preprocessor: RgbCameraPreprocessor = RgbCameraPreprocessor()
-    global_route_planner: GlobalRoutePlanner = GlobalRoutePlanner()
+    # TODO Change the num_nodes 
+    global_route_planner: GlobalRoutePlanner = GlobalRoutePlanner(700)
 
     def run_node(self):
         """Launch the ROS node to receive the map, the start and

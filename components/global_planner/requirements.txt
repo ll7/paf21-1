@@ -2,3 +2,5 @@
 pytest
 pylint
 numpy
+networkx
+shapely
