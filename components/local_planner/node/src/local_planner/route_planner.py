@@ -70,7 +70,10 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
             self.cached_local_route = self.global_route[max(neighbour_ids[0], neighbour_ids[1]):]
             self.cached_local_route = self.cached_local_route[:min(10,
                                                                    len(self.cached_local_route))]
-        # put more sophisticated route computation here ...
+
+        # reduce the points handed over to just a single one, just for now
+        self.cached_local_route = []
+
         lane_detect_config = "/app/src/local_planner/config/config_lane_detection.yml"
         lane_detection = LaneDetection(lane_detect_config)
         if images.semantic_image is not None:
@@ -81,7 +84,8 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
                 x_coord, y_coord = math.cos(new_yaw), math.sin(new_yaw)
                 length = np.linalg.norm([x_coord, y_coord])
                 new_driving_vector = [x_coord / length, y_coord / length]
-                predicted_position = self.vehicle_position + new_driving_vector
+                predicted_position = (self.vehicle_position[0] + new_driving_vector[0],
+                                      self.vehicle_position[1] + new_driving_vector[1])
                 self.cached_local_route.insert(0, predicted_position)
             if self.step_semantic % 30 == 0:
                 cv2.imwrite(f"/app/logs/img_{self.step_semantic}_highlighted.png", highlighted_img)
