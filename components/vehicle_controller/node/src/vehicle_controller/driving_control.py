@@ -1,7 +1,8 @@
 """Module for transitioning a fine-grained, idealistic route
 and other driving metadata into actionable driving signals"""
 
-from math import dist as euclid_dist, degrees
+# from math import dist as euclid_dist
+from math import degrees
 from typing import Tuple, List
 from dataclasses import dataclass, field
 
@@ -23,7 +24,7 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
 
     route_waypoints: List[Tuple[float, float]] = field(default_factory=list)
     target_velocity_mps: float = 0.0
-    current_wp_id: int = 0
+    # current_wp_id: int = 0
     vehicle: Vehicle = Vehicle()
 
     def update_route(self, waypoints: List[Tuple[float, float]]):
@@ -73,9 +74,10 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
             and self.vehicle.pos
 
     def _get_aim_point(self):
-        aim_point = self.route_waypoints[self.current_wp_id]
-        while euclid_dist(aim_point, self.vehicle.pos) < 7 \
-                and self.current_wp_id < len(self.route_waypoints) - 1:
-            self.current_wp_id += 1
-            aim_point = self.route_waypoints[self.current_wp_id]
-        return aim_point
+        return self.route_waypoints[0]
+        # aim_point = self.route_waypoints[self.current_wp_id]
+        # while euclid_dist(aim_point, self.vehicle.pos) < 7 \
+        #         and self.current_wp_id < len(self.route_waypoints) - 1:
+        #     self.current_wp_id += 1
+        #     aim_point = self.route_waypoints[self.current_wp_id]
+        # return aim_point
