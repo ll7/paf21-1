@@ -35,10 +35,13 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
         """Update the route to be followed"""
         self.target_velocity_mps = target_velocity_mps
 
-    def update_vehicle_position(self, vehicle_pos: Tuple[float, float], orientation: float):
-        """Update the vehicle's current position and estimate
-        the actual velocity by computing the position / time diffs"""
-        self.vehicle.move(vehicle_pos, orientation)
+    def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
+        """Update the vehicle's current position"""
+        self.vehicle.move(vehicle_pos)
+
+    def update_vehicle_orientation(self, orientation: float):
+        """Update the vehicle's current orientation"""
+        self.vehicle.orientation_rad = orientation
 
     def next_signal(self) -> DrivingSignal:
         """Compute the next driving signal to make the
@@ -46,6 +49,7 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
 
         steering_angle = self._compute_steering_angle()
         signal = DrivingSignal(steering_angle, self.target_velocity_mps)
+        rospy.loginfo(f'vehicle {self.vehicle}')
         return signal
 
     def _compute_steering_angle(self) -> float:
@@ -65,7 +69,8 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
 
     def _can_steer(self):
         return len(self.route_waypoints) > 0 \
-            and self.vehicle.orientation_rad
+            and self.vehicle.orientation_rad \
+            and self.vehicle.pos
 
     def _get_aim_point(self):
         aim_point = self.route_waypoints[self.current_wp_id]

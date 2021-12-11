@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import rospy
 from ackermann_msgs.msg import AckermannDrive
 # from std_msgs.msg import String as StringMsg
+from sensor_msgs.msg import Imu as ImuMsg
 from std_msgs.msg import Float32 as FloatMsg
 from nav_msgs.msg import Path as WaypointsMsg
 from nav_msgs.msg import Odometry as OdometryMsg
@@ -28,9 +29,8 @@ class VehicleControllerNode:
         """Launch the ROS node to receive planned routes + GPS
         and convert them into AckermannDrive signals"""
         self._init_publishers_and_subscribers()
+        self.driving_controller.target_velocity_mps = 5.0
         self._send_driving_signals_until_node_shutdown()
-        self.driving_controller.target_velocity_mps = 10.0
-        print(self.driving_controller)
 
     def _send_driving_signals_until_node_shutdown(self):
         rate = rospy.Rate(self.publish_rate_in_hz)
@@ -47,6 +47,7 @@ class VehicleControllerNode:
         self._init_route_subscriber()
         self._init_target_velocity_subscriber()
         self._init_gps_subscriber()
+        self._init_vehicle_orientation_subscriber()
 
     def _init_route_subscriber(self):
         # in_topic = f"/drive/{self.vehicle_name}/local_route"
@@ -67,14 +68,23 @@ class VehicleControllerNode:
         callback = lambda msg: process_velocity(msg_to_velocity(msg))
         rospy.Subscriber(in_topic, FloatMsg, callback)
 
+    def _init_vehicle_orientation_subscriber(self):
+        in_topic = f"/carla/{self.vehicle_name}/imu/imu1"
+        msg_to_orientation = RosDrivingMessagesAdapter.message_to_orientation
+        process_orientation = self.driving_controller.update_vehicle_orientation
+        callback = lambda msg: process_orientation(msg_to_orientation(msg))
+        rospy.Subscriber(in_topic, ImuMsg, callback)
+
     def _init_gps_subscriber(self):
         in_topic = f"/carla/{self.vehicle_name}/odometry"
-        callback = self._callback_odometry
+        msg_to_position = RosDrivingMessagesAdapter.message_to_vehicle_position
+        process_position = self.driving_controller.update_vehicle_position
+        callback = lambda msg: process_position(msg_to_position(msg))
         rospy.Subscriber(in_topic, OdometryMsg, callback)
 
-    def _callback_odometry(self, msg):
-        pos, orient = RosDrivingMessagesAdapter.message_to_vehicle_position(msg)
-        self.driving_controller.update_vehicle_position(pos, orient)
+    # def _callback_odometry(self, msg):
+    #     pos = RosDrivingMessagesAdapter.message_to_vehicle_position(msg)
+    #     self.driving_controller.update_vehicle_position(pos, orient)
 
     def _init_driving_signal_publisher(self):
         out_topic = f"/carla/{self.vehicle_name}/ackermann_cmd"
