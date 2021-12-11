@@ -5,9 +5,9 @@ from dataclasses import dataclass
 
 import rospy
 from ackermann_msgs.msg import AckermannDrive
-# from std_msgs.msg import String as StringMsg
-from sensor_msgs.msg import Imu as ImuMsg
+from std_msgs.msg import String as StringMsg
 from std_msgs.msg import Float32 as FloatMsg
+from sensor_msgs.msg import Imu as ImuMsg
 from nav_msgs.msg import Path as WaypointsMsg
 from nav_msgs.msg import Odometry as OdometryMsg
 
@@ -24,6 +24,7 @@ class VehicleControllerNode:
     publish_rate_in_hz: float
     driving_controller = DrivingController()
     driving_signal_publisher: rospy.Publisher = None
+    use_waypoint_api: bool = False
 
     def run_node(self):
         """Launch the ROS node to receive planned routes + GPS
@@ -50,16 +51,18 @@ class VehicleControllerNode:
         self._init_vehicle_orientation_subscriber()
 
     def _init_route_subscriber(self):
-        # in_topic = f"/drive/{self.vehicle_name}/local_route"
-        # msg_to_route = RosDrivingMessagesAdapter.json_message_to_waypoints
-        # process_route = self.signal_converter.update_route
-        # callback = lambda msg: process_route(msg_to_route(msg))
-        # rospy.Subscriber(in_topic, StringMsg, callback)
-        in_topic = f"/carla/{self.vehicle_name}/waypoints"
-        msg_to_route = RosDrivingMessagesAdapter.nav_message_to_waypoints
-        process_route = self.driving_controller.update_route
-        callback = lambda msg: process_route(msg_to_route(msg))
-        rospy.Subscriber(in_topic, WaypointsMsg, callback)
+        if self.use_waypoint_api:
+            in_topic = f"/carla/{self.vehicle_name}/waypoints"
+            msg_to_route = RosDrivingMessagesAdapter.nav_message_to_waypoints
+            process_route = self.driving_controller.update_route
+            callback = lambda msg: process_route(msg_to_route(msg))
+            rospy.Subscriber(in_topic, WaypointsMsg, callback)
+        else:
+            in_topic = f"/drive/{self.vehicle_name}/local_route"
+            msg_to_route = RosDrivingMessagesAdapter.json_message_to_waypoints
+            process_route = self.driving_controller.update_route
+            callback = lambda msg: process_route(msg_to_route(msg))
+            rospy.Subscriber(in_topic, StringMsg, callback)
 
     def _init_target_velocity_subscriber(self):
         in_topic = f"/drive/{self.vehicle_name}/target_velocity"
