@@ -75,7 +75,7 @@ class GlobalRoutePlanner:
     def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
         """Update the vehicle's current position"""
         self.start_pos = vehicle_pos
-        #rospy.loginfo(f'waypoints {self.start_pos}')
+        rospy.loginfo(f'start pos:  {self.start_pos}')
 
 
     def update_vehicle_orientation(self, orientation: float):
@@ -134,20 +134,23 @@ class GlobalRoutePlanner:
         self.dist[start_pos] = 0.0
 
         # add all nodes_id in queue
-        queue = list(range(self.num_nodes))
+        queue = list(range(self.num_nodes+2))
 
         # find the shortest path for all nodes
         while queue:
             # pick the minimum dist node from the set of nodes
             index_min = self._min_distance(queue)
+            #print(index_min)
+            if index_min == -1:
+                return
             # remove min element
             queue.remove(index_min)
 
             # update dist value and parent
             for num in queue:
                 # update dist[i] if it is in queue, there is an edge from index_min to i,
-                if self.graph[index_min][num]:
-                    new_dist = self.dist[index_min] + self.graph[index_min][num]
+                if self.graph_start_end[index_min][num]:
+                    new_dist = self.dist[index_min] + self.graph_start_end[index_min][num]
                     if new_dist < self.dist[num]:
                         self.dist[num] = new_dist
                         self.parent[num] = index_min
@@ -191,8 +194,8 @@ class GlobalRoutePlanner:
         self.graph_start_end = np.append(np.copy(self.graph), np.zeros((2, self.num_nodes)), axis=0)
         self.graph_start_end = np.append(self.graph_start_end,
                                          np.zeros((self.num_nodes+2, 2)), axis=1)
-        print(self.graph_start_end.shape)
-        print(self.mapping)
+        #print(self.graph_start_end.shape)
+        #print(self.mapping)
         #rospy.loginfo(f'index:  {self.mapping}')
         self.mapping['-1_0'] = self.num_nodes+1, self.start_pos
         self.mapping['-2_0'] = self.num_nodes+2,  self.end_pos
@@ -226,6 +229,7 @@ class GlobalRoutePlanner:
                 else:
                     self.graph_start_end[i][self.num_nodes] = 10
                     self.graph_start_end[self.num_nodes][i] = 10
+                print('start road:', key_list[i], ' i:', i)
 
             if polygon.contains(Point(self.end_pos[0], self.end_pos[1])):
                 ids_end.append(key_list[i])
@@ -250,7 +254,7 @@ class GlobalRoutePlanner:
             #self.start_pos = (20.0, 0.004)
         self.end_pos = (250.0, -0.004)
         # 2.05 find points
-        self.find_nearest_road()
+        ids_end = self.find_nearest_road()
         # 2.1 insert start point to matrix --> n-2  /  found point
 
         # 2.2 insert end point to matrix --> n-1  /  found point
@@ -263,11 +267,16 @@ class GlobalRoutePlanner:
         # print('start: ', self.graph_start_end[15][self.num_nodes])
         # print('end: ', self.graph_start_end[6][self.num_nodes+1])
         # print('end: ', self.graph_start_end[7][self.num_nodes+1])
-        self.dijkstra(self.num_nodes-1)
+        self.dijkstra(self.num_nodes+1)
         #print(self.dist)
 
         # TODO
-        self._append_id2path('6_0')
+        rospy.loginfo(f'ID END{ids_end[1][0]}')
+        rospy.loginfo(f'ID END2{ids_end[1]}')
+
+        for i in range(30):
+            rospy.loginfo(" ")
+        self._append_id2path(self.mapping['-2_0'])
         list_lanes = []
         list_waypoints = []
         #print(self.path)
@@ -281,7 +290,7 @@ class GlobalRoutePlanner:
                                        'y': float(self.mapping[key_list[path]][1][1])})
                 list_lanes.append(key_list[path])
         print(list_waypoints)
-
+        rospy.loginfo(f'Found Route{list_waypoints[1]}')
 
         # 4. convert to list of dic
 

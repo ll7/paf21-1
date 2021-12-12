@@ -40,7 +40,7 @@ class GlobalPlannerNode:
 
 
     def init_map(self, path):
-        rospy.loginfo(f'index3:  {os.path.isfile(path)}')
+        #rospy.loginfo(f'index3:  {os.path.isfile(path)}')
 
         self.xodr.read_xodr(path)
         self.xodr.create_links()
@@ -51,7 +51,7 @@ class GlobalPlannerNode:
 
     def run_node(self):
         rospy.init_node(f'global_planner_{self.vehicle_name}', anonymous=True)
-        rospy.loginfo("Hallo?")
+        #rospy.loginfo("Hallo?")
         """Launch the ROS node to receive the map, the start and
          end position and convert them into a global planned route."""
         #self.init_map(Path("/app/res/xodr/Town01.xodr"))
@@ -68,7 +68,7 @@ class GlobalPlannerNode:
             """ Start of Testing without hmi """
             rospy.loginfo(f'index:  {index_calc}')
             index_calc += 1
-            if index_calc == 20:
+            if index_calc == 40:
                 global_route = self.global_route_planner.compute_route()
                 self.global_route_publisher.publish(StringMsg(data=global_route))
             """ End of Testing  """

@@ -49,6 +49,10 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
         vehicle follow the suggested ideal route"""
 
         steering_angle = self._compute_steering_angle()
+        if len(self.route_waypoints) == 0:
+            self.target_velocity_mps = 0.0
+        else:
+            self.target_velocity_mps = 10.0
         signal = DrivingSignal(steering_angle, self.target_velocity_mps)
         rospy.loginfo(f'vehicle {self.vehicle}')
         return signal

@@ -107,4 +107,6 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
                     short_term_route.insert(0, predicted_position)
             if self.step_semantic % 10 == 0:
                 cv2.imwrite(f"/app/logs/img_{self.step_semantic}_highlighted.png", highlighted_img)
+
+
         return short_term_route
