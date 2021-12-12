@@ -2,6 +2,7 @@
 """Main script defining the ROS node"""
 
 import json
+import os.path
 from dataclasses import dataclass
 
 import rospy
@@ -27,6 +28,7 @@ class GlobalPlannerNode:
     xodr = XODRConverter()
 
     def init_map(self, path):
+        print(os.path.isfile(path))
         self.xodr.read_xodr(path)
         self.xodr.create_links()
 
@@ -38,7 +40,7 @@ class GlobalPlannerNode:
         """Launch the ROS node to receive the map, the start and
          end position and convert them into a global planned route."""
         self.init_ros()
-        self.init_map(Path("./../../../xodr/Town01.xodr"))
+        self.init_map(Path("./xodr/Town01.xodr"))
         rate = rospy.Rate(self.publish_rate_in_hz)
 
         index_calc = 0

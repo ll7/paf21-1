@@ -23,7 +23,9 @@ RUN python -m pip install -r /app/requirements.txt
 
 # test + lint the source code
 ADD ./node /app/src/global_planner
+ADD ./xodr /app/src/global_planner
 WORKDIR /app/src/global_planner/src
+
 # TODO add linter
 # RUN source /opt/ros/noetic/setup.bash && \
 #     python -m pytest tests && pylint global_planner --extension-pkg-whitelist=cv2
