@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """Main script defining the ROS node"""
-
+from typing import Tuple, List
 import json
 from dataclasses import dataclass
 import rospy
@@ -50,7 +50,17 @@ class LocalPlannerNode:
     def init_global_route_subscriber(self):
         """Initialize the ROS subscriber receiving global routes"""
         in_topic = f"/drive/{self.vehicle_name}/global_route"
-        rospy.Subscriber(in_topic, StringMsg, self.route_planner.update_global_route)
+        callback = lambda msg: self.route_planner.update_global_route(
+            self.json_message_to_waypoints(msg))
+        rospy.Subscriber(in_topic, StringMsg, callback)
+
+    @staticmethod
+    def json_message_to_waypoints(msg: StringMsg) -> List[Tuple[float, float]]:
+        """Convert a ROS message into waypoints"""
+        json_list = json.loads(msg.data)
+        waypoints = [(wp['x'], wp['y']) for wp in json_list]
+        return waypoints
+
 
     def init_gps_subscriber(self):
         """Initialize the ROS subscriber receiving GPS data"""

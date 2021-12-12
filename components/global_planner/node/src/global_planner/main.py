@@ -24,11 +24,24 @@ class GlobalPlannerNode:
     publish_rate_in_hz: int
     global_route_publisher: rospy.Publisher = None
     # TODO Change the num_nodes
-    global_route_planner: GlobalRoutePlanner = GlobalRoutePlanner(10)
-    xodr = XODRConverter()
+    path = Path("/app/res/xodr/Town01.xodr")
+    xodr: XODRConverter = None
+    global_route_planner: GlobalRoutePlanner = None
+
+    def __post_init__(self):
+        if not self.xodr:
+            self.xodr = XODRConverter()
+            self.xodr.read_xodr(self.path)
+            self.xodr.create_links()
+        if not self.global_route_planner:
+            self.global_route_planner = GlobalRoutePlanner(self.xodr.num_nodes)
+            self.global_route_planner.set_matrix(self.xodr.matrix)
+            self.global_route_planner.set_mapping(self.xodr.mapping)
+
 
     def init_map(self, path):
-        print(os.path.isfile(path))
+        rospy.loginfo(f'index3:  {os.path.isfile(path)}')
+
         self.xodr.read_xodr(path)
         self.xodr.create_links()
 
@@ -37,10 +50,12 @@ class GlobalPlannerNode:
         global_route_planner.set_mapping(self.xodr.mapping)
 
     def run_node(self):
+        rospy.init_node(f'global_planner_{self.vehicle_name}', anonymous=True)
+        rospy.loginfo("Hallo?")
         """Launch the ROS node to receive the map, the start and
          end position and convert them into a global planned route."""
+        #self.init_map(Path("/app/res/xodr/Town01.xodr"))
         self.init_ros()
-        self.init_map(Path("./xodr/Town01.xodr"))
         rate = rospy.Rate(self.publish_rate_in_hz)
 
         index_calc = 0
@@ -55,14 +70,14 @@ class GlobalPlannerNode:
             index_calc += 1
             if index_calc == 20:
                 global_route = self.global_route_planner.compute_route()
-                self.global_route_publisher.publish(global_route)
+                self.global_route_publisher.publish(StringMsg(data=global_route))
             """ End of Testing  """
             rate.sleep()
 
 
     def init_ros(self):
         """Initialize the ROS node's publishers and subscribers"""
-        rospy.init_node(f'global_planner_{self.vehicle_name}', anonymous=True)
+
         self.global_route_publisher = self.init_global_route_publisher()
         self.init_hmi_route_subscriber()
         self._init_gps_subscriber()
@@ -117,7 +132,7 @@ def main():
     with specific configuration parameters"""
 
     vehicle_name = "ego_vehicle"
-    publish_rate_in_hz = 0.5
+    publish_rate_in_hz = 1
 
     node = GlobalPlannerNode(vehicle_name, publish_rate_in_hz)
     node.run_node()

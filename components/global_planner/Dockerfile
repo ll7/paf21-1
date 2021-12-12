@@ -23,7 +23,7 @@ RUN python -m pip install -r /app/requirements.txt
 
 # test + lint the source code
 ADD ./node /app/src/global_planner
-ADD ./xodr /app/src/global_planner
+ADD ./xodr /app/res/xodr
 WORKDIR /app/src/global_planner/src
 
 # TODO add linter

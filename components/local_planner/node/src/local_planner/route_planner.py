@@ -15,7 +15,7 @@ from nav_msgs.msg import Odometry as OdometryMsg
 from local_planner.lane_detection import LaneDetection
 from local_planner.preprocessing import SensorCameraPreprocessor
 from local_planner.preprocessing import SingletonMeta
-
+# from dataclasses import field
 
 class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
     """A class that keeps all the necessary information needed by all the modules,
@@ -50,12 +50,11 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
         pos = msg.pose.pose.position
         self.vehicle_position = [pos.x, pos.y]
 
-    def update_global_route(self, msg: StringMsg):
+    def update_global_route(self, msg):
         """Update the global route to follow"""
         self.global_route = msg
         if self.global_route is None:
             self.cached_local_route = []
-        # call the json parser to extract the data, etc.
 
     def compute_local_route(self):
         """Modifies the global route based on sensor data

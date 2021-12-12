@@ -193,7 +193,7 @@ class GlobalRoutePlanner:
                                          np.zeros((self.num_nodes+2, 2)), axis=1)
         print(self.graph_start_end.shape)
         print(self.mapping)
-        rospy.loginfo(f'index:  {self.mapping}')
+        #rospy.loginfo(f'index:  {self.mapping}')
         self.mapping['-1_0'] = self.num_nodes+1, self.start_pos
         self.mapping['-2_0'] = self.num_nodes+2,  self.end_pos
 
@@ -238,6 +238,7 @@ class GlobalRoutePlanner:
         """Calculate the distance from the point to the road."""
 
     def compute_route(self) -> list:
+        print("Hallo :D")
         """Compute the route."""
         # 0. check map data is available
         # reload if new mapp
@@ -263,24 +264,26 @@ class GlobalRoutePlanner:
         # print('end: ', self.graph_start_end[6][self.num_nodes+1])
         # print('end: ', self.graph_start_end[7][self.num_nodes+1])
         self.dijkstra(self.num_nodes-1)
-        print(self.dist)
+        #print(self.dist)
 
         # TODO
-        #self._append_id2path('6_0')
+        self._append_id2path('6_0')
         list_lanes = []
         list_waypoints = []
-        print(self.path)
+        #print(self.path)
+
 
         key_list = list(self.mapping.keys())
 
         for path in self.path:
             if int(self.mapping[key_list[path]][0]) % 2 == 0:
-                list_waypoints.append({'x': self.mapping[key_list[path]][1][0],
-                                       'y': self.mapping[key_list[path]][1][1]})
+                list_waypoints.append({'x': float(self.mapping[key_list[path]][1][0]),
+                                       'y': float(self.mapping[key_list[path]][1][1])})
                 list_lanes.append(key_list[path])
         print(list_waypoints)
+
 
         # 4. convert to list of dic
 
         # 5. output thr route
-        return [0]
+        return json.dumps(list_waypoints)
