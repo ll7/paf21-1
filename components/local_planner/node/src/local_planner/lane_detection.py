@@ -2,6 +2,7 @@
 from cv2 import cv2
 import numpy as np
 import yaml
+import rospy
 
 
 class LaneDetection:  # pylint: disable=too-few-public-methods
@@ -20,6 +21,10 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
     hough_max_line_gap: int
     angle_lower_bound: int
     angle_upper_bound: int
+    last_middle: [int, int, int, int] = None
+    x_offset_left: int = 0
+    x_offset_right: int = 0
+    counter_angle = 5
 
     def __init__(self, config_path):
         with open(config_path, encoding='utf-8') as file:
@@ -43,7 +48,7 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
         """Detect lanes"""
         projections, keep_lane, angle = self.highlight_lines(image)
         highl_image = LaneDetection.augment_image_with_lines(image, projections)
-        #modify this to return recalculation of driving vector
+        # modify this to return recalculation of driving vector
         return highl_image, keep_lane, angle
 
     def highlight_lines(self, orig_image: np.ndarray):
@@ -53,12 +58,13 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
         lines = self._preprocess_lines(image)
         proj, angle = self._get_lane_boundary_projections(
             lines, image.shape[0], image.shape[1])
-        return proj, abs(angle) > self.deviation_threshold, angle
+        return proj, abs(angle) >= self.deviation_threshold, angle
 
     @staticmethod
     def augment_image_with_lines(orig_img: np.ndarray, lines):
         """Augment the image with the given lines"""
         color = [255, 0, 0]
+        middle_color = [0, 255, 0]
         thickness = 3
         # create a blank image of the same size
         shape = (orig_img.shape[0], orig_img.shape[1], 3)
@@ -69,6 +75,8 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
         for line in lines:
             if line is None:
                 continue
+            if np.array_equal(line, lines[-1]):
+                color = middle_color
             x_1, y_1, x_2, y_2 = line
             cv2.line(lines_img, (x_1, y_1), (x_2, y_2), color, thickness)
 
@@ -136,29 +144,59 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
         if len(left_half) >= 1:
             left_projections = [self._get_projection(
                 line, img_height) for line in left_half]
-            left_proj = left_projections[np.argmax([line[0] for line in left_projections])]
+            left_proj = left_projections[np.argmax([line[3] for line in left_projections])]
+
         if len(right_half) >= 1:
             right_projections = [self._get_projection(
                 line, img_height) for line in right_half]
-            right_proj = right_projections[np.argmin([line[0] for line in right_projections])]
+            right_proj = right_projections[np.argmin([line[3] for line in right_projections])]
+
         if right_proj is not None and left_proj is not None:
             end_point = [int((right_proj[2] + left_proj[2]) / 2), left_proj[3]]
             start_point = [int((right_proj[0] + left_proj[0]) / 2), left_proj[1]]
             middle = [start_point[0], start_point[1], end_point[0], end_point[1]]
-            angle = LaneDetection._calculate_angle(middle,
-                                                   [img_width / 2, 0, img_width / 2, img_height])
+
+        elif right_proj is not None and left_proj is None:
+            self.x_offset_right = right_proj[2] - right_proj[0]
+            middle = [right_proj[0] + self.x_offset_right, right_proj[1],
+                      right_proj[2], right_proj[3]]
+
+        elif right_proj is None and left_proj is not None:
+            self.x_offset_left = left_proj[2] - left_proj[0]
+            middle = [left_proj[0] + self.x_offset_left, left_proj[1],
+                      left_proj[2], left_proj[3]]
+
+        else:
+            middle = self.last_middle
+
+        if middle is not None:
+            self.last_middle = middle
+
+            distances = middle[2] - (img_width / 2), middle[0] - (img_width / 2)
+            distances = [d for d in distances if d > 0]
+            if len(distances) == 0:
+                angle = -self.counter_angle
+            elif len(distances) == 2:
+                angle = self.counter_angle
+            else:
+                angle = LaneDetection._calculate_angle(middle,
+                                                       [img_width / 2, img_height,
+                                                        img_width / 2, 0])
+                if abs(angle) < 10:
+                    angle = -angle
+            rospy.loginfo(f'angle: {angle}')
         return [right_proj, left_proj, middle], angle
 
     @staticmethod
     def _calculate_angle(vector_1, vector_2):
-        vector_1 = np.array([vector_1[2] - vector_1[0], vector_1[3] - vector_1[1]])
-        vector_2 = np.array([vector_2[2] - vector_2[0], vector_2[3] - vector_2[1]])
-        length_1 = np.sqrt(vector_1[0] ** 2 + vector_1[1] ** 2)
-        length_2 = np.sqrt(vector_2[0] ** 2 + vector_2[1] ** 2)
-        angle = np.arccos(np.dot(vector_1, vector_2) / (length_1 * length_2))
-        angle = 180 - np.rad2deg(angle)
-        if vector_1[0] > 0:
-            angle = -angle
+        vector_form_1 = np.array([vector_1[2] - vector_1[0], vector_1[3] - vector_1[1]])
+        vector_form_2 = np.array([vector_2[2] - vector_2[0], vector_2[3] - vector_2[1]])
+        length_1 = np.sqrt(vector_form_1[0] ** 2 + vector_form_1[1] ** 2)
+        length_2 = np.sqrt(vector_form_2[0] ** 2 + vector_form_2[1] ** 2)
+        angle = np.arccos(np.dot(vector_form_1, vector_form_2) / (length_1 * length_2))
+        angle = np.rad2deg(angle)
+        if vector_1[0] > vector_1[2]:
+            angle = -abs(angle)
         return angle
 
     @staticmethod

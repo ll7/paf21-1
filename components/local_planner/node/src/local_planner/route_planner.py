@@ -7,7 +7,7 @@ from cv2 import cv2
 
 import rospy
 import numpy as np
-from numpy.core.fromnumeric import argsort
+# from numpy.core.fromnumeric import argsort
 from std_msgs.msg import String as StringMsg
 from sensor_msgs.msg import Imu as ImuMsg
 from nav_msgs.msg import Odometry as OdometryMsg
@@ -22,10 +22,12 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
     this class should be expanded if needed"""
     vehicle_vector: Tuple[float, float] = None
     vehicle_position: Tuple[float, float] = None
-    global_route: List[Tuple[float, float]] = None
+    global_route: List[Tuple[float, float]] = []
     cached_local_route: List[Tuple[float, float]] = []
     vehicle_yaw: float = 0
     step_semantic: int = 0
+    lane_detect_config: str = "/app/src/local_planner/config/config_lane_detection.yml"
+    lane_detection = LaneDetection = LaneDetection(lane_detect_config)
 
     def update_vehicle_vector(self, msg: ImuMsg):
         """Calculates the vektor the car is currently driving"""
@@ -42,43 +44,42 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
             self.vehicle_vector = [x_coord / length, y_coord / length]
         else:
             self.vehicle_vector = [x_coord, y_coord]
-        rospy.loginfo(self.vehicle_vector)
 
     def update_gps(self, msg: OdometryMsg):
         """Convert a ROS message into the vehicle position"""
         pos = msg.pose.pose.position
         self.vehicle_position = [pos.x, pos.y]
-        rospy.loginfo(f'Position: {self.vehicle_position}')
 
     def update_global_route(self, msg: StringMsg):
         """Update the global route to follow"""
         self.global_route = msg
+        if self.global_route is None:
+            self.cached_local_route = []
         # call the json parser to extract the data, etc.
 
     def compute_local_route(self):
         """Modifies the global route based on sensor data
         to fit the current diving circumstances"""
         self.step_semantic += 1
+        short_term_route = []
 
-        # if self.global_route is None:
-        #    return []
         # interpolate the route such that the route points are closely aligned
         # filter the parts of the global route of the near future
         images = SensorCameraPreprocessor()
-        if self.global_route is not None:
-            neighbour_ids = argsort([dist(p, self.vehicle_position) for p in self.global_route])
-            self.cached_local_route = self.global_route[max(neighbour_ids[0], neighbour_ids[1]):]
-            self.cached_local_route = self.cached_local_route[:min(10,
-                                                                   len(self.cached_local_route))]
+        point_counts_as_done = 0.2
+        enumerator = 0
+        for point in self.cached_local_route:
+            if dist(point, self.vehicle_position) > point_counts_as_done:
+                break
+            enumerator += 1
+        self.cached_local_route = self.cached_local_route[enumerator:]
 
-        # reduce the points handed over to just a single one, just for now
-        self.cached_local_route = []
-
-        lane_detect_config = "/app/src/local_planner/config/config_lane_detection.yml"
-        lane_detection = LaneDetection(lane_detect_config)
+        # neighbour_ids = argsort([dist(p, self.vehicle_position) for p in self.cached_local_route])
+        # self.cached_local_route = self.global_route[max(neighbour_ids[0], neighbour_ids[1]):]
+        short_term_route = self.cached_local_route[:min(50, len(self.cached_local_route))]
         if images.semantic_image is not None:
             image = images.semantic_image[:, :, :3] # cut off alpha channel
-            highlighted_img, keep_lane, angle = lane_detection.detect_lanes(image)
+            highlighted_img, keep_lane, angle = self.lane_detection.detect_lanes(image)
             if keep_lane:
                 new_yaw = self.vehicle_yaw - np.deg2rad(angle)
                 x_coord, y_coord = math.cos(new_yaw), math.sin(new_yaw)
@@ -86,7 +87,8 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
                 new_driving_vector = [x_coord / length, y_coord / length]
                 predicted_position = (self.vehicle_position[0] + new_driving_vector[0],
                                       self.vehicle_position[1] + new_driving_vector[1])
-                self.cached_local_route.insert(0, predicted_position)
-            if self.step_semantic % 30 == 0:
+                short_term_route.insert(0, predicted_position)
+            rospy.loginfo(f'step: {self.step_semantic}')
+            if self.step_semantic % 10 == 0:
                 cv2.imwrite(f"/app/logs/img_{self.step_semantic}_highlighted.png", highlighted_img)
-        return self.cached_local_route
+        return short_term_route
