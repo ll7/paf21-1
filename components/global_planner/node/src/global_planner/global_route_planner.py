@@ -288,7 +288,7 @@ class GlobalRoutePlanner:
 
         key_list = list(self.mapping.keys())
 
-        for path in self.path:
+        for index, path in enumerate(self.path):
             if int(self.mapping[key_list[path]][0]) % 2 == 0 or index == len(self.path)-1:
                 list_waypoints.append({'x': float(self.mapping[key_list[path]][1][0]),
                                        'y': float(self.mapping[key_list[path]][1][1])})
