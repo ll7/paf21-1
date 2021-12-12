@@ -77,10 +77,9 @@ class GlobalRoutePlanner:
         self.start_pos = vehicle_pos
         rospy.loginfo(f'start pos:  {self.start_pos}')
 
-
     def update_vehicle_orientation(self, orientation: float):
         """Update the vehicle's current orientation"""
-        self.orientation= orientation
+        self.orientation = orientation
         #rospy.loginfo(f'orientation {self.orientation}')
 
     # def set_gps(self, msg: GpsMsg):
@@ -155,22 +154,24 @@ class GlobalRoutePlanner:
                         self.dist[num] = new_dist
                         self.parent[num] = index_min
 
-    def _append_pos2path(self, pos: int) -> int:
+    def _append_pos2path(self, pos_start: int, pos: int):
         """Append the position to the path."""
-        self.path.append(pos)
+        # self.path.append(pos)
+        self.path.insert(0, pos)
+        if self.parent[pos] == pos_start:
+            self.path.insert(0, pos_start)
         # check if pos has a parent
-        if self.parent[pos] != -1:
+        elif self.parent[pos] != -1:
             # recursive call
-            self._append_pos2path(self.parent[pos])
+            self._append_pos2path(pos_start, self.parent[pos])
 
-        return pos
-
-    def _append_id2path(self, target_id: str):
+    def _append_id2path(self, start_id: str, target_id: str):
         """Append the pos of the id to the path."""
         # get the position
-        pos = self.get_pos(target_id)
+        pos_start = self.get_pos(start_id)
+        pos_target = self.get_pos(target_id)
         # append the position to the path
-        self._append_pos2path(pos)
+        self._append_pos2path(pos_start, pos_target)
 
     def get_path_ids(self) -> list:
         """Get the ids for the path."""
@@ -197,8 +198,8 @@ class GlobalRoutePlanner:
         #print(self.graph_start_end.shape)
         #print(self.mapping)
         #rospy.loginfo(f'index:  {self.mapping}')
-        self.mapping['-1_0'] = self.num_nodes+1, self.start_pos
-        self.mapping['-2_0'] = self.num_nodes+2,  self.end_pos
+        self.mapping['-1_0'] = self.num_nodes, self.start_pos
+        self.mapping['-2_0'] = self.num_nodes+1,  self.end_pos
 
         key_list = list(self.mapping.keys())
 
@@ -252,7 +253,10 @@ class GlobalRoutePlanner:
         # 2. start and endpoint
             # start from update_vehicle_position()
             #self.start_pos = (20.0, 0.004)
-        self.end_pos = (250.0, -0.004)
+        self.start_pos = np.array([101.62, -328.59])
+        self.end_pos = np.array([144.99, -57.5])
+        # self.start_pos = np.array([20.0, 0.004])
+        # self.end_pos = np.array([255.0, -0.004])
         # 2.05 find points
         ids_end = self.find_nearest_road()
         # 2.1 insert start point to matrix --> n-2  /  found point
@@ -267,7 +271,7 @@ class GlobalRoutePlanner:
         # print('start: ', self.graph_start_end[15][self.num_nodes])
         # print('end: ', self.graph_start_end[6][self.num_nodes+1])
         # print('end: ', self.graph_start_end[7][self.num_nodes+1])
-        self.dijkstra(self.num_nodes+1)
+        self.dijkstra(self.mapping['-1_0'][0])
         #print(self.dist)
 
         # TODO
@@ -276,7 +280,7 @@ class GlobalRoutePlanner:
 
         for i in range(30):
             rospy.loginfo(" ")
-        self._append_id2path(self.mapping['-2_0'])
+        self._append_id2path('-1_0', '-2_0')
         list_lanes = []
         list_waypoints = []
         #print(self.path)
@@ -285,12 +289,12 @@ class GlobalRoutePlanner:
         key_list = list(self.mapping.keys())
 
         for path in self.path:
-            if int(self.mapping[key_list[path]][0]) % 2 == 0:
+            if int(self.mapping[key_list[path]][0]) % 2 == 0 or index == len(self.path)-1:
                 list_waypoints.append({'x': float(self.mapping[key_list[path]][1][0]),
                                        'y': float(self.mapping[key_list[path]][1][1])})
                 list_lanes.append(key_list[path])
         print(list_waypoints)
-        rospy.loginfo(f'Found Route{list_waypoints[1]}')
+        rospy.loginfo(f'Found Route {list_waypoints}')
 
         # 4. convert to list of dic
 
