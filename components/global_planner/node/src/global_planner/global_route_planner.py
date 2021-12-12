@@ -10,6 +10,8 @@ from shapely.geometry.polygon import Polygon
 # from std_msgs.msg import String as StringMsg
 # from sensor_msgs.msg import NavSatFix as GpsMsg
 # import xodr_converter
+from typing import Tuple, List
+import rospy
 
 
 class GlobalRoutePlanner:
@@ -34,6 +36,7 @@ class GlobalRoutePlanner:
         self.map_name = ''
         self.end_pos = np.zeros(shape=(2,))
         self.start_pos = np.zeros(shape=(2,))
+        self.orientation = 0.0
         self.update = False
         # TODO read from data
         self.road_width = 4.0
@@ -68,6 +71,17 @@ class GlobalRoutePlanner:
 
         self.end_pos = msg.end_point
         self.update = True
+
+    def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
+        """Update the vehicle's current position"""
+        self.start_pos = vehicle_pos
+        #rospy.loginfo(f'waypoints {self.start_pos}')
+
+
+    def update_vehicle_orientation(self, orientation: float):
+        """Update the vehicle's current orientation"""
+        self.orientation= orientation
+        #rospy.loginfo(f'orientation {self.orientation}')
 
     # def set_gps(self, msg: GpsMsg):
     def update_gps(self, msg):
@@ -178,7 +192,8 @@ class GlobalRoutePlanner:
         self.graph_start_end = np.append(self.graph_start_end,
                                          np.zeros((self.num_nodes+2, 2)), axis=1)
         print(self.graph_start_end.shape)
-        print()
+        print(self.mapping)
+        rospy.loginfo(f'index:  {self.mapping}')
         self.mapping['-1_0'] = self.num_nodes+1, self.start_pos
         self.mapping['-2_0'] = self.num_nodes+2,  self.end_pos
 
@@ -204,9 +219,13 @@ class GlobalRoutePlanner:
             if polygon.contains(Point(self.start_pos[0], self.start_pos[1])):
                 ids_start.append(key_list[i])
                 # TODO set weights for start and end (distance)
-                self.graph_start_end[i][self.num_nodes] = 10
-                self.graph_start_end[self.num_nodes][i] = 10
-                print('start road:', key_list[i], ' i:', i)
+                ori_to_point = math.atan2(end_point[1]-start_point[1], div)
+                if self.orientation == ori_to_point:
+                    self.graph_start_end[i][self.num_nodes] = 10
+                    self.graph_start_end[self.num_nodes][i] = 10
+                else:
+                    self.graph_start_end[i][self.num_nodes] = 10
+                    self.graph_start_end[self.num_nodes][i] = 10
 
             if polygon.contains(Point(self.end_pos[0], self.end_pos[1])):
                 ids_end.append(key_list[i])
@@ -226,7 +245,8 @@ class GlobalRoutePlanner:
         # 1. load and set map -> Done
 
         # 2. start and endpoint
-        self.start_pos = (20.0, 0.004)
+            # start from update_vehicle_position()
+            #self.start_pos = (20.0, 0.004)
         self.end_pos = (250.0, -0.004)
         # 2.05 find points
         self.find_nearest_road()
@@ -237,16 +257,16 @@ class GlobalRoutePlanner:
         # from start and end point get id
 
         # 3. start dijkstra
-        # TODO
-        print('start: ', self.graph_start_end[14][self.num_nodes])
-        print('start: ', self.graph_start_end[15][self.num_nodes])
-        print('end: ', self.graph_start_end[6][self.num_nodes+1])
-        print('end: ', self.graph_start_end[7][self.num_nodes+1])
-
+        # # TODO
+        # print('start: ', self.graph_start_end[14][self.num_nodes])
+        # print('start: ', self.graph_start_end[15][self.num_nodes])
+        # print('end: ', self.graph_start_end[6][self.num_nodes+1])
+        # print('end: ', self.graph_start_end[7][self.num_nodes+1])
         self.dijkstra(self.num_nodes-1)
         print(self.dist)
+
         # TODO
-        self._append_id2path('6_0')
+        #self._append_id2path('6_0')
         list_lanes = []
         list_waypoints = []
         print(self.path)

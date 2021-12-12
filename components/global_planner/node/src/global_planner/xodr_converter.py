@@ -4,7 +4,7 @@ import xml.etree.ElementTree as eTree
 from pathlib import Path
 from typing import List
 import numpy as np
-from global_planner.global_route_planner import GlobalRoutePlanner
+#from components.global_planner.node.src.global_planner.global_route_planner import GlobalRoutePlanner
 
 
 class XODRConverter:
@@ -278,14 +278,14 @@ class XODRConverter:
         self.link_pre_suc()
 
 
-if __name__ == "__main__":
-    filename = Path("./../../../xodr/Town01.xodr")
-
-    xodr = XODRConverter()
-    xodr.read_xodr(filename)
-    xodr.create_links()
-
-    gp = GlobalRoutePlanner(xodr.num_nodes)
-    gp.set_matrix(xodr.matrix)
-    gp.set_mapping(xodr.mapping)
-    gp.compute_route()
+# if __name__ == "__main__":
+#     filename = Path("./../../../xodr/Town01.xodr")
+#
+#     xodr = XODRConverter()
+#     xodr.read_xodr(filename)
+#     xodr.create_links()
+#
+#     gp = GlobalRoutePlanner(xodr.num_nodes)
+#     gp.set_matrix(xodr.matrix)
+#     gp.set_mapping(xodr.mapping)
+#     gp.compute_route()
