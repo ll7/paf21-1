@@ -58,7 +58,7 @@ class LocalPlannerNode:
     def json_message_to_waypoints(msg: StringMsg) -> List[Tuple[float, float]]:
         """Convert a ROS message into waypoints"""
         json_list = json.loads(msg.data)
-        waypoints = [(wp['x'], wp['y']) for wp in json_list]
+        waypoints = [[wp['x'], wp['y']] for wp in json_list]
         return waypoints
 
 

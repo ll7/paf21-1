@@ -48,24 +48,29 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
     def update_gps(self, msg: OdometryMsg):
         """Convert a ROS message into the vehicle position"""
         pos = msg.pose.pose.position
+
         self.vehicle_position = [pos.x, pos.y]
 
     def update_global_route(self, msg):
         """Update the global route to follow"""
         self.global_route = msg
+        rospy.loginfo(self.global_route)
+        #self.global_route = None
         if self.global_route is None:
             self.cached_local_route = []
+        else:
+            self.cached_local_route = self.global_route
 
     def compute_local_route(self):
         """Modifies the global route based on sensor data
         to fit the current diving circumstances"""
+        if self.vehicle_position is None:
+            return []
         self.step_semantic += 1
-        short_term_route = []
-
         # interpolate the route such that the route points are closely aligned
         # filter the parts of the global route of the near future
         images = SensorCameraPreprocessor()
-        point_counts_as_done = 0.2
+        point_counts_as_done = 2.5
         enumerator = 0
         for point in self.cached_local_route:
             if dist(point, self.vehicle_position) > point_counts_as_done:
@@ -76,7 +81,9 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
         # neighbour_ids = argsort([dist(p, self.vehicle_position) for p in self.cached_local_route])
         # self.cached_local_route = self.global_route[max(neighbour_ids[0], neighbour_ids[1]):]
         short_term_route = self.cached_local_route[:min(50, len(self.cached_local_route))]
-        if images.semantic_image is not None:
+
+        turned_on = False
+        if images.semantic_image is not None and turned_on:
             image = images.semantic_image[:, :, :3] # cut off alpha channel
             highlighted_img, keep_lane, angle = self.lane_detection.detect_lanes(image)
             if keep_lane:
@@ -86,8 +93,18 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
                 new_driving_vector = [x_coord / length, y_coord / length]
                 predicted_position = (self.vehicle_position[0] + new_driving_vector[0],
                                       self.vehicle_position[1] + new_driving_vector[1])
-                short_term_route.insert(0, predicted_position)
-            rospy.loginfo(f'step: {self.step_semantic}')
+                if len(short_term_route) != 0:
+                    predicted_vector = np.subtract(predicted_position, self.vehicle_position)
+                    route_vector = np.subtract(short_term_route[0], self.vehicle_position)
+                    cos = np.dot(route_vector, predicted_vector)/np.linalg.norm(
+                        route_vector) / np.linalg.norm(predicted_vector)
+                    off_set_angle = np.rad2deg(np.arccos(cos))
+                    if abs(off_set_angle) < 45:
+                        short_term_route.insert(0, predicted_position)
+                        rospy.loginfo(f'step: {self.step_semantic}')
+                        rospy.loginfo(f'{short_term_route[0]} {self.vehicle_position}')
+                else:
+                    short_term_route.insert(0, predicted_position)
             if self.step_semantic % 10 == 0:
                 cv2.imwrite(f"/app/logs/img_{self.step_semantic}_highlighted.png", highlighted_img)
         return short_term_route

@@ -156,19 +156,18 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
             start_point = [int((right_proj[0] + left_proj[0]) / 2), left_proj[1]]
             middle = [start_point[0], start_point[1], end_point[0], end_point[1]]
 
-        elif right_proj is not None and left_proj is None:
-            self.x_offset_right = right_proj[2] - right_proj[0]
-            middle = [right_proj[0] + self.x_offset_right, right_proj[1],
-                      right_proj[2], right_proj[3]]
-
-        elif right_proj is None and left_proj is not None:
-            self.x_offset_left = left_proj[2] - left_proj[0]
-            middle = [left_proj[0] + self.x_offset_left, left_proj[1],
-                      left_proj[2], left_proj[3]]
-
-        else:
-            middle = self.last_middle
-
+#        elif right_proj is not None and left_proj is None:
+#            self.x_offset_right = right_proj[2] - right_proj[0]
+#            middle = [right_proj[0] + self.x_offset_right, right_proj[1],
+#                      right_proj[2], right_proj[3]]
+#
+#        elif right_proj is None and left_proj is not None:
+#            self.x_offset_left = left_proj[2] - left_proj[0]
+#            middle = [left_proj[0] + self.x_offset_left, left_proj[1],
+#                      left_proj[2], left_proj[3]]
+#
+#        else:
+#            middle = self.last_middle
         if middle is not None:
             self.last_middle = middle
 

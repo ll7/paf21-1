@@ -1,6 +1,6 @@
-lower_bound: [150, 100, 100]
-upper_bound: [151, 150, 150]
-lower_bound_car: [120, 0, 0]
+lower_bound: [150, 120, 100]
+upper_bound: [150, 140, 150]
+lower_bound_car: [120, 100, 100]
 upper_bound_car: [130, 255, 255]
 canny_lower: 50
 canny_upper: 150

@@ -30,7 +30,7 @@ class VehicleControllerNode:
         """Launch the ROS node to receive planned routes + GPS
         and convert them into AckermannDrive signals"""
         self._init_publishers_and_subscribers()
-        self.driving_controller.target_velocity_mps = 5.0
+        self.driving_controller.target_velocity_mps = 10.0
         self._send_driving_signals_until_node_shutdown()
 
     def _send_driving_signals_until_node_shutdown(self):
