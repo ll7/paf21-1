@@ -22,8 +22,8 @@ class GlobalRoutePlanner:
         # base filepath to the maps
         self.filepath = r"../../../maps"
         # graph with
-        self.graph = np.zeros(shape=(num_nodes, num_nodes))
-        self.graph_start_end = np.zeros(shape=(num_nodes+2, num_nodes+2))
+        self.graph = None
+        self.graph_start_end = None
         # initialize all distances with inf.
         self.dist = np.ones(shape=(num_nodes+2,)) * np.inf
         # array for the parents to store shortest path tree
@@ -128,20 +128,23 @@ class GlobalRoutePlanner:
 
     def dijkstra(self, start_pos: int):
         """Implementation of the Dijkstra algorithm."""
+
+        self.num_nodes = self.graph.shape[0]+2
+        self.dist = np.ones(shape=(self.num_nodes,)) * np.inf
+        # array for the parents to store shortest path tree
+        self.parent = np.ones(shape=(self.num_nodes,)).astype('int32') * (-1)
+
         # distance of source to itself is 0
         # start_pos = self.get_pos(start_id)
         self.dist[start_pos] = 0.0
 
         # add all nodes_id in queue
-        queue = list(range(self.num_nodes+2))
+        queue = list(range(self.num_nodes))
 
         # find the shortest path for all nodes
         while queue:
             # pick the minimum dist node from the set of nodes
             index_min = self._min_distance(queue)
-            #print(index_min)
-            if index_min == -1:
-                return
             # remove min element
             queue.remove(index_min)
 
@@ -192,18 +195,20 @@ class GlobalRoutePlanner:
         """Find the nearest road to the start and end point."""
         ids_start = []
         ids_end = []
-        self.graph_start_end = np.append(np.copy(self.graph), np.zeros((2, self.num_nodes)), axis=0)
+        self.num_nodes = self.graph.shape[0] + 2
+        start_pos = self.start_pos
+        print(f"Start Point: {start_pos}")
+        self.graph_start_end = np.append(np.copy(self.graph), np.zeros((2, self.num_nodes-2)), axis=0)
         self.graph_start_end = np.append(self.graph_start_end,
-                                         np.zeros((self.num_nodes+2, 2)), axis=1)
+                                         np.zeros((self.num_nodes, 2)), axis=1)
         #print(self.graph_start_end.shape)
         #print(self.mapping)
         #rospy.loginfo(f'index:  {self.mapping}')
-        self.mapping['-1_0'] = self.num_nodes, self.start_pos
-        self.mapping['-2_0'] = self.num_nodes+1,  self.end_pos
+        self.mapping['-1_0'] = self.num_nodes-2, start_pos
+        self.mapping['-2_0'] = self.num_nodes-1,  self.end_pos
 
         key_list = list(self.mapping.keys())
-
-        for i in range(0, self.num_nodes+2, 2):
+        for i in range(0, self.num_nodes-2, 2):
             start_point = self.mapping[key_list[i]][1]
             end_point = self.mapping[key_list[i+1]][1]
             div = (end_point[0]-start_point[0])
@@ -216,11 +221,11 @@ class GlobalRoutePlanner:
             offset_y = math.sin(beta) * self.road_width
             polygon = Polygon([(start_point[0] + offset_x, start_point[1] - offset_y),
                                (start_point[0] - offset_x, start_point[1] + offset_y),
+                               (end_point[0] - offset_x, end_point[1] + offset_y),
                                (end_point[0] + offset_x, end_point[1] - offset_y),
-                               (end_point[0] - offset_x, end_point[1] + offset_y)
                                ])
 
-            if polygon.contains(Point(self.start_pos[0], self.start_pos[1])):
+            if polygon.contains(Point(start_pos[0], start_pos[1])):
                 ids_start.append(key_list[i])
                 # TODO set weights for start and end (distance)
                 ori_to_point = math.atan2(end_point[1]-start_point[1], div)
@@ -253,7 +258,9 @@ class GlobalRoutePlanner:
         # 2. start and endpoint
             # start from update_vehicle_position()
             #self.start_pos = (20.0, 0.004)
-        self.start_pos = np.array([101.62, -328.59])
+        # self.start_pos = np.array([101.62, -328.59])
+        # self.end_pos = np.array([144.99, -57.5])
+        #self.start_pos = np.array([200.63262939453125, -2.020033836364746])
         self.end_pos = np.array([144.99, -57.5])
         # self.start_pos = np.array([20.0, 0.004])
         # self.end_pos = np.array([255.0, -0.004])
@@ -267,10 +274,6 @@ class GlobalRoutePlanner:
 
         # 3. start dijkstra
         # # TODO
-        # print('start: ', self.graph_start_end[14][self.num_nodes])
-        # print('start: ', self.graph_start_end[15][self.num_nodes])
-        # print('end: ', self.graph_start_end[6][self.num_nodes+1])
-        # print('end: ', self.graph_start_end[7][self.num_nodes+1])
         self.dijkstra(self.mapping['-1_0'][0])
         #print(self.dist)
 
@@ -283,8 +286,6 @@ class GlobalRoutePlanner:
         self._append_id2path('-1_0', '-2_0')
         list_lanes = []
         list_waypoints = []
-        #print(self.path)
-
 
         key_list = list(self.mapping.keys())
 
@@ -294,6 +295,7 @@ class GlobalRoutePlanner:
                                        'y': float(self.mapping[key_list[path]][1][1])})
                 list_lanes.append(key_list[path])
         print(list_waypoints)
+        print(list_lanes)
         rospy.loginfo(f'Found Route {list_waypoints}')
 
         # 4. convert to list of dic
