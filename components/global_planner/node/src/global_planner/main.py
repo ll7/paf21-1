@@ -28,6 +28,15 @@ class GlobalPlannerNode:
     xodr: XODRConverter = None
     global_route_planner: GlobalRoutePlanner = None
 
+
+    #
+    #     gp = GlobalRoutePlanner()
+    #     gp.set_matrix(xodr.matrix)
+    #     gp.point_dict = xodr.point_dict
+    #     gp.set_mapping(xodr.mapping)
+    #     gp.compute_route()
+
+
     def __post_init__(self):
         if not self.xodr:
             self.xodr = XODRConverter()
@@ -67,6 +76,10 @@ class GlobalPlannerNode:
                 self.global_route_planner.update = False
             # ToDo for Testing only
             """ Start of Testing without hmi """
+            rospy.loginfo(f'index:  {index_calc}')
+            rospy.loginfo(f'index:  {index_calc}')
+            rospy.loginfo(f'index:  {index_calc}')
+            rospy.loginfo(f'index:  {index_calc}')
             rospy.loginfo(f'index:  {index_calc}')
             index_calc += 1
             if index_calc == 40:

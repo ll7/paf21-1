@@ -70,7 +70,7 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
         # interpolate the route such that the route points are closely aligned
         # filter the parts of the global route of the near future
         images = SensorCameraPreprocessor()
-        point_counts_as_done = 2.5
+        point_counts_as_done = 10
         enumerator = 0
         for point in self.cached_local_route:
             if dist(point, self.vehicle_position) > point_counts_as_done:
