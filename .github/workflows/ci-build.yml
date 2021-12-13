@@ -1,0 +1,19 @@
+name: Build Driving Components
+
+on:
+  push:
+    branches: [ master ]
+
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+
+      - name: Build the Docker images
+        run: cd components && docker-compose -f driving-components-build.yml build

@@ -14,18 +14,3 @@ services:
       context: ./carla_ros_bridge
       args:
         - CARLA_VERSION=0.9.10.1
-
-  vehicle-controller:
-    image: vehicle_controller
-    build:
-      context: ./vehicle_controller
-
-  local-planner:
-    image: local_planner
-    build:
-      context: ./local_planner
-
-  global-planner:
-    image: global_planner
-    build:
-      context: ./global_planner
