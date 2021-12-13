@@ -13,7 +13,7 @@ docker-compose -f driving-components-build.yml build
 *Note: Splitting up the components into CARLA simulation and driving was required
 to speed up the server-side GitHub workflows because building the Docker images
 from scratch on each commit would imply downloading ~15 GB of pre-built Docker images
-which is not feasible at all*
+which is not feasible*
 
 ## CARLA Simulation Components
 The CARLA simulation involves following components:
@@ -24,6 +24,6 @@ The CARLA simulation involves following components:
 
 ## Driving Components (ROS)
 The components for driving are the following:
-- **global planner**: serves navigation tasks based on map data
-- **local planner**: serves local decision-making tasks and amplifies the route based on sensor data
-- **vehicle controller**: transforms the route waypoints etc. into actionable remote-control signals
+- **Global Planner**: serves navigation tasks based on map data
+- **Local Planner**: serves local decision-making tasks and amplifies the route based on sensor data
+- **Vehicle Controller**: transforms the route waypoints etc. into actionable remote-control signals
