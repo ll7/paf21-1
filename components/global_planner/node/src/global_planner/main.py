@@ -37,6 +37,7 @@ class GlobalPlannerNode:
             self.global_route_planner = GlobalRoutePlanner()
             self.global_route_planner.set_matrix(self.xodr.matrix)
             self.global_route_planner.set_mapping(self.xodr.mapping)
+            self.global_route_planner.point_dict = self.xodr.point_dict
 
 
     def init_map(self, path):

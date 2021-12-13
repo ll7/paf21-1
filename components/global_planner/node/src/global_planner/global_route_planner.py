@@ -43,7 +43,9 @@ class GlobalRoutePlanner:
 
     def set_matrix(self, matrix: np.ndarray):
         """Set the graph with a matrix (numpy array)."""
-        self.graph = matrix
+        print(f'Shape of Graph GRP {matrix.shape}')
+        self.graph = np.copy(matrix)
+        print(f'Shape of Graph GRP {self.graph.shape}')
 
     def set_mapping(self, mapping: dict):
         """Set the mapping and the nodes."""
@@ -104,7 +106,7 @@ class GlobalRoutePlanner:
         if node_id not in self.mapping:
             return KeyError
 
-        return self.mapping[node_id][0]
+        return self.mapping[node_id]
 
     def _min_distance(self, queue: list) -> int or AttributeError:
         """Calculate the index with the minimum distance."""
@@ -196,11 +198,14 @@ class GlobalRoutePlanner:
         ids_start = []
         ids_end = []
         self.num_nodes = self.graph.shape[0] + 2
+        print(f'Shape of Graph {len(self.mapping)}')
         start_pos = self.start_pos
         print(f"Start Point: {start_pos}")
         self.graph_start_end = np.append(np.copy(self.graph), np.zeros((2, self.num_nodes-2)), axis=0)
         self.graph_start_end = np.append(self.graph_start_end,
                                          np.zeros((self.num_nodes, 2)), axis=1)
+        print(f'Shape of GraphStartEnd {self.graph_start_end.shape}')
+
         #print(self.graph_start_end.shape)
         #print(self.mapping)
         #rospy.loginfo(f'index:  {self.mapping}')
@@ -278,7 +283,7 @@ class GlobalRoutePlanner:
         self.start_pos = np.array([245.850891, -198.75])
         # self.end_pos = np.array([255.0, -0.004])
         # 2.05 find points
-        ids_end = self.find_nearest_road()
+        ids_start, ids_end = self.find_nearest_road()
         # 2.1 insert start point to matrix --> n-2  /  found point
 
         # 2.2 insert end point to matrix --> n-1  /  found point
@@ -291,7 +296,7 @@ class GlobalRoutePlanner:
         #print(self.dist)
 
         # TODO
-        self._append_id2path('-1_0', '-2_0')
+        self._append_id2path('-1_0_0', '-2_0_0')
         list_lanes = []
         list_waypoints = []
 
@@ -305,7 +310,7 @@ class GlobalRoutePlanner:
         print(list_waypoints)
         print(list_lanes)
         rospy.loginfo(f'Found Route {list_waypoints}')
-
+        rospy.loginfo(f"List Lanes: {list_lanes}")
         # 4. convert to list of dic
 
         # 5. output thr route

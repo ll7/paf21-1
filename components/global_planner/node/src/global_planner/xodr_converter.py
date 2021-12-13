@@ -20,6 +20,7 @@ class XODRConverter:
         self.matrix = None
         # road mapping
         self.mapping = {}
+        self.point_dict = {}
 
     def _get_lane_sec(self):
         """Get the lane section out of the road."""
@@ -40,7 +41,7 @@ class XODRConverter:
             if lane_sec.find(direction) is not None:
                 for lane in lane_sec.find(direction).findall('lane'):
                     if lane.get('type') == 'driving':
-                        return_ids[i].append(lane.get('id'))
+                        return_ids[i].append(int(lane.get('id')))
         return return_ids
 
     def _get_traffic_signs(self) -> list:
@@ -97,7 +98,15 @@ class XODRConverter:
                 }
                 links = []
                 for lane_link in connection:
-                    links.append([int(lane_link.get('from')), int(lane_link.get('to'))])
+                    from_lane = int(lane_link.get('from'))
+                    key_from = f"{junction_dict['incoming_road']}_0_{from_lane}"
+                    to_lane = int(lane_link.get('to'))
+                    key_to = f"{junction_dict['connecting_road']}_0_{to_lane}"
+
+                    if key_from in self.mapping or key_to in self.mapping:
+                        links.append([from_lane, to_lane])
+                if len(links) == 0:
+                    continue
 
                 # set the links to the junction dict
                 junction_dict['lane_links'] = links
@@ -178,7 +187,6 @@ class XODRConverter:
 
         # parse all junctions
         self._get_junction_dic(root.findall('junction'))
-
         return None
 
     # TODO refactor
@@ -221,7 +229,7 @@ class XODRConverter:
 
             return founded_keys[-1]
 
-    def junc_id2index(self, junction_id: int) -> List[int]:
+    def junc_ids_entries(self, junction_id: int) -> List[int]:
         """Get the list of indices to the corresponding junction id"""
         founded_junc = []
         for index, junction in enumerate(self.junctions):
@@ -248,14 +256,32 @@ class XODRConverter:
 
             connecting_road = int(self.junctions[i]['connecting_road'])
             contact_point = self.junctions[i]['contact_point']
+            incoming_road = int(self.junctions[i]['incoming_road'])
 
-            index_incoming = self.road_id2index(road['road_id'], link == 'pre')
-            first_element = contact_point == 'start'
-            index_connecting = self.road_id2index(connecting_road, first_element)
-            # TODO check if both sides are necessary
-            if index_incoming != index_connecting:
-                self.matrix[index_connecting][index_incoming] = 1e-4
-                self.matrix[index_incoming][index_connecting] = 1e-4
+            if link == 'pre' and contact_point == 'start':
+                for lane_links in self.junctions[i]['lane_links']:
+                    index_incoming = self.find_mapping(incoming_road, 0, lane_links[0])
+                    index_connecting = self.find_mapping(connecting_road, 0, lane_links[1])
+                    if index_incoming != index_connecting:
+                        self.matrix[index_incoming][index_connecting] = 1e-4
+            if link == 'pre' and contact_point == 'end':
+                for lane_links in self.junctions[i]['lane_links']:
+                    index_incoming = self.find_mapping(incoming_road, 0, lane_links[0])
+                    index_connecting = self.find_mapping(connecting_road, 1, lane_links[1])
+                    if index_incoming != index_connecting:
+                        self.matrix[index_incoming][index_connecting] = 1e-4
+            if link == 'suc' and contact_point == 'start':
+                for lane_links in self.junctions[i]['lane_links']:
+                    index_incoming = self.find_mapping(incoming_road, 1, lane_links[0])
+                    index_connecting = self.find_mapping(connecting_road, 0, lane_links[1])
+                    if index_incoming != index_connecting:
+                        self.matrix[index_incoming][index_connecting] = 1e-4
+            if link == 'suc' and contact_point == 'end':
+                for lane_links in self.junctions[i]['lane_links']:
+                    index_incoming = self.find_mapping(incoming_road, 1, lane_links[0])
+                    index_connecting = self.find_mapping(connecting_road, 1, lane_links[1])
+                    if index_incoming != index_connecting:
+                        self.matrix[index_incoming][index_connecting] = 1e-4
 
     def link_pre_suc(self):
         """Link the predecessor and successor in the weighted matrix."""
