@@ -16,18 +16,18 @@ import rospy
 
 class GlobalRoutePlanner:
     """A global route planner based on map and hmi data."""
-    def __init__(self, num_nodes):
+    def __init__(self):
         """Initialize the global route planner."""
-        self.num_nodes = num_nodes
+        self.num_nodes = 0
         # base filepath to the maps
         self.filepath = r"../../../maps"
         # graph with
         self.graph = None
         self.graph_start_end = None
         # initialize all distances with inf.
-        self.dist = np.ones(shape=(num_nodes+2,)) * np.inf
+        self.dist = None   # np.ones(shape=(0+2,)) * np.inf
         # array for the parents to store shortest path tree
-        self.parent = np.ones(shape=(num_nodes+2,)).astype('int32') * (-1)
+        self.parent = None     # np.ones(shape=(0+2,)).astype('int32') * (-1)
         # path
         self.path = []
         # dict with lane-let ids and matrix pos
@@ -211,6 +211,7 @@ class GlobalRoutePlanner:
         for i in range(0, self.num_nodes-2, 2):
             start_point = self.mapping[key_list[i]][1]
             end_point = self.mapping[key_list[i+1]][1]
+
             div = (end_point[0]-start_point[0])
             if div == 0:
                 div = 0.000000000001
@@ -227,28 +228,40 @@ class GlobalRoutePlanner:
 
             if polygon.contains(Point(start_pos[0], start_pos[1])):
                 ids_start.append(key_list[i])
+                print("[{'x': ", start_point[0] + offset_x, ", 'y': ", start_point[1] - offset_y, "},"
+                     "{'x': ", start_point[0] - offset_x, ", 'y': ", start_point[1] + offset_y, "},"
+                    "{'x': ", end_point[0] - offset_x, ", 'y': ", end_point[1] + offset_y, "},"
+                    "{'x': ", end_point[0] + offset_x, ", 'y': ", end_point[1] - offset_y, "}]")
                 # TODO set weights for start and end (distance)
                 ori_to_point = math.atan2(end_point[1]-start_point[1], div)
-                if self.orientation == ori_to_point:
-                    self.graph_start_end[i][self.num_nodes] = 10
-                    self.graph_start_end[self.num_nodes][i] = 10
-                else:
-                    self.graph_start_end[i][self.num_nodes] = 10
-                    self.graph_start_end[self.num_nodes][i] = 10
-                print('start road:', key_list[i], ' i:', i)
+                print(ori_to_point)
+                # if self.orientation == ori_to_point:
+                #     self.graph_start_end[i][self.num_nodes] = 10
+                #     self.graph_start_end[self.num_nodes][i] = 10
+                # else:
+                self.graph_start_end[i][self.num_nodes-2] = 10
+                self.graph_start_end[self.num_nodes-2][i] = 10
+
+                #self.graph_start_end[i+1][self.num_nodes] = 10
+                #self.graph_start_end[self.num_nodes][i+1] = 10000
+                #print('start road:', key_list[i], ' i:', i)
 
             if polygon.contains(Point(self.end_pos[0], self.end_pos[1])):
                 ids_end.append(key_list[i])
-                self.graph_start_end[i][self.num_nodes+1] = 10
-                self.graph_start_end[self.num_nodes+1][i] = 10
-                print('end road:', key_list[i], ' i:', i)
+                self.graph_start_end[i][self.num_nodes - 1] = 10
+                self.graph_start_end[self.num_nodes - 1][i] = 10
+                #print('end road:', key_list[i], ' i:', i)
+
+        print("id_start", ids_start)
+        print()
+        print("id_end", ids_end)
+
         return ids_start, ids_end
 
     def calculate_distance(self, point):
         """Calculate the distance from the point to the road."""
 
     def compute_route(self) -> list:
-        print("Hallo :D")
         """Compute the route."""
         # 0. check map data is available
         # reload if new mapp
@@ -262,7 +275,7 @@ class GlobalRoutePlanner:
         # self.end_pos = np.array([144.99, -57.5])
         #self.start_pos = np.array([200.63262939453125, -2.020033836364746])
         self.end_pos = np.array([144.99, -57.5])
-        # self.start_pos = np.array([20.0, 0.004])
+        self.start_pos = np.array([245.850891, -198.75])
         # self.end_pos = np.array([255.0, -0.004])
         # 2.05 find points
         ids_end = self.find_nearest_road()
@@ -278,11 +291,6 @@ class GlobalRoutePlanner:
         #print(self.dist)
 
         # TODO
-        rospy.loginfo(f'ID END{ids_end[1][0]}')
-        rospy.loginfo(f'ID END2{ids_end[1]}')
-
-        for i in range(30):
-            rospy.loginfo(" ")
         self._append_id2path('-1_0', '-2_0')
         list_lanes = []
         list_waypoints = []

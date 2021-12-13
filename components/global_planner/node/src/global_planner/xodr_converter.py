@@ -4,7 +4,7 @@ import xml.etree.ElementTree as eTree
 from pathlib import Path
 from typing import List
 import numpy as np
-#from components.global_planner.node.src.global_planner.global_route_planner import GlobalRoutePlanner
+from components.global_planner.node.src.global_planner.global_route_planner import GlobalRoutePlanner
 
 
 class XODRConverter:
@@ -273,19 +273,18 @@ class XODRConverter:
     def create_links(self):
         """Link geometry, predecessor and successor in the weighted matrix."""
         self.matrix = np.zeros(shape=(self.num_nodes, self.num_nodes))
-        print(self.matrix.shape)
+        #print(self.matrix.shape)
         self.link_geometry()
         self.link_pre_suc()
 
 
-# if __name__ == "__main__":
-#     filename = Path("./../../../xodr/Town01.xodr")
-#
-#     xodr = XODRConverter()
-#     xodr.read_xodr(filename)
-#     xodr.create_links()
-#
-#     gp = GlobalRoutePlanner(xodr.num_nodes)
-#     gp.set_matrix(xodr.matrix)
-#     gp.set_mapping(xodr.mapping)
-#     gp.compute_route()
+if __name__ == "__main__":
+    filename = Path("./../../../xodr/Town01.xodr")
+    xodr = XODRConverter()
+    xodr.read_xodr(filename)
+    xodr.create_links()
+
+    gp = GlobalRoutePlanner()
+    gp.set_matrix(xodr.matrix)
+    gp.set_mapping(xodr.mapping)
+    gp.compute_route()

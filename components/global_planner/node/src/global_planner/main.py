@@ -34,7 +34,7 @@ class GlobalPlannerNode:
             self.xodr.read_xodr(self.path)
             self.xodr.create_links()
         if not self.global_route_planner:
-            self.global_route_planner = GlobalRoutePlanner(self.xodr.num_nodes)
+            self.global_route_planner = GlobalRoutePlanner()
             self.global_route_planner.set_matrix(self.xodr.matrix)
             self.global_route_planner.set_mapping(self.xodr.mapping)
 
