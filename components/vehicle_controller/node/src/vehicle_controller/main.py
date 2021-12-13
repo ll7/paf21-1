@@ -47,7 +47,7 @@ class VehicleControllerNode:
         self.driving_signal_publisher = self._init_driving_signal_publisher()
         self._init_route_subscriber()
         self._init_target_velocity_subscriber()
-        self._init_gps_subscriber()
+        self._init_vehicle_position_subscriber()
         self._init_vehicle_orientation_subscriber()
 
     def _init_route_subscriber(self):
@@ -78,16 +78,12 @@ class VehicleControllerNode:
         callback = lambda msg: process_orientation(msg_to_orientation(msg))
         rospy.Subscriber(in_topic, ImuMsg, callback)
 
-    def _init_gps_subscriber(self):
+    def _init_vehicle_position_subscriber(self):
         in_topic = f"/carla/{self.vehicle_name}/odometry"
         msg_to_position = RosDrivingMessagesAdapter.message_to_vehicle_position
         process_position = self.driving_controller.update_vehicle_position
         callback = lambda msg: process_position(msg_to_position(msg))
         rospy.Subscriber(in_topic, OdometryMsg, callback)
-
-    # def _callback_odometry(self, msg):
-    #     pos = RosDrivingMessagesAdapter.message_to_vehicle_position(msg)
-    #     self.driving_controller.update_vehicle_position(pos, orient)
 
     def _init_driving_signal_publisher(self):
         out_topic = f"/carla/{self.vehicle_name}/ackermann_cmd"
