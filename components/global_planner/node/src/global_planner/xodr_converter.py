@@ -4,7 +4,7 @@ import xml.etree.ElementTree as eTree
 from pathlib import Path
 from typing import List
 import numpy as np
-#from components.global_planner.node.src.global_planner.global_route_planner import GlobalRoutePlanner
+# from components.global_planner.node.src.global_planner.global_route_planner import GlobalRoutePlanner
 
 
 class XODRConverter:

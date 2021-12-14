@@ -375,54 +375,57 @@ class GlobalRoutePlanner:
         list_waypoints = []
 
         key_list = list(self.mapping.keys())
-        # print(self.path)
+        print(self.path)
         # print(self.path[:-2])
         # print(self.point_dict)
-        for index, path in enumerate(self.path):
-            # if int(self.mapping[key_list[path]]) % 2 == 0 or index == len(self.path)-1:
-            road_key = int((key_list[path]).split('_')[0])
-            # print(road_key)
-            if road_key == -1:
-                pass
-                # list_waypoints.append({'x': float(self.start_pos[0]),
-                #                        'y': float(self.start_pos[1])})
-            elif road_key == -2:
-                list_waypoints.append({'x': float(self.end_pos[0]),
-                                       'y': float(self.end_pos[1])})
-            elif road_key == ids_start[0][0]:
-                pass
-            elif road_key == ids_end[0][0]:
-                pass
-                # for index, points in enumerate(self.point_dict[road_key]):
-                #     ref_point = ids_start[0][2]
-                #     index_id = ids_start[0][1]
-                #     if ref_point == 0:
-                #         #List von vorne append till index_id
-                #         if index < index_id:
-                #             list_waypoints.append({'x': float(points[0][0]),
-                #                                'y': float(points[0][1])})
-                #         pass
-                #     else:
-                #         # List von hinten
-                #         if index > index_id:
-                #             list_waypoints.append({'x': float(points[0][0]),
-                #                                    'y': float(points[0][1])})
-                #         pass
+        minimaping = {}
+        lastroad = -5
+        for elem in self.path:
+            road_key = int((key_list[elem]).split('_')[0])
+            if lastroad == road_key:
 
-
+                listindex = minimaping[road_key]
+                listindex.append(elem)
+                minimaping[road_key] = listindex
             else:
-                for points in self.point_dict[road_key][::-1]:
-                    list_waypoints.append({'x': float(points[0][0]),
-                                           'y': float(points[0][1])})
-                    # list_waypoints.append({'x': float(points[1][0]),
-                    #                        'y': float(points[1][1])})
-            list_lanes.append(key_list[path])
+                listindex = []
+                listindex.append(elem)
+                minimaping[road_key] = listindex
+            lastroad = road_key
+        print(self.point_dict)
+        print(minimaping)
+        for road in minimaping:
+            listkey = minimaping[road]
+            if road < 0:
+                continue
+            pd = self.point_dict[road]
+            #print(listkey[0], " ", listkey[1])
+            if len(listkey) == 0:
+                pass
+            elif len(listkey) == 1:
+                pass
+            else:
+                dif = listkey[0] - listkey[1]
+                if dif < 0:
+                    for i, list_wp in enumerate(pd):
+                        # 2. Element und 2. letztes Element
+                        if listkey[0] == 48 or listkey[1]==246:
+                            continue
+                        else:
+                            list_waypoints.append({'x': float(pd[i][0][0]), 'y': float(pd[i][0][1])})
+                else:
+                    for i, list_wp in enumerate(pd):
+                        if listkey[0] == 48 or listkey[1]==246:
+                            continue
+                        else:
+                            list_waypoints.append({'x': float(pd[-i-1][0][0]), 'y': float(pd[-i-1][0][1])})
 
-        # list_waypoints.append({'x': float(self.end_pos[0]),
-        #                        'y': float(self.end_pos[1])})
+                    pass  # von hinten
 
-        # print(list_waypoints)
-        # print(list_lanes)
+
+
+        print(list_waypoints)
+        #print(list_lanes)
         rospy.loginfo(f'Found Route {list_waypoints}')
         rospy.loginfo(f"List Lanes: {list_lanes}")
         # 4. convert to list of dic

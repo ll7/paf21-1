@@ -27,8 +27,8 @@ ADD ./xodr /app/res/xodr
 WORKDIR /app/src/global_planner/src
 
 # TODO add linter
-# RUN source /opt/ros/noetic/setup.bash && \
-#     python -m pytest tests && pylint global_planner --extension-pkg-whitelist=cv2
+RUN source /opt/ros/noetic/setup.bash && \
+    python -m pytest tests && pylint global_planner --fail-under=8.0 --extension-pkg-whitelist=cv2
 
 # deploy the source code to ROS using catkin
 WORKDIR /app/catkin_ws/src
