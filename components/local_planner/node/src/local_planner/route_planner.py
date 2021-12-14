@@ -55,7 +55,7 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
         """Update the global route to follow"""
         self.global_route = msg
         rospy.loginfo(self.global_route)
-        #self.global_route = None
+        self.global_route = None
         if self.global_route is None:
             self.cached_local_route = []
         else:
@@ -82,7 +82,7 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
         # self.cached_local_route = self.global_route[max(neighbour_ids[0], neighbour_ids[1]):]
         short_term_route = self.cached_local_route[:min(50, len(self.cached_local_route))]
 
-        turned_on = False
+        turned_on = True
         if images.semantic_image is not None and turned_on:
             image = images.semantic_image[:, :, :3] # cut off alpha channel
             highlighted_img, keep_lane, angle = self.lane_detection.detect_lanes(image)
@@ -105,8 +105,6 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
                         rospy.loginfo(f'{short_term_route[0]} {self.vehicle_position}')
                 else:
                     short_term_route.insert(0, predicted_position)
-            if self.step_semantic % 10 == 0:
+            if self.step_semantic % 10 == 0 and self.step_semantic < 10000:
                 cv2.imwrite(f"/app/logs/img_{self.step_semantic}_highlighted.png", highlighted_img)
-
-
         return short_term_route

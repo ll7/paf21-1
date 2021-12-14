@@ -21,7 +21,7 @@ class SensorCameraPreprocessor(metaclass=SingletonMeta):  # pylint: disable=too-
     semantic_image = None
     depth_image = None
     rgb_image = None
-    write_images = False
+    write_images = True
     step_semantic : int  = 0
     step_rgb: int = 0
     step_depth: int = 0

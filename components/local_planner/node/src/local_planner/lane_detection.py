@@ -24,7 +24,7 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
     last_middle: [int, int, int, int] = None
     x_offset_left: int = 0
     x_offset_right: int = 0
-    counter_angle = 5
+    counter_angle = 33
 
     def __init__(self, config_path):
         with open(config_path, encoding='utf-8') as file:
@@ -155,35 +155,33 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
             end_point = [int((right_proj[2] + left_proj[2]) / 2), left_proj[3]]
             start_point = [int((right_proj[0] + left_proj[0]) / 2), left_proj[1]]
             middle = [start_point[0], start_point[1], end_point[0], end_point[1]]
+            self.x_offset_right = middle[0] - right_proj[0]
+            self.x_offset_left = middle[0] - left_proj[0]
+        elif right_proj is not None and left_proj is None and self.x_offset_right is not None:
+            middle = [right_proj[0] + self.x_offset_right, right_proj[1],
+                      right_proj[2], right_proj[3]]
 
-#        elif right_proj is not None and left_proj is None:
-#            self.x_offset_right = right_proj[2] - right_proj[0]
-#            middle = [right_proj[0] + self.x_offset_right, right_proj[1],
-#                      right_proj[2], right_proj[3]]
-#
-#        elif right_proj is None and left_proj is not None:
-#            self.x_offset_left = left_proj[2] - left_proj[0]
-#            middle = [left_proj[0] + self.x_offset_left, left_proj[1],
-#                      left_proj[2], left_proj[3]]
-#
-#        else:
-#            middle = self.last_middle
+        elif right_proj is None and left_proj is not None and self.x_offset_left is not None:
+            middle = [left_proj[0] + self.x_offset_left, left_proj[1],
+                      left_proj[2], left_proj[3]]
+
         if middle is not None:
-            self.last_middle = middle
-
             distances = middle[2] - (img_width / 2), middle[0] - (img_width / 2)
-            distances = [d for d in distances if d > 0]
-            if len(distances) == 0:
-                angle = -self.counter_angle
+            distances = [d for d in distances if d > 0] + [(distances[0] + distances[1]) / 2]
+
+            if abs(distances[-1]) >= 10:
+                angle = (abs(distances[-1])+(self.counter_angle*10))
+                rospy.loginfo(f'angle1:{angle}')
+                angle = -(1/((10**-4)*angle)) + self.counter_angle
+                rospy.loginfo(f'angle2:{angle}')
+            if len(distances) == 1:
+                angle = -angle
             elif len(distances) == 2:
-                angle = self.counter_angle
-            else:
                 angle = LaneDetection._calculate_angle(middle,
                                                        [img_width / 2, img_height,
                                                         img_width / 2, 0])
-                if abs(angle) < 10:
-                    angle = -angle
-            rospy.loginfo(f'angle: {angle}')
+
+            rospy.loginfo(f'angle:{angle}, distance: {distances}')
         return [right_proj, left_proj, middle], angle
 
     @staticmethod
@@ -200,8 +198,11 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
 
     @staticmethod
     def _cross_line_at_y(x_0, x_1, y_0, y_1, cross_y):
+        if x_0 == x_1:
+            return x_0
         grad = (y_1 - y_0) / (x_1 - x_0)
         intercept = y_0 - grad * x_0
+        rospy.loginfo(f'{x_0}, {x_1}, {cross_y}')
         return (cross_y - intercept) / grad
 
     @staticmethod

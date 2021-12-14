@@ -3,13 +3,13 @@ upper_bound: [150, 140, 150]
 lower_bound_car: [120, 100, 100]
 upper_bound_car: [130, 255, 255]
 canny_lower: 50
-canny_upper: 150
-fov: 0.55
-hough_rho: 6
-hough_threshold: 30
-hough_min_line_length: 20
-hough_max_line_gap: 25
-angle_lower_bound: 30
-angle_upper_bound: 60
+canny_upper: 100
+fov: 0.70
+hough_rho: 1
+hough_threshold: 5
+hough_min_line_length: 2
+hough_max_line_gap: 100
+angle_lower_bound: 0
+angle_upper_bound: 180
 deviation_threshold: 0
 create_visualisation: True
