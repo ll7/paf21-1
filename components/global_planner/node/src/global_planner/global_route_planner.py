@@ -258,10 +258,10 @@ class GlobalRoutePlanner:
                     i = self.find_mapping(road_id, reference_point, lanelink)
                     if reference_point == 0:
                         self.graph_start_end[i][self.num_nodes - 2] = distance
-                        #self.graph_start_end[self.num_nodes - 2][i] = 9999
+                        # self.graph_start_end[self.num_nodes - 2][i] = distance
                     else:
                         self.graph_start_end[self.num_nodes - 2][i] = distance
-                        #self.graph_start_end[i][self.num_nodes - 2] = 9999
+                        # self.graph_start_end[i][self.num_nodes - 2] = distance
                     # self.graph_start_end[i][self.num_nodes - 2] = distance
                     # self.graph_start_end[self.num_nodes - 2][i] = distance
 
@@ -286,11 +286,11 @@ class GlobalRoutePlanner:
                     # print("i: ", i)
                     # print(self.graph_start_end[249][249])
                     if reference_point == 0:
-                        #self.graph_start_end[i][self.num_nodes - 1] = 9999
+                        # self.graph_start_end[i][self.num_nodes - 1] = distance
                         self.graph_start_end[self.num_nodes - 1][i] = distance
 
                     else:
-                        #self.graph_start_end[self.num_nodes - 1][i] = 9999
+                        # self.graph_start_end[self.num_nodes - 1][i] = distance
                         self.graph_start_end[i][self.num_nodes - 1] = distance
                     # self.graph_start_end[i][self.num_nodes - 1] = distance
                     # self.graph_start_end[self.num_nodes - 1][i] = distance
@@ -422,13 +422,24 @@ class GlobalRoutePlanner:
 
                     pass  # von hinten
 
+        interpolated_list = []
+        for i in range(1, len(list_waypoints)):
+            interpolated_list.append(list_waypoints[i-1])
+            interploated_points = self.linear_interpolation(list_waypoints[i-1], list_waypoints[i], 10)
+            for point in interploated_points:
+                interpolated_list.append({'x': point[0], 'y': point[1], 'trafficSign': None})
+
+
+
 
 
         print(list_waypoints)
+        print()
+        print(interpolated_list)
         #print(list_lanes)
         rospy.loginfo(f'Found Route {list_waypoints}')
         rospy.loginfo(f"List Lanes: {list_lanes}")
         # 4. convert to list of dic
 
         # 5. output thr route
-        return json.dumps(list_waypoints)
+        return json.dumps(interpolated_list)
