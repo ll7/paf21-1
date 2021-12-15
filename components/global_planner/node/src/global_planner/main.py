@@ -43,10 +43,12 @@ class GlobalPlannerNode:
             self.xodr.read_xodr(self.path)
             self.xodr.create_links()
         if not self.global_route_planner:
+
             self.global_route_planner = GlobalRoutePlanner()
             self.global_route_planner.set_matrix(self.xodr.matrix)
             self.global_route_planner.set_mapping(self.xodr.mapping)
             self.global_route_planner.point_dict = self.xodr.point_dict
+            self.global_route_planner.road_dict = self.xodr.lane_lets
 
 
     def init_map(self, path):

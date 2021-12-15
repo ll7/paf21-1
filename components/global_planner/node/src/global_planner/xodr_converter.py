@@ -388,4 +388,5 @@ class XODRConverter:
 #     gp.set_matrix(xodr.matrix)
 #     gp.point_dict = xodr.point_dict
 #     gp.set_mapping(xodr.mapping)
+#     gp.road_dict = xodr.lane_lets
 #     gp.compute_route()

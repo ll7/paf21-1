@@ -41,6 +41,7 @@ class GlobalRoutePlanner:
         # TODO read from data
         self.road_width = 4.0
         self.point_dict = {}
+        self.road_dict = None
 
     def set_matrix(self, matrix: np.ndarray):
         """Set the graph with a matrix (numpy array)."""
@@ -337,7 +338,59 @@ class GlobalRoutePlanner:
     def calculate_distance(self, point):
         """Calculate the distance from the point to the road."""
 
-    def compute_route(self) -> list:
+    def linear_interpolation(self, start, end, interval_m):
+        listPol = []
+        start = [start['x'], start['y']]
+        end = [end['x'], end['y']]
+
+        # dist = math.dist(start, end)
+        distance = np.linalg.norm(np.array(start) - np.array(end))
+        difference_se = (end[0] - start[0], end[1] - start[1])
+        #+1 bei Komma
+        steps = math.ceil((distance/interval_m))
+        adddiff = (0.0, 0.0)
+        if distance > interval_m:
+            adddiff = (difference_se[0]/ steps, difference_se[1]/ steps,)
+        else:
+            adddiff = difference_se
+
+        diff = (0.0, 0.0)
+        for index in range(steps):
+            point = (start[0]+diff[0], start[1] + diff[1])
+            diff = (diff[0]+adddiff[0], diff[1]+adddiff[1])
+            if index > 0 and (listPol[-1] == point):
+                continue
+            listPol.append(point)
+        return listPol
+
+    @staticmethod
+    def calculate_offset(start_point, end_point, road_width) -> List[float]:
+        """Calculate the offset according the road_width"""
+        div = (end_point[0] - start_point[0])
+        if div == 0:
+            div = 0.000000000001
+        alpha = np.arctan((end_point[1] - start_point[1]) / div)
+        beta = math.pi + alpha + math.pi / 2
+
+        return [math.cos(beta) * road_width, math.sin(beta) * road_width]
+
+    def calculate_offset2points(self, start_point, end_point, road_width, direction) -> List[tuple]:
+        """Function to calculate an offset to the start and end point."""
+
+        offset = self.calculate_offset(start_point, end_point, road_width)
+
+        if direction < 0:
+            return [
+                (start_point[0] - offset[0], start_point[1] + offset[1]),
+                (end_point[0] - offset[0], end_point[1] + offset[1])
+            ]
+        else:
+            return [
+                (start_point[0] + offset[0], start_point[1] - offset[1]),
+                (end_point[0] + offset[0], end_point[1] - offset[1])
+            ]
+
+    def compute_route(self) -> str:
         """Compute the route."""
         # 0. check map data is available
         # reload if new mapp
@@ -395,6 +448,16 @@ class GlobalRoutePlanner:
         print(self.point_dict)
         print(minimaping)
         for road in minimaping:
+            trafficSign = None
+
+            if road >= 0:
+                for x in self.road_dict:
+                    if x['road_id'] == road:
+                        #print(x)
+                        if len(x['traffic_signs']):
+                            print(x['traffic_signs'])
+                            trafficSign = x['traffic_signs']
+
             listkey = minimaping[road]
             if road < 0:
                 continue
@@ -412,13 +475,15 @@ class GlobalRoutePlanner:
                         if listkey[0] == 48 or listkey[1]==246:
                             continue
                         else:
-                            list_waypoints.append({'x': float(pd[i][0][0]), 'y': float(pd[i][0][1])})
+                            new_points = self.calculate_offset2points(pd[i][0], pd[i][1], 2.0, -1)
+                            list_waypoints.append({'x': new_points[0][0], 'y': new_points[0][1], 'trafficSign': trafficSign})
                 else:
                     for i, list_wp in enumerate(pd):
                         if listkey[0] == 48 or listkey[1]==246:
                             continue
                         else:
-                            list_waypoints.append({'x': float(pd[-i-1][0][0]), 'y': float(pd[-i-1][0][1])})
+                            new_points = self.calculate_offset2points(pd[-i-1][0], pd[-i-1][1], 2.0, 1)
+                            list_waypoints.append({'x': new_points[0][0], 'y': new_points[0][1], 'trafficSign': trafficSign})
 
                     pass  # von hinten
 
@@ -440,6 +505,6 @@ class GlobalRoutePlanner:
         rospy.loginfo(f'Found Route {list_waypoints}')
         rospy.loginfo(f"List Lanes: {list_lanes}")
         # 4. convert to list of dic
-
+        #print(self.road_dict)
         # 5. output thr route
         return json.dumps(interpolated_list)
