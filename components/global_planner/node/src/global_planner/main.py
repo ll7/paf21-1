@@ -28,15 +28,6 @@ class GlobalPlannerNode:
     xodr: XODRConverter = None
     global_route_planner: GlobalRoutePlanner = None
 
-
-    #
-    #     gp = GlobalRoutePlanner()
-    #     gp.set_matrix(xodr.matrix)
-    #     gp.point_dict = xodr.point_dict
-    #     gp.set_mapping(xodr.mapping)
-    #     gp.compute_route()
-
-
     def __post_init__(self):
         if not self.xodr:
             self.xodr = XODRConverter()
@@ -50,23 +41,17 @@ class GlobalPlannerNode:
             self.global_route_planner.point_dict = self.xodr.point_dict
             self.global_route_planner.road_dict = self.xodr.lane_lets
 
-
     def init_map(self, path):
-        #rospy.loginfo(f'index3:  {os.path.isfile(path)}')
-
+        # rospy.loginfo(f'index3:  {os.path.isfile(path)}')
         self.xodr.read_xodr(path)
         self.xodr.create_links()
 
-        global_route_planner = GlobalRoutePlanner(self.xodr.num_nodes)
-        global_route_planner.set_matrix(self.xodr.matrix)
-        global_route_planner.set_mapping(self.xodr.mapping)
-
     def run_node(self):
-        rospy.init_node(f'global_planner_{self.vehicle_name}', anonymous=True)
-        #rospy.loginfo("Hallo?")
         """Launch the ROS node to receive the map, the start and
-         end position and convert them into a global planned route."""
-        #self.init_map(Path("/app/res/xodr/Town01.xodr"))
+        end position and convert them into a global planned route."""
+        rospy.init_node(f'global_planner_{self.vehicle_name}', anonymous=True)
+
+        # TODO update map and end pos
         self.init_ros()
         rate = rospy.Rate(self.publish_rate_in_hz)
 
@@ -77,19 +62,14 @@ class GlobalPlannerNode:
                 self.global_route_publisher.publish(global_route)
                 self.global_route_planner.update = False
             # ToDo for Testing only
-            """ Start of Testing without hmi """
-            rospy.loginfo(f'index:  {index_calc}')
-            rospy.loginfo(f'index:  {index_calc}')
-            rospy.loginfo(f'index:  {index_calc}')
-            rospy.loginfo(f'index:  {index_calc}')
+            # Start of Testing without hmi
             rospy.loginfo(f'index:  {index_calc}')
             index_calc += 1
             if index_calc == 40:
                 global_route = self.global_route_planner.compute_route()
                 self.global_route_publisher.publish(StringMsg(data=global_route))
-            """ End of Testing  """
+            # End of Testing
             rate.sleep()
-
 
     def init_ros(self):
         """Initialize the ROS node's publishers and subscribers"""
@@ -106,14 +86,14 @@ class GlobalPlannerNode:
 
     def _init_vehicle_orientation_subscriber(self):
         in_topic = f"/carla/{self.vehicle_name}/imu/imu1"
-        callback = lambda msg: GlobalRoutePlanner.update_vehicle_orientation(GlobalRoutePlanner, self.message_to_orientation(msg))
+        callback = lambda msg: self.global_route_planner.update_vehicle_orientation(self.message_to_orientation(msg))
         rospy.Subscriber(in_topic, ImuMsg, callback)
 
     @staticmethod
     def message_to_vehicle_position(msg: OdometryMsg) -> Tuple[float, float]:
         """Convert a ROS message into the vehicle position"""
         pos = msg.pose.pose.position
-        return (pos.x, pos.y)
+        return pos.x, pos.y
 
     @staticmethod
     def message_to_orientation(msg: ImuMsg) -> float:
@@ -124,12 +104,12 @@ class GlobalPlannerNode:
         orientation = math.atan2(q_y, q_x)
         return orientation
 
-
     def _init_gps_subscriber(self):
         in_topic = f"/carla/{self.vehicle_name}/odometry"
-        # msg_to_position = self.message_to_vehicle_position
-        # process_position = GlobalRoutePlanner.update_vehicle_position
-        callback = lambda msg: GlobalRoutePlanner.update_vehicle_position(GlobalRoutePlanner, self.message_to_vehicle_position(msg))
+
+        callback = lambda msg: self.global_route_planner.update_vehicle_position(
+            self.message_to_vehicle_position(msg)
+        )
         rospy.Subscriber(in_topic, OdometryMsg, callback)
 
     def init_global_route_publisher(self):
