@@ -12,12 +12,14 @@ import numpy as np
 from sensor_msgs.msg import Imu as ImuMsg
 from nav_msgs.msg import Odometry as OdometryMsg
 
+from local_planner.traffic_light_detection import TrafficLightDetector
 from local_planner.lane_detection import LaneDetection
 from local_planner.preprocessing import SensorCameraPreprocessor
 from local_planner.preprocessing import SingletonMeta
 # from dataclasses import field
 
 class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
+    # pylint: disable=too-many-instance-attributes
     """A class that keeps all the necessary information needed by all the modules,
     this class should be expanded if needed"""
     vehicle_vector: Tuple[float, float] = None
@@ -27,7 +29,10 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
     vehicle_yaw: float = 0
     step_semantic: int = 0
     lane_detect_config: str = "/app/src/local_planner/config/config_lane_detection.yml"
-    lane_detection = LaneDetection = LaneDetection(lane_detect_config)
+    traffic_light_config: str = "/app/src/local_planner" \
+                                       "/config/config_traffic_light_detection.yml"
+    lane_detection: LaneDetection = LaneDetection(lane_detect_config)
+    traffic_light_detection: TrafficLightDetector = TrafficLightDetector(traffic_light_config)
 
     def update_vehicle_vector(self, msg: ImuMsg):
         """Calculates the vektor the car is currently driving"""
@@ -77,14 +82,36 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
                 break
             enumerator += 1
         self.cached_local_route = self.cached_local_route[enumerator:]
-
+        images_list = {'semantic': images.semantic_image,
+                       'rgb': images.rgb_image,
+                       'depth': images.depth_image}
         # neighbour_ids = argsort([dist(p, self.vehicle_position) for p in self.cached_local_route])
         # self.cached_local_route = self.global_route[max(neighbour_ids[0], neighbour_ids[1]):]
         short_term_route = self.cached_local_route[:min(50, len(self.cached_local_route))]
-
+        turned_on_traffic_light_detection = True
         turned_on = True
+        self.lane_keeping_assistant(images, short_term_route, turned_on)
+        if all(image is not None for image in images_list.values())\
+                and turned_on_traffic_light_detection:
+            rgb_image = images_list['rgb'][:, :, :3]
+            depth_image = images_list['depth']
+            semantic_image = images_list['semantic'][:, :, :3]
+            rospy.loginfo(semantic_image.shape)
+            rospy.loginfo(depth_image.shape)
+            rospy.loginfo(rgb_image.shape)
+            _, _, highlighted_img = self.traffic_light_detection.\
+                detect_traffic_light(semantic_image, rgb_image, depth_image)
+            if self.step_semantic % 10 == 0 and self.step_semantic < 10000:
+                cv2.imwrite(f"/app/logs/img_{self.step_semantic}_traffic_light.png",
+                            highlighted_img)
+
+
+        return short_term_route
+
+    def lane_keeping_assistant(self, images, short_term_route, turned_on):
+        """starts lane detection for this cycle"""
         if images.semantic_image is not None and turned_on:
-            image = images.semantic_image[:, :, :3] # cut off alpha channel
+            image = images.semantic_image[:, :, :3]  # cut off alpha channel
             highlighted_img, keep_lane, angle = self.lane_detection.detect_lanes(image)
             if keep_lane:
                 new_yaw = self.vehicle_yaw - np.deg2rad(angle)
@@ -96,7 +123,7 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
                 if len(short_term_route) != 0:
                     predicted_vector = np.subtract(predicted_position, self.vehicle_position)
                     route_vector = np.subtract(short_term_route[0], self.vehicle_position)
-                    cos = np.dot(route_vector, predicted_vector)/np.linalg.norm(
+                    cos = np.dot(route_vector, predicted_vector) / np.linalg.norm(
                         route_vector) / np.linalg.norm(predicted_vector)
                     off_set_angle = np.rad2deg(np.arccos(cos))
                     rospy.loginfo(f'off_set_angle:{off_set_angle}')
@@ -108,4 +135,3 @@ class RouteInfo(metaclass=SingletonMeta): # pylint: disable=too-many-locals
                     short_term_route.insert(0, predicted_position)
             if self.step_semantic % 10 == 0 and self.step_semantic < 10000:
                 cv2.imwrite(f"/app/logs/img_{self.step_semantic}_highlighted.png", highlighted_img)
-        return short_term_route
