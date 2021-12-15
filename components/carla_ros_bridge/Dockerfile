@@ -64,7 +64,7 @@ RUN echo 'pexpect' >> $SCENARIO_RUNNER_ROOT/requirements.txt && \
 # USER worker
 
 ENV CARLA_SIM_HOST=localhost
-ENV CARLA_SIM_WAIT_SECS=20
+ENV CARLA_SIM_WAIT_SECS=15
 ENV SCENARIO_RUNNER_PATH=/opt/scenario_runner
 
 COPY ./sensors.json /config/sensors.json

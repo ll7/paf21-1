@@ -7,6 +7,8 @@ import rospy
 
 class LaneDetection:  # pylint: disable=too-few-public-methods
     # pylint: disable=too-many-instance-attributes
+    # pylint: disable=chained-comparison
+
     """This module highlights road surface markings"""
     lower_bound: [int, int, int]
     upper_bound: [int, int, int]
@@ -22,9 +24,12 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
     angle_lower_bound: int
     angle_upper_bound: int
     last_middle: [int, int, int, int] = None
-    x_offset_left: int = 0
-    x_offset_right: int = 0
-    counter_angle = 5
+    x_offset_left: int = 300
+    x_offset_right: int = -300
+    counter_angle = 33
+    last_angle: float = 0.0
+    discount_car_length: float = 0.5
+    max_deviation: int = 360
 
     def __init__(self, config_path):
         with open(config_path, encoding='utf-8') as file:
@@ -136,55 +141,72 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
 
     def _get_lane_boundary_projections(self, lines: list, img_height: int, img_width: int):
         lines = np.array(lines).reshape(-1, 4)
-        right_half = [line for line in lines if min(line[0], line[2]) > img_width / 2]
-        left_half = [line for line in lines if max(line[0], line[2]) < img_width / 2]
+        right_half = [line for line in lines if LaneDetection.slope(line)]
+        left_half = [line for line in lines if not LaneDetection.slope(line)]
         right_proj, left_proj, middle = None, None, None
-        angle = 0
-
         if len(left_half) >= 1:
-            left_projections = [self._get_projection(
-                line, img_height) for line in left_half]
-            left_proj = left_projections[np.argmax([line[3] for line in left_projections])]
+            left_half = [self._get_projection(line, img_height) for line in left_half
+                         if line[0] <= img_width * 0.7]
+            rospy.loginfo(f'left: {left_half}')
+            if len(left_half) >= 1:
+                left_proj = left_half[np.argmax([line[0] for line in left_half])]
 
         if len(right_half) >= 1:
-            right_projections = [self._get_projection(
-                line, img_height) for line in right_half]
-            right_proj = right_projections[np.argmin([line[3] for line in right_projections])]
+            right_half = [self._get_projection(
+                line, img_height) for line in right_half if line[0] > img_width * 0.3]
+            if len(right_half) >= 1:
+                right_proj = right_half[np.argmin([line[0] for line in right_half
+                                                   ])]
 
         if right_proj is not None and left_proj is not None:
             end_point = [int((right_proj[2] + left_proj[2]) / 2), left_proj[3]]
             start_point = [int((right_proj[0] + left_proj[0]) / 2), left_proj[1]]
             middle = [start_point[0], start_point[1], end_point[0], end_point[1]]
 
-#        elif right_proj is not None and left_proj is None:
-#            self.x_offset_right = right_proj[2] - right_proj[0]
-#            middle = [right_proj[0] + self.x_offset_right, right_proj[1],
-#                      right_proj[2], right_proj[3]]
-#
-#        elif right_proj is None and left_proj is not None:
-#            self.x_offset_left = left_proj[2] - left_proj[0]
-#            middle = [left_proj[0] + self.x_offset_left, left_proj[1],
-#                      left_proj[2], left_proj[3]]
-#
-#        else:
-#            middle = self.last_middle
-        if middle is not None:
-            self.last_middle = middle
+        elif right_proj is not None and left_proj is None and self.x_offset_right is not None:
+            middle = [right_proj[0] + self.x_offset_right, right_proj[1],
+                      right_proj[2], right_proj[3]]
 
-            distances = middle[2] - (img_width / 2), middle[0] - (img_width / 2)
-            distances = [d for d in distances if d > 0]
-            if len(distances) == 0:
-                angle = -self.counter_angle
-            elif len(distances) == 2:
-                angle = self.counter_angle
-            else:
-                angle = LaneDetection._calculate_angle(middle,
-                                                       [img_width / 2, img_height,
-                                                        img_width / 2, 0])
-                if abs(angle) < 10:
-                    angle = -angle
-            rospy.loginfo(f'angle: {angle}')
+        elif right_proj is None and left_proj is not None and self.x_offset_left is not None:
+            if img_width/2 - left_proj[0] > 600:
+                self.x_offset_left = 3 * self.x_offset_left
+            middle = [left_proj[0] + self.x_offset_left, left_proj[1],
+                      left_proj[2], left_proj[3]]
+            self.x_offset_left = 300
+        if middle is not None:
+            distance, upper_distance = self.get_car_middle(img_width, middle)
+            angle = LaneDetection._calculate_angle(middle,
+                                                   [img_width / 2, img_height,
+                                                    img_width / 2, 0])
+            if (abs(distance) >= abs(upper_distance)) and abs(distance) > 10:
+                angle, distance = self.get_angle_to_middle(angle, distance)
+            elif (abs(upper_distance) >= abs(distance)) and abs(upper_distance) > 10:
+                angle, upper_distance = self.get_angle_to_middle(angle, upper_distance)
+
+        else:
+            angle = self.last_angle
+        self.last_angle = angle - angle / 100
+        rospy.loginfo(f'angle: {angle}')
         return [right_proj, left_proj, middle], angle
+
+    def get_angle_to_middle(self, angle, distance):
+        """function to calculate angle to the middle considering the distance"""
+
+        abs_distance = min(abs(distance), self.max_deviation)
+        angle = 1.1 ** (abs_distance * 0.1)
+        if distance < 0:
+            angle = -angle
+        return angle, distance
+
+    def get_car_middle(self, img_width, middle):
+        """Approximate the middle of the car"""
+        vectorized_middle = [self.discount_car_length * (middle[2] - middle[0]),
+                             self.discount_car_length * (middle[3] - middle[1])]
+        moved_middle = [np.subtract([middle[0], middle[1]], vectorized_middle),
+                        np.subtract([middle[2], middle[3]], vectorized_middle)]
+        distance = moved_middle[0][0] - img_width / 2
+        upper_distance = moved_middle[1][0] - img_width / 2
+        return distance, upper_distance
 
     @staticmethod
     def _calculate_angle(vector_1, vector_2):
@@ -200,9 +222,17 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
 
     @staticmethod
     def _cross_line_at_y(x_0, x_1, y_0, y_1, cross_y):
+        if x_0 == x_1:
+            return x_0
         grad = (y_1 - y_0) / (x_1 - x_0)
         intercept = y_0 - grad * x_0
         return (cross_y - intercept) / grad
+
+    @staticmethod
+    def slope(line):
+        """Truthvalue for the slope of Line
+        True if it goes from left to right, otherwise False"""
+        return line[1] < line[3]
 
     @staticmethod
     def _get_projection(line, height):

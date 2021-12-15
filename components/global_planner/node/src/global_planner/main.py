@@ -28,15 +28,27 @@ class GlobalPlannerNode:
     xodr: XODRConverter = None
     global_route_planner: GlobalRoutePlanner = None
 
+
+    #
+    #     gp = GlobalRoutePlanner()
+    #     gp.set_matrix(xodr.matrix)
+    #     gp.point_dict = xodr.point_dict
+    #     gp.set_mapping(xodr.mapping)
+    #     gp.compute_route()
+
+
     def __post_init__(self):
         if not self.xodr:
             self.xodr = XODRConverter()
             self.xodr.read_xodr(self.path)
             self.xodr.create_links()
         if not self.global_route_planner:
-            self.global_route_planner = GlobalRoutePlanner(self.xodr.num_nodes)
+
+            self.global_route_planner = GlobalRoutePlanner()
             self.global_route_planner.set_matrix(self.xodr.matrix)
             self.global_route_planner.set_mapping(self.xodr.mapping)
+            self.global_route_planner.point_dict = self.xodr.point_dict
+            self.global_route_planner.road_dict = self.xodr.lane_lets
 
 
     def init_map(self, path):
@@ -66,6 +78,10 @@ class GlobalPlannerNode:
                 self.global_route_planner.update = False
             # ToDo for Testing only
             """ Start of Testing without hmi """
+            rospy.loginfo(f'index:  {index_calc}')
+            rospy.loginfo(f'index:  {index_calc}')
+            rospy.loginfo(f'index:  {index_calc}')
+            rospy.loginfo(f'index:  {index_calc}')
             rospy.loginfo(f'index:  {index_calc}')
             index_calc += 1
             if index_calc == 40:
