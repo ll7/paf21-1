@@ -11,7 +11,6 @@ from local_planner.preprocessing import SensorCameraPreprocessor
 from local_planner.route_planner import RouteInfo
 
 
-
 @dataclass
 class LocalPlannerNode:
     """A class representing a ROS node that's processing route and
