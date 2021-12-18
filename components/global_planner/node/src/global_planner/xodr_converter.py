@@ -4,7 +4,6 @@ import xml.etree.ElementTree as eTree
 from pathlib import Path
 from typing import List
 import numpy as np
-# from components.global_planner.node.src.global_planner.global_route_planner import GlobalRoutePlanner
 
 
 class XODRConverter:
@@ -103,7 +102,7 @@ class XODRConverter:
                     to_lane = int(lane_link.get('to'))
                     key_to = f"{junction_dict['connecting_road']}_0_{to_lane}"
 
-                    if key_from in self.mapping or key_to in self.mapping:
+                    if key_from in self.mapping and key_to in self.mapping:
                         links.append([from_lane, to_lane])
                 if len(links) == 0:
                     continue
@@ -113,29 +112,18 @@ class XODRConverter:
                 # add the junction to dict if the roads are driving roads
                 if junction_dict['incoming_road'] and junction_dict['connecting_road'] in list_ids:
                     self.junctions.append(junction_dict)
-                # print(junction_dict)
 
     def _create_road_mapping(self):
         """Fill the mapping with the position in the matrix and the point"""
         # init the mapping and the counter
         self.mapping = {}
         counter = 0
-        # mapping = 1_0, -2, len
-        # mapping = 1_0, -1, len
-        # mapping = 1_0, 1, len
-        # mapping = 1_0, 2, len
 
-        # mapping = 1_1, -2, len
-        # mapping = 1_1, -1, len
-        # mapping = 1_1, 1, len
-        # mapping = 1_1, 2, len
-
-        #pointMapping = road_id, [(start, end, hgd, length, arc), ...]
         self.point_dict = {}
         # iterate over all entries in the lane-lets list
         for road in self.lane_lets:
             # iterate over all links
-            pointMapping = []
+            point_mapping = []
             for link in road['left_ids']:
                 if len(road['geometry']) == 0:
                     continue
@@ -151,24 +139,36 @@ class XODRConverter:
                     self.mapping[f"{road['road_id']}_1_{link}"] = counter + 1
                 counter += 2
             for geo in road['geometry']:
-                pointMapping.append(geo)
-            self.point_dict[road['road_id']] = pointMapping
+                point_mapping.append(geo)
+            self.point_dict[road['road_id']] = point_mapping
 
-        # print(self.point_dict)
+    def get_index(self, road: int, pos: int, link: int):
+        """Get the index out of the mapping."""
+        key = f"{road}_{pos}_{link}"
+        if key in self.mapping:
+            return self.mapping[key]
+        return AttributeError
 
-        # print(self.mapping)
-        # print(len(self.mapping))
+    @staticmethod
+    def _get_linked_elements(element) -> tuple:
+        element_id = int(element.get('elementId'))
+        element_type = element.get('elementType')
+        element_contact_point = element.get('contactPoint')
 
-    def read_xodr(self, filepath: Path):
-        """Read the xodr file from the file path."""
+        return element_id, element_type, element_contact_point
+
+    def _get_root(self, filepath: Path) -> eTree.Element or FileNotFoundError:
         # check if file exist
         if not os.path.isfile(filepath):
             return FileNotFoundError
         self.filepath = filepath
 
         # get the root of the xml file
-        root = eTree.parse(self.filepath).getroot()
+        return eTree.parse(self.filepath).getroot()
 
+    def read_xodr(self, filepath: Path):
+        """Read the xodr file from the file path."""
+        root = self._get_root(filepath)
         # parse all roads
         for road in root.findall('road'):
             self.road = road
@@ -178,20 +178,16 @@ class XODRConverter:
 
             # parse the link tag
             link = self.road.find('link')
-
             # parse the successor
             suc = link.find('successor')
             if suc is not None:
-                road_dict['suc_id'] = int(suc.get('elementId'))
-                road_dict['suc_type'] = suc.get('elementType')
-                road_dict['suc_contact_point'] = suc.get('contactPoint')
-
+                tmp = XODRConverter._get_linked_elements(suc)
+                road_dict['suc_id'], road_dict['suc_type'], road_dict['suc_contact_point'] = tmp
             # parse the predecessor
             pre = link.find('predecessor')
             if pre is not None:
-                road_dict['pre_id'] = int(pre.get('elementId'))
-                road_dict['pre_type'] = pre.get('elementType')
-                road_dict['pre_contact_point'] = pre.get('contactPoint')
+                tmp = XODRConverter._get_linked_elements(pre)
+                road_dict['pre_id'], road_dict['pre_type'], road_dict['pre_contact_point'] = tmp
 
             # get the lane ids and the line type
             road_dict['left_ids'], road_dict['right_ids'] = self._get_lane_id()
@@ -207,7 +203,7 @@ class XODRConverter:
             if len(road_dict['left_ids']) + len(road_dict['right_ids']):
                 # the start and end point are different nodes
                 self.lane_lets.append(road_dict)
-            #print(road_dict)
+
         # create the road mapping
         self._create_road_mapping()
 
@@ -218,17 +214,17 @@ class XODRConverter:
     def link_roads(self):
         """Link the geometries between each other."""
         for index, road in enumerate(self.lane_lets):
-            # TO-DO Cost function
+            # TODO Cost function
             length = 0
             for geometry in road['geometry']:
                 length += geometry[3]
 
             for link in road['left_ids']:
-                identifier = self.mapping[f"{road['road_id']}_0_{link}"]
+                identifier = self.get_index(road['road_id'], 0, link)
                 self.matrix[identifier+1][identifier] = length
 
             for link in road['right_ids']:
-                identifier = self.mapping[f"{road['road_id']}_0_{link}"]
+                identifier = self.get_index(road['road_id'], 0, link)
                 self.matrix[identifier][identifier+1] = length
 
     def road_id2index(self, road_id: int, first: bool) -> int or AttributeError:
@@ -257,71 +253,26 @@ class XODRConverter:
 
     def _road_connection(self, road, link: str):
         # link = {'pre', 'suc'}
-        if link == "pre":
-            if (road[link + '_contact_point'] == 'start'):
-                for lane_link in road['right_ids']:
-                    index_link = self.mapping[f"{road[link+'_id']}_0_{-lane_link}"]
-                    index_road = self.mapping[f"{road['road_id']}_0_{lane_link}"]
-
-                    if index_link != index_road:
-                        self.matrix[index_link][index_road] = 1e-6
-
-                for lane_link in road['left_ids']:
-                    index_link = self.mapping[f"{road[link+'_id']}_0_{-lane_link}"]
-                    index_road = self.mapping[f"{road['road_id']}_0_{lane_link}"]
-
-                    if index_link != index_road:
-                        self.matrix[index_road][index_link] = 1e-6
-            else:
-                for lane_link in road['right_ids']:
-                    index_link = self.mapping[f"{road[link+'_id']}_1_{lane_link}"]
-                    index_road = self.mapping[f"{road['road_id']}_0_{lane_link}"]
-
-                    if index_link != index_road:
-                        self.matrix[index_link][index_road] = 1e-6
-
-                for lane_link in road['left_ids']:
-                    index_link = self.mapping[f"{road[link+'_id']}_1_{lane_link}"]
-                    index_road = self.mapping[f"{road['road_id']}_0_{lane_link}"]
-
-                    if index_link != index_road:
-                        self.matrix[index_road][index_link] = 1e-6
-        # Suc
+        if road[link + '_contact_point'] == 'start':
+            contact_link = 0
+            sign = -1 if link == "pre" else 1
         else:
-            if (road[link + '_contact_point'] == 'start'):
-                for lane_link in road['right_ids']:
-                    index_link = self.mapping[f"{road[link + '_id']}_0_{lane_link}"]
-                    index_road = self.mapping[f"{road['road_id']}_1_{lane_link}"]
+            contact_link = 1
+            sign = 1 if link == "pre" else -1
 
-                    if index_link != index_road:
-                        self.matrix[index_road][index_link] = 1e-6
-                for lane_link in road['left_ids']:
-                    index_link = self.mapping[f"{road[link + '_id']}_0_{lane_link}"]
-                    index_road = self.mapping[f"{road['road_id']}_1_{lane_link}"]
+        contact_road = 0 if link == "pre" else 1
 
-                    if index_link != index_road:
-                        self.matrix[index_link][index_road] = 1e-6
-            # End
-            else:
-                for lane_link in road['right_ids']:
-                    index_link = self.mapping[f"{road[link + '_id']}_1_{-lane_link}"]
-                    index_road = self.mapping[f"{road['road_id']}_1_{lane_link}"]
+        for lane_link in road['right_ids']:
+            index_link = self.get_index(road[link + '_id'], contact_link, sign * lane_link)
+            index_road = self.get_index(road['road_id'], contact_road, lane_link)
 
-                    if index_link != index_road:
-                        self.matrix[index_road][index_link] = 1e-6
-                for lane_link in road['left_ids']:
-                    index_link = self.mapping[f"{road[link + '_id']}_1_{-lane_link}"]
-                    index_road = self.mapping[f"{road['road_id']}_1_{lane_link}"]
+            self.matrix[index_link][index_road] = 1e-6
 
-                    if index_link != index_road:
-                        self.matrix[index_link][index_road] = 1e-6
+        for lane_link in road['left_ids']:
+            index_link = self.get_index(road[link + '_id'], contact_link, sign * lane_link)
+            index_road = self.get_index(road['road_id'], contact_road, lane_link)
 
-    def find_mapping(self, road: int, end: int, link: int):
-        key = f"{road}_{end}_{link}"
-        if key in self.mapping:
-            return self.mapping[key]
-        print("XODR: ", key)
-        return AttributeError
+            self.matrix[index_road][index_link] = 1e-6
 
     def _junction_connection(self, road, link: str):
         for i in self.junc_ids_entries(road[link+'_id']):
@@ -332,30 +283,15 @@ class XODRConverter:
             contact_point = self.junctions[i]['contact_point']
             incoming_road = int(self.junctions[i]['incoming_road'])
 
-            if link == 'pre' and contact_point == 'start':
-                for lane_links in self.junctions[i]['lane_links']:
-                    index_incoming = self.find_mapping(incoming_road, 0, lane_links[0])
-                    index_connecting = self.find_mapping(connecting_road, 0, lane_links[1])
-                    if index_incoming != index_connecting:
-                        self.matrix[index_incoming][index_connecting] = 1e-4
-            if link == 'pre' and contact_point == 'end':
-                for lane_links in self.junctions[i]['lane_links']:
-                    index_incoming = self.find_mapping(incoming_road, 0, lane_links[0])
-                    index_connecting = self.find_mapping(connecting_road, 1, lane_links[1])
-                    if index_incoming != index_connecting:
-                        self.matrix[index_incoming][index_connecting] = 1e-4
-            if link == 'suc' and contact_point == 'start':
-                for lane_links in self.junctions[i]['lane_links']:
-                    index_incoming = self.find_mapping(incoming_road, 1, lane_links[0])
-                    index_connecting = self.find_mapping(connecting_road, 0, lane_links[1])
-                    if index_incoming != index_connecting:
-                        self.matrix[index_incoming][index_connecting] = 1e-4
-            if link == 'suc' and contact_point == 'end':
-                for lane_links in self.junctions[i]['lane_links']:
-                    index_incoming = self.find_mapping(incoming_road, 1, lane_links[0])
-                    index_connecting = self.find_mapping(connecting_road, 1, lane_links[1])
-                    if index_incoming != index_connecting:
-                        self.matrix[index_incoming][index_connecting] = 1e-4
+            contact_incoming = 0 if link == 'pre' else 1
+            contact_connecting = 0 if contact_point == 'start' else 1
+
+            for lane_links in self.junctions[i]['lane_links']:
+                index_incoming = self.get_index(incoming_road, contact_incoming, lane_links[0])
+                index_connecting = self.get_index(connecting_road, contact_connecting,
+                                                  lane_links[1])
+
+                self.matrix[index_incoming][index_connecting] = 1e-6
 
     def link_pre_suc(self):
         """Link the predecessor and successor in the weighted matrix."""
