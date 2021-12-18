@@ -1,6 +1,7 @@
 """A xodr converter based on xodr files."""
 
 from xml.etree import ElementTree as eTree
+from xml.etree.ElementTree import Element
 from os.path import isfile, exists
 from pathlib import Path
 from typing import List, Tuple, Dict
@@ -24,18 +25,46 @@ class Geometry:
     length: float
     curvature: float
 
+class LinkType(IntEnum):
+    PRE = 0
+    SUC = 1
+
+
+@dataclass
+class RoadLink:
+    """Representing a link between two roads"""
+    id: int
+    type: str
+    contact_point: str
+    link_type: LinkType
+    contact_link: int = 0
+    sign: int = 0
+    contact_road: int = 0
+
+    def __init__(self, road_link_xml: Element, link_type: LinkType):
+        self.id = int(road_link_xml.get('elementId'))
+        self.type = road_link_xml.get('elementType')
+        self.contact_point = road_link_xml.get('contactPoint')
+        self.link_type = link_type
+        self.__post_init__()
+
+    def __post_init__(self):
+        print('Post_Init_RoadLink')
+        if self.contact_point == 'start':
+            self.contact_link = 0
+            self.sign = -1 if self.link_type == LinkType.PRE else 1
+        else:
+            self.contact_link = 1
+            self.sign = 1 if self.link_type == LinkType.PRE else -1
+
+        self.contact_road = 0 if self.link_type == LinkType.PRE else 1
+
 
 @dataclass
 class Road:
     """Represents the data of a road object."""
     road_id: int
     junction: int
-    suc_id: int
-    suc_type: str
-    suc_contact_point: str
-    pre_id: int
-    pre_type: str
-    pre_contact_point: str
     left_ids: List[int]
     right_ids: List[int]
     line_type: str
@@ -59,8 +88,8 @@ class XODRConverter:
         root = XODRConverter._get_root(filepath)
 
         # parse all roads
-        lane_lets = [XODRConverter._create_road_dict(road) for road in root.findall('road')]
-        lane_lets = [road for road in lane_lets if len(road['left_ids'] + road['right_ids'])]
+        lane_lets = [Road(road) for road in root.findall('road')]
+        lane_lets = [road for road in lane_lets if len(road.left_ids + road.right_ids)]
 
         # create the road mapping
         mapping = XODRConverter._create_road_mapping(lane_lets)
@@ -206,14 +235,6 @@ class XODRConverter:
                 counter += 2
 
         return mapping
-
-    @staticmethod
-    def _get_linked_elements(element) -> tuple:
-        element_id = int(element.get('elementId'))
-        element_type = element.get('elementType')
-        element_contact_point = element.get('contactPoint')
-
-        return element_id, element_type, element_contact_point
 
     @staticmethod
     def _get_root(filepath: Path) -> eTree.Element:
