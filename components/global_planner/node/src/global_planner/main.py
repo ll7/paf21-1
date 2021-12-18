@@ -2,19 +2,19 @@
 """Main script defining the ROS node"""
 
 import json
-import os.path
-from dataclasses import dataclass
-
-import rospy
-from std_msgs.msg import String as StringMsg
-from sensor_msgs.msg import NavSatFix as GpsMsg
-from sensor_msgs.msg import Imu as ImuMsg
 import math
-from global_planner.global_route_planner import GlobalRoutePlanner
+import rospy
+
+from std_msgs.msg import String as StringMsg
+from sensor_msgs.msg import Imu as ImuMsg
 from nav_msgs.msg import Odometry as OdometryMsg
+
+from dataclasses import dataclass
 from typing import Tuple, List
-from global_planner.xodr_converter import XODRConverter
 from pathlib import Path
+from global_planner.global_route_planner import GlobalRoutePlanner
+from global_planner.xodr_converter import XODRConverter
+
 
 @dataclass
 class GlobalPlannerNode:
@@ -36,10 +36,9 @@ class GlobalPlannerNode:
         if not self.global_route_planner:
 
             self.global_route_planner = GlobalRoutePlanner()
-            self.global_route_planner.set_matrix(self.xodr.matrix)
-            self.global_route_planner.set_mapping(self.xodr.mapping)
-            self.global_route_planner.point_dict = self.xodr.point_dict
-            self.global_route_planner.road_dict = self.xodr.lane_lets
+            self.global_route_planner.set_data(self.xodr.matrix,
+                                               self.xodr.mapping,
+                                               self.xodr.lane_lets)
 
     def init_map(self, path):
         # rospy.loginfo(f'index3:  {os.path.isfile(path)}')
