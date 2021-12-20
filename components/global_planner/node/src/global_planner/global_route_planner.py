@@ -1,29 +1,34 @@
 """A global route planner based on map and hmi data."""
 import math
 import json
-import os.path
+import dataclasses
 import numpy as np
 import networkx as nx
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
-# for ROS connection
-# from std_msgs.msg import String as StringMsg
-# from sensor_msgs.msg import NavSatFix as GpsMsg
-# import xodr_converter
 from typing import Tuple, List
 import rospy
+# only for debugging
+from global_planner.xodr_converter import XodrMap
+
+
+class EnhancedJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        return super().default(o)
 
 
 class GlobalRoutePlanner:
     """A global route planner based on map and hmi data."""
-    def __init__(self):
+    def __init__(self, xodr_map: XodrMap):
+    # def __init__(self, xodr_map):
         """Initialize the global route planner."""
-        self.num_nodes = 0
         # base filepath to the maps
         self.filepath = r"../../../maps"
         # graph with
-        self.graph = None
-        self.graph_start_end = None
+        self.xodr_map = xodr_map
+        self.num_nodes = len(self.xodr_map.mapping)
         # initialize all distances with inf.
         self.dist = None
         # array for the parents to store shortest path tree
@@ -31,50 +36,46 @@ class GlobalRoutePlanner:
         # path
         self.path = []
         # dict with lane-let ids and matrix pos
-        self.mapping = {}
+        self.matrix = np.copy(self.xodr_map.matrix)
+        self.mapping = self.xodr_map.mapping
+        self.lane_lets = self.xodr_map.lane_lets
+        # TODO DELETE
+        self.point_dict = {}
 
         self.map_name = ''
-        self.end_pos = np.zeros(shape=(2,))
-        self.start_pos = np.zeros(shape=(2,))
+        self.end_pos = None
+        self.start_pos = None
         self.orientation = 0.0
         self.update = False
         # TODO read from data
         self.road_width = 4.0
-        self.point_dict = {}
-        self.road_dict = None
 
-    def set_matrix(self, matrix: np.ndarray):
-        """Set the graph with a matrix (numpy array)."""
-        print(f'Shape of Graph GRP {matrix.shape}')
-        self.graph = np.copy(matrix)
-        print(f'Shape of Graph GRP {self.graph.shape}')
+    def set_data(self):
+        """Set the graph, the mapping and the lane-lets."""
+        self.matrix = np.copy(self.xodr_map.matrix)
+        self.mapping = self.xodr_map.mapping
+        self.lane_lets = self.xodr_map.lane_lets
 
-    def set_mapping(self, mapping: dict):
-        """Set the mapping and the nodes."""
-        self.mapping = mapping
+    # def load_map_data(self) -> None or FileNotFoundError:
+    #     """Load the data from the file with the map
+    #         name and set the mapping and the matrix."""
+    #     map_path = os.path.join(self.filepath, self.map_name, ".json")
+    #     if not os.path.isfile(map_path):
+    #         return FileNotFoundError
+    #
+    #     with open(map_path, encoding="utf-8") as json_file:
+    #         data = json.load(json_file)
+    #         self.set_data(data['matrix'], data['mapping'], data['lane_lets'])
+    #         return None
 
-    def load_map_data(self) -> None or FileNotFoundError:
-        """Load the data from the file with the map
-            name and set the mapping and the matrix."""
-        map_path = os.path.join(self.filepath, self.map_name, ".json")
-        if not os.path.isfile(map_path):
-            return FileNotFoundError
-
-        with open(map_path, encoding="utf-8") as json_file:
-            data = json.load(json_file)
-            self.set_mapping(data['mapping'])
-            self.set_matrix(data['matrix'])
-            return None
-
-    # def set_map_end_pos(self, msg: StringMsg):
-    def update_map_end_pos(self, msg):
-        """Update the current map name."""
-        if self.map_name != msg.map:
-            self.map_name = msg.map
-            self.load_map_data()
-
-        self.end_pos = msg.end_point
-        self.update = True
+    # def update_map_end_pos(self, msg):
+    #     """Update the current map name."""
+    #     if self.map_name != msg.map:
+    #         self.map_name = msg.map
+    #         self.load_map_data()
+    #
+    #     self.end_pos = msg.end_point
+    #     self.update = True
 
     def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
         """Update the vehicle's current position"""
@@ -113,14 +114,11 @@ class GlobalRoutePlanner:
 
     def dijkstra(self, start_pos: int):
         """Implementation of the Dijkstra algorithm."""
-
-        self.num_nodes = self.graph.shape[0]+2
         self.dist = np.ones(shape=(self.num_nodes,)) * np.inf
         # array for the parents to store shortest path tree
         self.parent = np.ones(shape=(self.num_nodes,)).astype('int32') * (-1)
 
         # distance of source to itself is 0
-        # start_pos = self.get_pos(start_id)
         self.dist[start_pos] = 0.0
 
         # add all nodes_id in queue
@@ -135,9 +133,8 @@ class GlobalRoutePlanner:
             # update dist value and parent
             for num in queue:
                 # update dist[i] if it is in queue, there is an edge from index_min to i,
-                # changed graph start end [index_min][num]
-                if self.graph_start_end[num][index_min]:
-                    new_dist = self.dist[index_min] + self.graph_start_end[num][index_min]
+                if self.matrix[num][index_min]:
+                    new_dist = self.dist[index_min] + self.matrix[num][index_min]
                     if new_dist < self.dist[num]:
                         self.dist[num] = new_dist
                         self.parent[num] = index_min
@@ -169,92 +166,128 @@ class GlobalRoutePlanner:
     def show_graph_with_labels(self):
         """Draw a graph with labeled nodes."""
         # get all edges out of the graph with value greater 0
-        edges = np.where(self.graph > 0)
+        edges = np.where(self.matrix > 0)
         graph = nx.Graph()
         # add all edges
         graph.add_edges_from(edges)
         # draw the graph
         nx.draw(graph, node_size=500, labels=list(self.mapping.keys()), with_labels=True)
 
+    @staticmethod
+    def _calculate_offset(start_point, end_point, road_width) -> List[float]:
+        """Calculate the offset according the road_width"""
+        # TODO check output
+        difference = end_point - start_point
+        # avoid division by zero
+        if difference[0] == 0.0:
+            difference[0] = 1e-8
+        alpha = np.arctan2(difference[1], difference[0])
+        beta = np.pi + alpha + np.pi / 2
+
+        # div = (end_point[0] - start_point[0])
+        # if div == 0:
+        #     div = 0.000000000001
+        # alpha = np.arctan((end_point[1] - start_point[1]) / div)
+        # beta = math.pi + alpha + math.pi / 2
+        output = [np.cos(beta) * road_width, np.sin(beta) * road_width]
+
+        return output
+
+    def calculate_offset2points(self, start_point, end_point, road_width, direction) -> List[tuple]:
+        """Function to calculate an offset to the start and end point."""
+        offset = GlobalRoutePlanner._calculate_offset(start_point, end_point, road_width)
+
+        if direction < 0:
+            return [
+                (start_point[0] - offset[0], start_point[1] + offset[1]),
+                (end_point[0] - offset[0], end_point[1] + offset[1])
+            ]
+        else:
+            return [
+                (start_point[0] + offset[0], start_point[1] - offset[1]),
+                (end_point[0] + offset[0], end_point[1] - offset[1])
+            ]
+
+    def create_polygon(self, start_point, end_point, one_sided=True) -> Polygon:
+        """Function to create a polygon."""
+        point_2, point_3 = self.calculate_offset2points(start_point, end_point, self.road_width, -1)
+
+        if one_sided:
+            return Polygon([(start_point[0], start_point[1]),
+                            point_2,
+                            point_3,
+                            (end_point[0], end_point[1]),
+                            ])
+        else:
+            point_1, point_4 = self.calculate_offset2points(start_point, end_point, self.road_width, 1)
+            return Polygon([point_1,
+                            point_2,
+                            point_3,
+                            point_4,
+                            ])
+
+    def _append_start_end(self):
+        self.num_nodes = self.matrix.shape[0] + 2
+        self.matrix = np.append(self.matrix, np.zeros((2, self.num_nodes - 2)), axis=0)
+        self.matrix = np.append(self.matrix, np.zeros((self.num_nodes, 2)), axis=1)
+
+        self.mapping['-1_0_0'] = self.num_nodes - 2
+        self.mapping['-2_0_0'] = self.num_nodes - 1
+
     def find_nearest_road(self) -> (list, list):
         """Find the nearest road to the start and end point."""
         ids_start = []
         ids_end = []
-        self.num_nodes = self.graph.shape[0] + 2
+
         # caching the start pos (in case the car starts driving)
         start_pos = self.start_pos
 
-        self.graph_start_end = np.append(np.copy(self.graph), np.zeros((2, self.num_nodes-2)), axis=0)
-        self.graph_start_end = np.append(self.graph_start_end,
-                                         np.zeros((self.num_nodes, 2)), axis=1)
+        # append two rows and columns to graph and append start and end to mapping
+        self._append_start_end()
 
-        self.mapping['-1_0_0'] = self.num_nodes-2
-        self.mapping['-2_0_0'] = self.num_nodes-1
+        # TODO DELETE
+        for road in self.lane_lets:
+            self.point_dict[road.road_id] = [geometry for geometry in road.geometry]
 
         for road_id, roads in self.point_dict.items():
             for index, geo in enumerate(roads):
 
-                start_point = geo[0]
-                end_point = geo[1]
+                start_point = geo.start_point
+                end_point = geo.end_point
 
-                div = (end_point[0] - start_point[0])
-                if div == 0:
-                    div = 0.000000000001
-                alpha = np.arctan((end_point[1] - start_point[1]) / div)
-                beta = math.pi + alpha + math.pi / 2
-
-                offset_x = math.cos(beta) * self.road_width
-                offset_y = math.sin(beta) * self.road_width
-                polygon = Polygon([(start_point[0] + offset_x, start_point[1] - offset_y),
-                                   (start_point[0] - offset_x, start_point[1] + offset_y),
-                                   (end_point[0] - offset_x, end_point[1] + offset_y),
-                                   (end_point[0] + offset_x, end_point[1] - offset_y),
-                                   ])
+                polygon = self.create_polygon(start_point, end_point, False)
+                polygon2 = self.create_polygon(start_point, end_point, True)
 
                 if polygon.contains(Point(start_pos[0], start_pos[1])):
-
-                    # print("[{'x': ", start_point[0] + offset_x, ", 'y': ", start_point[1] - offset_y, "},"
-                    #       "{'x': ", start_point[0] - offset_x, ", 'y': ", start_point[1] + offset_y, "},"
-                    #       "{'x': ", end_point[0] - offset_x, ", 'y': ", end_point[1] + offset_y, "},"
-                    #       "{'x': ", end_point[0] + offset_x, ", 'y': ", end_point[1] - offset_y, "}]")
-                    polygon2 = Polygon([(start_point[0], start_point[1]),
-                                        (start_point[0] - offset_x, start_point[1] + offset_y),
-                                       (end_point[0] - offset_x, end_point[1] + offset_y),
-                                       (end_point[0], end_point[1]),
-                                       ])
-                    lanelink = -1
+                    lane_link = -1
                     reference_point = 1
                     if polygon2.contains(Point(start_pos[0], start_pos[1])):
-                        lanelink = 1
+                        lane_link = 1
                         reference_point = 0
+
                     ids_start.append([road_id, index, reference_point])
                     distance = self.accumulate_dist(roads, reference_point, index)
-                    i = self.find_mapping(road_id, reference_point, lanelink)
+                    i = self.find_mapping(road_id, reference_point, lane_link)
                     if reference_point == 0:
-                        self.graph_start_end[i][self.num_nodes - 2] = distance
+                        self.matrix[i][self.num_nodes - 2] = distance
                     else:
-                        self.graph_start_end[self.num_nodes - 2][i] = distance
+                        self.matrix[self.num_nodes - 2][i] = distance
 
                 if polygon.contains(Point(self.end_pos[0], self.end_pos[1])):
-
-                    polygon2 = Polygon([(start_point[0], start_point[1]),
-                                        (start_point[0] - offset_x, start_point[1] + offset_y),
-                                        (end_point[0] - offset_x, end_point[1] + offset_y),
-                                        (end_point[0], end_point[1]),
-                                        ])
-                    lanelink = -1
+                    lane_link = -1
                     reference_point = 1
                     if polygon2.contains(Point(self.end_pos[0], self.end_pos[1])):
-                        lanelink = 1
+                        lane_link = 1
                         reference_point = 0
-                    ids_end.append([road_id,index, reference_point])
+
+                    ids_end.append([road_id, index, reference_point])
                     distance = self.accumulate_dist(roads, reference_point, index)
-                    i = self.find_mapping(road_id, reference_point, lanelink)
+                    i = self.find_mapping(road_id, reference_point, lane_link)
 
                     if reference_point == 0:
-                        self.graph_start_end[self.num_nodes - 1][i] = distance
+                        self.matrix[self.num_nodes - 1][i] = distance
                     else:
-                        self.graph_start_end[i][self.num_nodes - 1] = distance
+                        self.matrix[i][self.num_nodes - 1] = distance
 
         print("id_start", ids_start)
         print()
@@ -266,7 +299,7 @@ class GlobalRoutePlanner:
         key = f"{road}_{end}_{link}"
         if key in self.mapping:
             return self.mapping[key]
-        # Quick Fix ToDo
+        # TODO why wrong mapping?
         key = f"{road}_{end}_{-link}"
         if key in self.mapping:
             return self.mapping[key]
@@ -298,7 +331,7 @@ class GlobalRoutePlanner:
 
     @staticmethod
     def _linear_interpolation(start, end, interval_m):
-        listPol = []
+        list_pol = []
         start = [start['x'], start['y']]
         end = [end['x'], end['y']]
 
@@ -307,128 +340,91 @@ class GlobalRoutePlanner:
         difference_se = (end[0] - start[0], end[1] - start[1])
         # +1 bei Komma
         steps = math.ceil((distance/interval_m))
-        adddiff = (0.0, 0.0)
+
         if distance > interval_m:
-            adddiff = (difference_se[0]/ steps, difference_se[1]/ steps,)
+            add_diff = (difference_se[0] / steps, difference_se[1] / steps)
         else:
-            adddiff = difference_se
+            add_diff = difference_se
 
         diff = (0.0, 0.0)
         for index in range(steps):
-            point = (start[0]+diff[0], start[1] + diff[1])
-            diff = (diff[0]+adddiff[0], diff[1]+adddiff[1])
-            if index > 0 and (listPol[-1] == point):
+            point = (start[0] + diff[0], start[1] + diff[1])
+            diff = (diff[0] + add_diff[0], diff[1] + add_diff[1])
+            if index > 0 and (list_pol[-1] == point):
                 continue
-            listPol.append(point)
-        return listPol
-
-    @staticmethod
-    def calculate_offset(start_point, end_point, road_width) -> List[float]:
-        """Calculate the offset according the road_width"""
-        div = (end_point[0] - start_point[0])
-        if div == 0:
-            div = 0.000000000001
-        alpha = np.arctan((end_point[1] - start_point[1]) / div)
-        beta = math.pi + alpha + math.pi / 2
-
-        return [math.cos(beta) * road_width, math.sin(beta) * road_width]
-
-    def calculate_offset2points(self, start_point, end_point, road_width, direction) -> List[tuple]:
-        """Function to calculate an offset to the start and end point."""
-
-        offset = self.calculate_offset(start_point, end_point, road_width)
-
-        if direction < 0:
-            return [
-                (start_point[0] - offset[0], start_point[1] + offset[1]),
-                (end_point[0] - offset[0], end_point[1] + offset[1])
-            ]
-        else:
-            return [
-                (start_point[0] + offset[0], start_point[1] - offset[1]),
-                (end_point[0] + offset[0], end_point[1] - offset[1])
-            ]
+            list_pol.append(point)
+        return list_pol
 
     def compute_route(self) -> str:
         """Compute the route."""
-        # 0. check map data is available
-        # reload if new mapp
-
-        # 1. load and set map -> Done
-
-        # 2. start and endpoint
         self.end_pos = np.array([144.99, -57.5])
-        # self.end_pos = np.array([245.850891, -198.75])
-        # self.end_pos = np.array([255.0, -0.004])
-        # 2.05 find points
+
         ids_start, ids_end = self.find_nearest_road()
-        # 3. start dijkstra
-        # # TODO
-
         self.dijkstra(self.mapping['-1_0_0'])
-        #print(self.dist)
 
-        # TODO
         self._append_id2path('-1_0_0', '-2_0_0')
         list_lanes = []
         list_waypoints = []
 
         key_list = list(self.mapping.keys())
 
-        minimaping = {}
-        lastroad = -5
+        mini_mapping = {}
+        last_road = -5
         for elem in self.path:
             road_key = int((key_list[elem]).split('_')[0])
-            if lastroad == road_key:
+            if last_road == road_key:
 
-                listindex = minimaping[road_key]
-                listindex.append(elem)
-                minimaping[road_key] = listindex
+                list_index = mini_mapping[road_key]
+                list_index.append(elem)
+                mini_mapping[road_key] = list_index
             else:
-                listindex = []
-                listindex.append(elem)
-                minimaping[road_key] = listindex
-            lastroad = road_key
+                list_index = [elem]
+                mini_mapping[road_key] = list_index
+            last_road = road_key
 
-        for road in minimaping:
-            trafficSign = None
+        for index, road in enumerate(mini_mapping):
+            traffic_sign = None
 
             if road >= 0:
-                for x in self.road_dict:
-                    if x['road_id'] == road:
-                        if len(x['traffic_signs']):
-                            trafficSign = x['traffic_signs']
+                for x in self.lane_lets:
+                    if x.road_id == road:
+                        if len(x.traffic_signs):
+                            traffic_sign = x.traffic_signs
 
-            listkey = minimaping[road]
+            list_key = mini_mapping[road]
             if road < 0:
                 continue
             pd = self.point_dict[road]
 
-            if len(listkey) == 0:
+            if len(list_key) == 0:
                 pass
-            elif len(listkey) == 1:
+            elif len(list_key) == 1:
                 pass
             else:
-                dif = listkey[0] - listkey[1]
+                dif = list_key[0] - list_key[1]
                 if dif < 0:
                     for i, list_wp in enumerate(pd):
                         # 2. Element und 2. letztes Element
-                        if listkey[0] == 48 or listkey[1]==246:
+                        if index == 1 and i == 0:
                             continue
                         else:
-                            new_points = self.calculate_offset2points(pd[i][0], pd[i][1], 2.0, -1)
+                            new_points = self.calculate_offset2points(pd[i].start_point,
+                                                                      pd[i].end_point,
+                                                                      2.0, -1)
                             list_waypoints.append({'x': new_points[0][0],
                                                    'y': new_points[0][1],
-                                                   'trafficSign': trafficSign})
+                                                   'trafficSign': traffic_sign})
                 else:
                     for i, list_wp in enumerate(pd):
-                        if listkey[0] == 48 or listkey[1]==246:
+                        if index == 1 and i == 0:
                             continue
                         else:
-                            new_points = self.calculate_offset2points(pd[-i-1][0], pd[-i-1][1], 2.0, 1)
+                            new_points = self.calculate_offset2points(pd[-i-1].start_point,
+                                                                      pd[-i-1].end_point,
+                                                                      2.0, 1)
                             list_waypoints.append({'x': new_points[0][0],
                                                    'y': new_points[0][1],
-                                                   'trafficSign': trafficSign})
+                                                   'trafficSign': traffic_sign})
 
         interpolated_list = []
         for i in range(1, len(list_waypoints)):
@@ -442,4 +438,4 @@ class GlobalRoutePlanner:
         rospy.loginfo(f"List Lanes: {interpolated_list}")
 
         # output the interpolated route list as json
-        return json.dumps(interpolated_list)
+        return json.dumps(interpolated_list, cls=EnhancedJSONEncoder)

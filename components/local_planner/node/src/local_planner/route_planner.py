@@ -91,7 +91,7 @@ class RouteInfo(metaclass=SingletonMeta):  # pylint: disable=too-many-locals
         # self.cached_local_route = self.global_route[max(neighbour_ids[0], neighbour_ids[1]):]
         short_term_route = self.cached_local_route[:min(50, len(self.cached_local_route))]
         turned_on_traffic_light_detection = False
-        turned_on = True
+        turned_on = False
         short_term_route = self.lane_keeping_assistant(images, short_term_route, turned_on)
         if all(image is not None for image in images_list.values()) \
                 and turned_on_traffic_light_detection:
