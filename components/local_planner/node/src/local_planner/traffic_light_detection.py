@@ -13,7 +13,7 @@ class TrafficLightDetector:
     upper_mask = [int, int, int]
     box_offset: int = 0
     enhanced_dim: Tuple[int, int]
-    states = ['red', 'yellow', 'green', 'backside']
+    states = ['Red', 'Yellow', 'Green', 'Backside']
     crop_left_right: int
     crop_top_bottom: int
     value_backside: int
@@ -35,9 +35,9 @@ class TrafficLightDetector:
         rectangles = self.get_mask(semantic_image)
         marked_image = rgb_image
         meters = None
-        tl_color = None
+        tl_color = 'Green'
         if len(rectangles) > 0:
-            state_votes = {'red': 0, 'yellow': 0, 'green': 0, 'backside': 0}
+            state_votes = {'Red': 0, 'Yellow': 0, 'Green': 0, 'Backside': 0}
             rectangles = [rect for rect in rectangles if rect[2] * rect[3] ==
                           max(rect[2] * rect[3] for rect in rectangles)]
 

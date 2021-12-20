@@ -16,6 +16,7 @@ from local_planner.traffic_light_detection import TrafficLightDetector
 from local_planner.lane_detection import LaneDetection
 from local_planner.preprocessing import SensorCameraPreprocessor
 from local_planner.preprocessing import SingletonMeta
+from local_planner.speed_state_machine import SpeedStateMachine
 
 
 # from dataclasses import field
@@ -35,6 +36,7 @@ class RouteInfo(metaclass=SingletonMeta):  # pylint: disable=too-many-locals
                                 "/config/config_traffic_light_detection.yml"
     lane_detection: LaneDetection = LaneDetection(lane_detect_config)
     traffic_light_detection: TrafficLightDetector = TrafficLightDetector(traffic_light_config)
+    speed_state_machine: SpeedStateMachine = SpeedStateMachine()
 
     def update_vehicle_vector(self, msg: ImuMsg):
         """Calculates the vektor the car is currently driving"""
@@ -90,20 +92,12 @@ class RouteInfo(metaclass=SingletonMeta):  # pylint: disable=too-many-locals
         # neighbour_ids = argsort([dist(p, self.vehicle_position) for p in self.cached_local_route])
         # self.cached_local_route = self.global_route[max(neighbour_ids[0], neighbour_ids[1]):]
         short_term_route = self.cached_local_route[:min(50, len(self.cached_local_route))]
-        turned_on_traffic_light_detection = False
-        turned_on = False
+        turned_on_traffic_light_detection = True
+        turned_on = True
         short_term_route = self.lane_keeping_assistant(images, short_term_route, turned_on)
-        if all(image is not None for image in images_list.values()) \
-                and turned_on_traffic_light_detection:
-            rgb_image = images_list['rgb'][:, :, :3]
-            depth_image = images_list['depth']
-            semantic_image = images_list['semantic'][:, :, :3]
-            meters, _, highlighted_img = self.traffic_light_detection. \
-                detect_traffic_light(semantic_image, rgb_image, depth_image)
-            rospy.loginfo(meters)
-            if self.step_semantic % 10 == 0 and self.step_semantic < 0:
-                cv2.imwrite(f"/app/logs/img_{self.step_semantic}_traffic_light.png",
-                            highlighted_img)
+        tl_state = self.traffic_light_detec(images_list, turned_on_traffic_light_detection)
+        self.speed_state_machine.tl_state = tl_state
+        rospy.loginfo(f'{tl_state}')
         return short_term_route
 
     def lane_keeping_assistant(self, images, short_term_route, turned_on):
