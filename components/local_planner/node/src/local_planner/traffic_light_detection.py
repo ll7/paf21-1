@@ -13,7 +13,7 @@ class TrafficLightDetector:
     upper_mask = [int, int, int]
     box_offset: int = 0
     enhanced_dim: Tuple[int, int]
-    states: [str, str, str, str] = ['red', 'yellow', 'green', 'backside']
+    states = ['red', 'yellow', 'green', 'backside']
     crop_left_right: int
     crop_top_bottom: int
     value_backside: int
