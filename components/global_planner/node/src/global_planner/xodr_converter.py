@@ -9,6 +9,7 @@ import numpy as np
 
 
 def create_key(road: int, pos: int, link: int) -> str:
+    """Function to create the key of the mapping dictionary."""
     return f"{road}_{pos}_{link}"
 
 
@@ -30,14 +31,15 @@ class Geometry:
 
 
 class LinkType(IntEnum):
+    """Represents the type of the link."""
     PRE = 0
     SUC = 1
 
 
 @dataclass
 class RoadLink:
-    """Representing a link between two roads"""
-    id: int
+    """Represents a link between two roads"""
+    road_link_id: int
     type: str
     contact_point: str
     link_type: LinkType
@@ -46,7 +48,7 @@ class RoadLink:
     contact_road: int = 0
 
     def __init__(self, road_link_xml: Element, link_type: LinkType):
-        self.id = int(road_link_xml.get('elementId'))
+        self.road_link_id = int(road_link_xml.get('elementId'))
         self.type = road_link_xml.get('elementType')
         self.contact_point = road_link_xml.get('contactPoint')
         self.link_type = link_type
@@ -160,6 +162,7 @@ class Road:
 
 @dataclass
 class Connection:
+    """Represents the connection in a junction."""
     connection_id: int
     incoming_road: int
     connecting_road: int
@@ -169,6 +172,7 @@ class Connection:
 
 @dataclass
 class Junction:
+    """Represents the junction."""
     junction_id: int
     connections: List[Connection]
 
@@ -189,7 +193,7 @@ class Junction:
             # set the links to the junction dict
             connection.lane_links = links
 
-            if connection.incoming_road and connection.connecting_road in road_ids:
+            if connection.incoming_road in road_ids and connection.connecting_road in road_ids:
                 self.connections.append(connection)
 
     @staticmethod
@@ -230,28 +234,31 @@ class XodrMap:
 
     def _link_roads(self, matrix):
         """Link the geometries between each other."""
-        for index, road in enumerate(self.lane_lets):
+        for road in self.lane_lets:
             # TODO Cost function
             length = 0
             for geometry in road.geometry:
                 length += geometry.length
 
             for link in road.left_ids:
-                identifier = self.mapping[create_key(road.road_id, 0, link)]
-                matrix[identifier + 1][identifier] = length
+                index_start = self.mapping[create_key(road.road_id, 0, link)]
+                index_end = self.mapping[create_key(road.road_id, 1, link)]
+                matrix[index_end][index_start] = length
 
             for link in road.right_ids:
-                identifier = self.mapping[create_key(road.road_id, 0, link)]
-                matrix[identifier][identifier + 1] = length
+                index_start = self.mapping[create_key(road.road_id, 0, link)]
+                index_end = self.mapping[create_key(road.road_id, 1, link)]
+                matrix[index_start][index_end] = length
 
     def _junc_ids_entries(self, junction_id: int) -> List[Connection]:
         """Get the list of indices to the corresponding junction id."""
         for junction in self.junctions:
             if junction.junction_id == junction_id:
                 return junction.connections
+        return []
 
     def _apply_junction_connection(self, road: Road, link: RoadLink, matrix: np.ndarray):
-        for connection in self._junc_ids_entries(link.id):
+        for connection in self._junc_ids_entries(link.road_link_id):
             if connection.incoming_road != road.road_id:
                 continue
 
@@ -269,15 +276,21 @@ class XodrMap:
     def _apply_road_connection(self, road: Road, link: RoadLink, matrix: np.ndarray):
         for lane_link in road.right_ids:
             index_link, index_road = self._get_connected_lane_ids(lane_link, link, road.road_id)
-            matrix[index_link][index_road] = 1e-6
+            if link.link_type == LinkType.PRE:
+                matrix[index_link][index_road] = 1e-6
+            else:
+                matrix[index_road][index_link] = 1e-6
 
         for lane_link in road.left_ids:
             index_link, index_road = self._get_connected_lane_ids(lane_link, link, road.road_id)
-            matrix[index_road][index_link] = 1e-6
+            if link.link_type == LinkType.PRE:
+                matrix[index_road][index_link] = 1e-6
+            else:
+                matrix[index_link][index_road] = 1e-6
 
     def _get_connected_lane_ids(self, lane_link: int, link: RoadLink, road_id: int):
         print(link)
-        key = create_key(link.id, link.contact_link, link.sign * lane_link)
+        key = create_key(link.road_link_id, link.contact_link, link.sign * lane_link)
         index_link = self.mapping[key]
         key = create_key(road_id, link.contact_road, lane_link)
         index_road = self.mapping[key]
