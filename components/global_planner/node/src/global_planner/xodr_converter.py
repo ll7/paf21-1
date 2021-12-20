@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List
 import numpy as np
 # from components.global_planner.node.src.global_planner.global_route_planner import GlobalRoutePlanner
-
+#
 
 class XODRConverter:
     """A xodr converter based on xodr files."""

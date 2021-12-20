@@ -389,8 +389,10 @@ class GlobalRoutePlanner:
                 listindex.append(elem)
                 minimaping[road_key] = listindex
             lastroad = road_key
-
-        for road in minimaping:
+        # list_waypoints.append({'x': self.start_pos[0],
+        #                        'y': self.start_pos[1],
+        #                        'trafficSign': None})
+        for index, road in enumerate(minimaping):
             trafficSign = None
 
             if road >= 0:
@@ -413,7 +415,7 @@ class GlobalRoutePlanner:
                 if dif < 0:
                     for i, list_wp in enumerate(pd):
                         # 2. Element und 2. letztes Element
-                        if listkey[0] == 48 or listkey[1]==246:
+                        if index == 1 and i == 0:
                             continue
                         else:
                             new_points = self.calculate_offset2points(pd[i][0], pd[i][1], 2.0, -1)
@@ -422,7 +424,7 @@ class GlobalRoutePlanner:
                                                    'trafficSign': trafficSign})
                 else:
                     for i, list_wp in enumerate(pd):
-                        if listkey[0] == 48 or listkey[1]==246:
+                        if index == 1 and i == 0:
                             continue
                         else:
                             new_points = self.calculate_offset2points(pd[-i-1][0], pd[-i-1][1], 2.0, 1)
