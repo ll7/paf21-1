@@ -100,6 +100,21 @@ class RouteInfo(metaclass=SingletonMeta):  # pylint: disable=too-many-locals
         rospy.loginfo(f'{tl_state}')
         return short_term_route
 
+    def traffic_light_detec(self, images_list, turned_on_traffic_light_detection):
+        """set traffic lane color"""
+        tl_color = 'Green'
+        if all(image is not None for image in images_list.values()) \
+                and turned_on_traffic_light_detection:
+            rgb_image = images_list['rgb'][:, :, :3]
+            depth_image = images_list['depth']
+            semantic_image = images_list['semantic'][:, :, :3]
+            meters, tl_color, highlighted_img = self.traffic_light_detection. \
+                detect_traffic_light(semantic_image, rgb_image, depth_image)
+            rospy.loginfo(meters)
+            if self.step_semantic % 10 == 0 and self.step_semantic < 0:
+                cv2.imwrite(f"/app/logs/img_{self.step_semantic}_traffic_light.png",
+                            highlighted_img)
+        return tl_color
     def lane_keeping_assistant(self, images, short_term_route, turned_on):
         """starts lane detection for this cycle"""
         if images.semantic_image is not None and turned_on:
