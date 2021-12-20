@@ -9,7 +9,7 @@ hough_rho: 6
 hough_threshold: 50
 hough_min_line_length: 20
 hough_max_line_gap: 100
-angle_lower_bound: 50
+angle_lower_bound: 20
 angle_upper_bound: 90
-deviation_threshold: 0
+deviation_threshold: 2
 create_visualisation: True

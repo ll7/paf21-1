@@ -26,9 +26,9 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
     last_middle: [int, int, int, int] = None
     x_offset_left: int = 300
     x_offset_right: int = -300
-    counter_angle = 33
+    counter_angle = 18
     last_angle: float = 0.0
-    discount_car_length: float = 0.5
+    discount_car_length: float = 0
     max_deviation: int = 360
 
     def __init__(self, config_path):
@@ -153,7 +153,8 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
 
         if len(right_half) >= 1:
             right_half = [self._get_projection(
-                line, img_height) for line in right_half if line[0] > img_width * 0.3]
+                line, img_height) for line in right_half if line[0] > img_width * 0.5]
+            rospy.loginfo(f'right: {right_half}')
             if len(right_half) >= 1:
                 right_proj = right_half[np.argmin([line[0] for line in right_half
                                                    ])]
@@ -174,26 +175,22 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
                       left_proj[2], left_proj[3]]
             self.x_offset_left = 300
         if middle is not None:
-            distance, upper_distance = self.get_car_middle(img_width, middle)
+            distance = self.get_car_middle(img_width, middle)
             angle = LaneDetection._calculate_angle(middle,
                                                    [img_width / 2, img_height,
                                                     img_width / 2, 0])
-            if (abs(distance) >= abs(upper_distance)) and abs(distance) > 10:
+            if abs(distance) > 10:
                 angle, distance = self.get_angle_to_middle(angle, distance)
-            elif (abs(upper_distance) >= abs(distance)) and abs(upper_distance) > 10:
-                angle, upper_distance = self.get_angle_to_middle(angle, upper_distance)
 
         else:
-            angle = self.last_angle
-        self.last_angle = angle - angle / 100
+            angle = 0
         rospy.loginfo(f'angle: {angle}')
         return [right_proj, left_proj, middle], angle
 
     def get_angle_to_middle(self, angle, distance):
         """function to calculate angle to the middle considering the distance"""
-
         abs_distance = min(abs(distance), self.max_deviation)
-        angle = 1.1 ** (abs_distance * 0.1)
+        angle = self.counter_angle / self.max_deviation * abs_distance
         if distance < 0:
             angle = -angle
         return angle, distance
@@ -202,11 +199,10 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
         """Approximate the middle of the car"""
         vectorized_middle = [self.discount_car_length * (middle[2] - middle[0]),
                              self.discount_car_length * (middle[3] - middle[1])]
-        moved_middle = [np.subtract([middle[0], middle[1]], vectorized_middle),
-                        np.subtract([middle[2], middle[3]], vectorized_middle)]
-        distance = moved_middle[0][0] - img_width / 2
-        upper_distance = moved_middle[1][0] - img_width / 2
-        return distance, upper_distance
+        moved_middle = np.subtract([middle[0], middle[1]], vectorized_middle)
+
+        distance = moved_middle[0] - img_width / 2
+        return distance
 
     @staticmethod
     def _calculate_angle(vector_1, vector_2):
