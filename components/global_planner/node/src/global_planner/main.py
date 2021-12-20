@@ -4,10 +4,10 @@
 import math
 from time import sleep
 
-import rospy
 from dataclasses import dataclass
 from typing import Tuple
 from pathlib import Path
+import rospy
 
 from std_msgs.msg import String as StringMsg
 from sensor_msgs.msg import Imu as ImuMsg
@@ -17,14 +17,12 @@ from global_planner.global_route_planner import GlobalRoutePlanner
 from global_planner.xodr_converter import XODRConverter, XodrMap
 
 
-
 @dataclass
 class GlobalPlannerNode:
     """A class representing a ROS node that's planning a global route."""
 
     vehicle_name: str
     global_route_publisher: rospy.Publisher = None
-    # TODO Change the num_nodes
     path = Path("/app/res/xodr/Town01.xodr")
     xodr_map: XodrMap = None
     global_route_planner: GlobalRoutePlanner = None
