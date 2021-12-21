@@ -4,9 +4,4 @@ build.gradle
 .catkin_workspace
 .vscode
 .idea
-/components/global_planner/.xdp_graphTown1.png
-/components/global_planner/mat.csv
-/components/global_planner/node/src/global_planner/mat.npy
-/components/global_planner/mat.npy
-/components/global_planner/node/src/global_planner/Town01.xodr
-/components/global_planner/Town03.xodr
+/scenarios/default_scenario/logs/

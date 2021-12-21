@@ -41,7 +41,8 @@ cd paf21-1
 
 # build the components
 cd components
-docker-compose -f simulation-images-build.yml build
+docker-compose -f carla-sim-build.yml build
+docker-compose -f driving-components-build.yml build
 
 # launch the default scenario
 cd ../scenarios/default_scenario

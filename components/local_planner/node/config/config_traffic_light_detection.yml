@@ -1,0 +1,7 @@
+lower_bound: [30, 0, 0]
+upper_bound: [30, 255, 255]
+box_offset: 0
+enhanced_dim: [200, 400]
+value_backside: 1000000
+crop_left_right: 25
+crop_top_bottom: 50
