@@ -13,7 +13,7 @@ from std_msgs.msg import String as StringMsg
 from sensor_msgs.msg import Imu as ImuMsg
 from nav_msgs.msg import Odometry as OdometryMsg
 
-from global_planner.global_route_planner import GlobalRoutePlanner
+from global_planner.global_route_planner import GlobalPlanner
 from global_planner.xodr_converter import XODRConverter, XodrMap
 
 
@@ -27,13 +27,13 @@ class GlobalPlannerNode:
     # TODO Change the num_nodes
     path = Path("/app/res/xodr/Town01.xodr")
     xodr_map: XodrMap = None
-    global_route_planner: GlobalRoutePlanner = None
+    global_planner: GlobalPlanner = None
 
     def __post_init__(self):
         if not self.xodr_map:
             self.xodr_map = XODRConverter.read_xodr(self.path)
-        if not self.global_route_planner:
-            self.global_route_planner = GlobalRoutePlanner(self.xodr_map)
+        if not self.global_planner:
+            self.global_planner = GlobalPlanner(self.xodr_map)
 
     def run_node(self):
         """Launch the ROS node to receive the map, the start and
@@ -42,10 +42,12 @@ class GlobalPlannerNode:
 
         self.init_ros()
 
-        while not self.global_route_planner.start_pos:
+        while not self.global_planner.start_pos:
             sleep(1)
 
-        global_route = self.global_route_planner.compute_route()
+        end_pos = (144.99, -57.5)
+        global_route = GlobalPlanner.generate_waypoints(self.global_planner.start_pos, end_pos,
+                                                        self.xodr_map)
         self.global_route_publisher.publish(StringMsg(data=global_route))
 
         rospy.spin()
@@ -58,7 +60,7 @@ class GlobalPlannerNode:
 
     def _init_vehicle_orientation_subscriber(self):
         in_topic = f"/carla/{self.vehicle_name}/imu/imu1"
-        callback = lambda msg: self.global_route_planner.update_vehicle_orientation(
+        callback = lambda msg: self.global_planner.update_vehicle_orientation(
             self.message_to_orientation(msg))
         rospy.Subscriber(in_topic, ImuMsg, callback)
 
@@ -73,7 +75,7 @@ class GlobalPlannerNode:
 
     def _init_gps_subscriber(self):
         in_topic = f"/carla/{self.vehicle_name}/odometry"
-        callback = lambda msg: self.global_route_planner.update_vehicle_position(
+        callback = lambda msg: self.global_planner.update_vehicle_position(
             self.message_to_vehicle_position(msg))
         rospy.Subscriber(in_topic, OdometryMsg, callback)
 
