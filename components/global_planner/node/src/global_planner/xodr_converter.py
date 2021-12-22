@@ -1,4 +1,5 @@
 """A xodr converter based on xodr files."""
+from math import sin, cos
 from enum import IntEnum
 from xml.etree import ElementTree as eTree
 from xml.etree.ElementTree import Element
@@ -23,8 +24,8 @@ class TrafficSign:
 @dataclass
 class Geometry:
     """Represents the data of a geometry object."""
-    start_point: np.ndarray
-    end_point: np.ndarray
+    start_point: Tuple[float, float]
+    end_point: Tuple[float, float]
     angle: float
     length: float
     curvature: float
@@ -75,7 +76,8 @@ class Road:
     right_ids: List[int]
     line_type: str
     traffic_signs: List[TrafficSign]
-    geometry: List[Geometry]
+    geometries: List[Geometry]
+    road_width: float
     suc: RoadLink = None
     pre: RoadLink = None
 
@@ -92,7 +94,8 @@ class Road:
         self.left_ids, self.right_ids = Road._get_lane_id(road_xml)
         self.line_type = Road._get_line_type(road_xml)
         self.traffic_signs = Road._get_traffic_signs(road_xml)
-        self.geometry = Road._get_geometry(road_xml)
+        self.geometries = Road._get_geometry(road_xml)
+        self.road_width = Road._get_road_width(road_xml)
 
     @staticmethod
     def _get_line_type(road: Element) -> str:
@@ -101,7 +104,7 @@ class Road:
         return lane_sec.find('center').find('lane').find('roadMark').get('type')
 
     @staticmethod
-    def _get_lane_id(road: Element) -> list:
+    def _get_lane_id(road: Element) -> List[List[int]]:
         """Get the lane id."""
         directions = ['left', 'right']
         return_ids = [[], []]
@@ -116,6 +119,22 @@ class Road:
 
                 return_ids[i].append(int(lane.get('id')))
         return return_ids
+
+    @staticmethod
+    def _get_road_width(road: Element) -> float:
+        """Get the lane id."""
+        default_road_width = 4.0
+        directions = ['left', 'right']
+
+        lane_sec = road.find('lanes').find('laneSection')
+        for direction in directions:
+            if lane_sec.find(direction) is None:
+                continue
+            for lane in lane_sec.find(direction).findall('lane'):
+                if lane.get('type') != 'driving':
+                    continue
+                return float(lane.find('width').get('a'))
+        return default_road_width
 
     @staticmethod
     def _get_traffic_signs(road: Element) -> list:
@@ -137,7 +156,7 @@ class Road:
 
         objects = []
         for geometry in plan_view.findall('geometry'):
-            start_point = np.array([geometry.get('x'), geometry.get('y')], dtype=np.float32)
+            start_point = (float(geometry.get('x')), float(geometry.get('y')))
             angle = float(geometry.get('hdg'))
             length = float(geometry.get('length'))
 
@@ -150,14 +169,12 @@ class Road:
         return objects
 
     @staticmethod
-    def _calculate_end_point(start_point: np.ndarray, angle: float,
-                             length: float, arc: float) -> np.ndarray:
+    def _calculate_end_point(start_point: Tuple[float, float], angle: float,
+                             length: float, arc: float) -> Tuple[float, float]:
         """Calculate the end point based on the start point, angle, length and arc."""
         # TODO check implementation and add arc
         # https://www.delftstack.com/howto/numpy/curvature-formula-numpy/
-        rotation = np.array([np.cos(angle), np.sin(angle)], dtype=np.float32)
-        end_point = start_point + rotation * length
-        return end_point
+        return start_point[0] + cos(angle) * length, start_point[1] + sin(angle) * length
 
 
 @dataclass
@@ -237,7 +254,7 @@ class XodrMap:
         for road in self.lane_lets:
             # TODO Cost function
             length = 0
-            for geometry in road.geometry:
+            for geometry in road.geometries:
                 length += geometry.length
 
             for link in road.left_ids:
@@ -346,15 +363,6 @@ class XODRConverter:
                 counter += 2
 
         return mapping
-
-    # @staticmethod
-    # def _get_root(filepath: Path) -> Element:
-    #     # check if file exist
-    #     if not exists(filepath) or not isfile(filepath):
-    #         raise FileNotFoundError
-    #
-    #     # get the root of the xml file
-    #     return eTree.parse(filepath).getroot()
 
     # @staticmethod
     # def _road_id2index(road_id: int, mapping: dict) -> Tuple[int, int]:
