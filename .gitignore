@@ -4,4 +4,4 @@ build.gradle
 .catkin_workspace
 .vscode
 .idea
-logs
+/scenarios/default_scenario/logs/

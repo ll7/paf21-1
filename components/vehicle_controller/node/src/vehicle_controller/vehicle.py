@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 from typing import Tuple
 from datetime import datetime
-from math import dist as euclid_dist, atan2
-from vehicle_controller.geometry import norm_angle
+from math import dist as euclid_dist
+from vehicle_controller.geometry import norm_angle, points_to_vector, vector_to_dir
 
 @dataclass
 class Vehicle:
@@ -34,8 +34,7 @@ class Vehicle:
 
     def steer_towards(self, aim_point: Tuple[float, float]) -> float:
         """Adjust the steering angle for driving towards the given point"""
-        diff = (aim_point[0] - self.pos[0],
-                aim_point[1] - self.pos[1])
-        angle = atan2(diff[1], diff[0])
-        steer_angle = angle - self.orientation_rad
+        aim_vector = points_to_vector(self.pos, aim_point)
+        aim_angle_rad = vector_to_dir(aim_vector)
+        steer_angle = aim_angle_rad - self.orientation_rad
         self.steering_angle = norm_angle(steer_angle)
