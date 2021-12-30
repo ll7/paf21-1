@@ -10,7 +10,7 @@ from nav_msgs.msg import Path as WaypointsMsg
 from nav_msgs.msg import Odometry as OdometryMsg
 from sensor_msgs.msg import Imu as ImuMsg
 
-from vehicle_controller.driving_control import DrivingSignal
+from local_planner.vehicle_control import DrivingSignal
 
 
 class RosDrivingMessagesAdapter:

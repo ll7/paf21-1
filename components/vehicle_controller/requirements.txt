@@ -1,4 +1,0 @@
-# put pip packages here in case your python script references them
-pytest
-pylint
-transformations

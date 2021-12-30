@@ -11,9 +11,10 @@ RUN apt-get update && apt-get install -y python3-pip \
 RUN apt-get update && apt-get install -y python-is-python3 \
     && rm -rf /var/lib/apt/lists/*
 
-# alias python3 as python
+# install ros-related dependencies (mainly for messaging)
 RUN apt-get update && apt-get install -y \
         ros-noetic-cv-bridge ros-noetic-vision-opencv \
+        ros-noetic-ackermann-msgs \
     && rm -rf /var/lib/apt/lists/*
 
 # install pip dependencies

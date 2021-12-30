@@ -1,5 +1,0 @@
-<!-- -->
-<launch>
-  <node pkg="vehicle_controller" name="vehicle_controller"
-        type="main.py" output="screen" required="true" />
-</launch>

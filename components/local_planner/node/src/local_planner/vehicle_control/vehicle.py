@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from typing import Tuple
 from datetime import datetime
 from math import dist as euclid_dist
-from vehicle_controller.geometry import norm_angle, points_to_vector, vector_to_dir
+
+from local_planner.vehicle_control.geometry import \
+    norm_angle, points_to_vector, vector_to_dir
 
 @dataclass
 class Vehicle:

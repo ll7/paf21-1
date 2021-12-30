@@ -7,9 +7,9 @@ from typing import Tuple, List
 from dataclasses import dataclass, field
 
 # import numpy as np
-import rospy
+# import rospy
 
-from vehicle_controller.vehicle import Vehicle
+from local_planner.vehicle_control.vehicle import Vehicle
 
 @dataclass
 class DrivingSignal:
@@ -30,7 +30,7 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
     def update_route(self, waypoints: List[Tuple[float, float]]):
         """Update the route to be followed"""
         self.route_waypoints = waypoints
-        rospy.loginfo(f'waypoints {waypoints}')
+        print(f'waypoints {waypoints}')
 
     def update_target_velocity(self, target_velocity_mps: float):
         """Update the route to be followed"""
@@ -51,7 +51,7 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
         steering_angle = self._compute_steering_angle()
         velocity = self._compute_velocity()
         signal = DrivingSignal(steering_angle, velocity)
-        rospy.loginfo(f'vehicle {self.vehicle}')
+        print(f'vehicle {self.vehicle}')
         return signal
 
     def _compute_velocity(self) -> float:
@@ -64,9 +64,9 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
         aim_point = self._get_aim_point()
         self.vehicle.steer_towards(aim_point)
 
-        if self.target_velocity_mps > 0:
-            rospy.loginfo(
-                  f'aim_point {aim_point}, vehicle_position {self.vehicle.pos} '
+        is_car_moving = self.target_velocity_mps > 0
+        if is_car_moving:
+            print(f'aim_point {aim_point}, vehicle_position {self.vehicle.pos} '
                 + f'steer {degrees(self.vehicle.steering_angle)}, '
                 + f'orientation {degrees(self.vehicle.orientation_rad)}')
 
