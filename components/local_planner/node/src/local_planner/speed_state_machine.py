@@ -11,11 +11,11 @@ class SpeedStateMachine(metaclass=SingletonMeta):
     def __init__(self):
 
         """Builds our Statemachine"""
-        self.states = ['Stop', 'Accel', 'Keep', 'Break']
+        self.states = ['Stop', 'Accel', 'Keep', 'Brake']
         self.current_state = "Stop"
         #['Green', 'Yellow', 'Red']
         self.tl_state = 'Green'
-        self.speed_limit = 50
+        # self.speed_limit = 50
         self.target_limit = 50
         self.current_limit = 50
         self.junction_free = True
@@ -29,19 +29,19 @@ class SpeedStateMachine(metaclass=SingletonMeta):
         elif self.current_state == "Accel":
             if self.target_limit < self.current_limit\
                     or not self.junction_free or self.tl_state == 'Red':
-                self.current_state = "Break"
+                self.current_state = "Brake"
             elif self.target_limit == self.current_limit:
                 self.current_state = "Keep"
 
         elif self.current_state == "Keep":
             if self.target_limit < self.current_limit\
                     or not self.junction_free or self.tl_state == 'Red':
-                self.current_state = "Break"
+                self.current_state = "Brake"
             if self.target_limit > self.current_limit\
                     and self.junction_free and self.tl_state == 'Green':
                 self.current_state = "Accel"
 
-        elif self.current_state == "Break":
+        elif self.current_state == "Brake":
             if self.target_limit > self.current_limit\
                     and self.junction_free and self.tl_state == 'Green':
                 self.current_state = "Accel"

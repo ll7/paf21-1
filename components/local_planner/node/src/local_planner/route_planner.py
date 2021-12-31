@@ -1,27 +1,30 @@
 """A route planner based on map and sensor data"""
 
+from dataclasses import dataclass, field
 from math import dist, sin, cos
 from typing import List, Tuple
 
 from cv2 import cv2
 import numpy as np
 
+from local_planner.vehicle_control import DrivingController
 from local_planner.traffic_light_detection import TrafficLightDetector
 from local_planner.lane_detection import LaneDetection
 from local_planner.preprocessing import SensorCameraPreprocessor
-from local_planner.preprocessing import SingletonMeta
 from local_planner.speed_state_machine import SpeedStateMachine
 
 
-class RouteInfo(metaclass=SingletonMeta):  # pylint: disable=too-many-locals
+@dataclass
+class RouteInfo(): # pylint: disable=too-many-locals
     # pylint: disable=too-many-instance-attributes
     """A class that keeps all the necessary information needed by all the modules,
     this class should be expanded if needed"""
 
+    driving_control: DrivingController
     vehicle_vector: Tuple[float, float] = None
     vehicle_position: Tuple[float, float] = None
-    global_route: List[Tuple[float, float]] = []
-    cached_local_route: List[Tuple[float, float]] = []
+    global_route: List[Tuple[float, float]] = field(default_factory=list)
+    cached_local_route: List[Tuple[float, float]] = field(default_factory=list)
     orientation: float = 0
     step_semantic: int = 0
     lane_detect_config: str = "/app/src/local_planner/config/config_lane_detection.yml"
@@ -84,16 +87,27 @@ class RouteInfo(metaclass=SingletonMeta):  # pylint: disable=too-many-locals
         # self.cached_local_route = self.global_route[max(neighbour_ids[0], neighbour_ids[1]):]
         short_term_route = self.cached_local_route[:min(50, len(self.cached_local_route))]
         turned_on_traffic_light_detection = True
-        turned_on = True
+        turned_on = False
         short_term_route = self.lane_keeping_assistant(images, short_term_route, turned_on)
-        tl_state = self.traffic_light_detec(images_list, turned_on_traffic_light_detection)
-        self.speed_state_machine.tl_state = tl_state
-        print(f'{tl_state}')
+
+        tl_state, dist_m = self.traffic_light_detec(images_list, turned_on_traffic_light_detection)
+        # self.speed_state_machine.tl_state = tl_state
+        # print(f'{tl_state}, {self.speed_state_machine.current_state}')
+
+        if tl_state == 'Red' and dist_m <= 50:
+            print(f'traffic lights are red. initiate brake in {dist_m} meters')
+            self.driving_control.update_target_velocity(dist_m, 0)
+        else:
+            self.driving_control.update_target_velocity(dist_m, 10)
+
+        # don't return this, just call the driving controller directly (it's an attribute of this class)
         return short_term_route
 
     def traffic_light_detec(self, images_list, turned_on_traffic_light_detection):
         """set traffic lane color"""
+
         tl_color = 'Green'
+        meters = 300
         if all(image is not None for image in images_list.values()) \
                 and turned_on_traffic_light_detection:
             rgb_image = images_list['rgb'][:, :, :3]
@@ -105,7 +119,9 @@ class RouteInfo(metaclass=SingletonMeta):  # pylint: disable=too-many-locals
             if self.step_semantic % 10 == 0 and self.step_semantic < 0:
                 cv2.imwrite(f"/app/logs/img_{self.step_semantic}_traffic_light.png",
                             highlighted_img)
-        return tl_color
+
+        # TODO: return the traffic light's position in case something was found
+        return tl_color, meters
 
     def lane_keeping_assistant(self, images, short_term_route, turned_on):
         """starts lane detection for this cycle"""

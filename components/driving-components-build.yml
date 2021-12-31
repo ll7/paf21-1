@@ -1,10 +1,10 @@
 version: '2'
 
 services:
-  vehicle-controller:
-    image: vehicle_controller
-    build:
-      context: ./vehicle_controller
+  # vehicle-controller:
+  #   image: vehicle_controller
+  #   build:
+  #     context: ./vehicle_controller
 
   local-planner:
     image: local_planner

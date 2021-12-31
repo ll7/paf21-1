@@ -36,8 +36,7 @@ class LocalPlannerNode:
     publish_rate_in_hz: int
     driving_signal_publisher: rospy.Publisher = None
     image_preprocessor: SensorCameraPreprocessor = SensorCameraPreprocessor()
-    route_planner: RouteInfo = RouteInfo()
-    driving_controller: DrivingController() = DrivingController()
+    route_planner: RouteInfo = RouteInfo(driving_control=DrivingController())
 
     def run_node(self):
         """Launch the ROS node to receive globally planned routes
@@ -45,12 +44,12 @@ class LocalPlannerNode:
 
         self._init_ros()
         rate = rospy.Rate(self.publish_rate_in_hz)
-        self.driving_controller.target_velocity_mps = 10.0
+        # self.route_planner.driving_control.target_velocity_mps = 10.0
 
         while not rospy.is_shutdown():
             local_route = self.route_planner.compute_local_route()
-            self.driving_controller.update_route(local_route)
-            driving_signal = self.driving_controller.next_signal()
+            self.route_planner.driving_control.update_route(local_route)
+            driving_signal = self.route_planner.driving_control.next_signal()
             msg = RosDrivingMessagesAdapter.signal_to_message(driving_signal)
             self.driving_signal_publisher.publish(msg)
             rate.sleep()
@@ -76,7 +75,7 @@ class LocalPlannerNode:
     def _init_target_velocity_subscriber(self):
         in_topic = f"/drive/{self.vehicle_name}/target_velocity"
         msg_to_velocity = RosDrivingMessagesAdapter.message_to_target_velocity
-        process_velocity = self.driving_controller.update_target_velocity
+        process_velocity = self.route_planner.driving_control.update_target_velocity
         callback = lambda msg: process_velocity(msg_to_velocity(msg))
         rospy.Subscriber(in_topic, FloatMsg, callback)
 
@@ -84,7 +83,7 @@ class LocalPlannerNode:
         in_topic = f"/carla/{self.vehicle_name}/imu/imu1"
         msg_to_orientation = RosDrivingMessagesAdapter.message_to_orientation
         multi_callback = RosMsgMultiplexer(consumers=[
-            lambda msg: self.driving_controller.update_vehicle_orientation(msg_to_orientation(msg)),
+            lambda msg: self.route_planner.driving_control.update_vehicle_orientation(msg_to_orientation(msg)),
             lambda msg: self.route_planner.update_vehicle_orientation(msg_to_orientation(msg))
         ])
         rospy.Subscriber(in_topic, ImuMsg, multi_callback.forward_msg)
@@ -93,7 +92,7 @@ class LocalPlannerNode:
         in_topic = f"/carla/{self.vehicle_name}/odometry"
         msg_to_position = RosDrivingMessagesAdapter.message_to_vehicle_position
         multi_callback = RosMsgMultiplexer(consumers=[
-            lambda msg: self.driving_controller.update_vehicle_position(msg_to_position(msg)),
+            lambda msg: self.route_planner.driving_control.update_vehicle_position(msg_to_position(msg)),
             lambda msg: self.route_planner.update_vehicle_position(msg_to_position(msg))
         ])
         rospy.Subscriber(in_topic, OdometryMsg, multi_callback.forward_msg)
