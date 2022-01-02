@@ -115,6 +115,7 @@ class RouteInfo(): # pylint: disable=too-many-locals
         #     self.driving_control.update_target_velocity(dist_m, 0)
         # else:
         #     self.driving_control.update_target_velocity(dist_m, 10)
+        self.speed_state_machine.dist_next_obstacle_m = dist_m
         self.speed_state_machine.tl_state = tl_state
         self.speed_state_machine.current_speed = self.velocity
         self.speed_state_machine.update_state()

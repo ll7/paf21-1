@@ -23,7 +23,7 @@ class SpeedStateMachine(metaclass=SingletonMeta):
         self.tl_state = 'Green'
 
         # Evaluation of Signs
-        self.speed_limit_sign_ms = 30 / 3.6
+        self.speed_limit_sign_ms = 200 / 3.6
 
         # Eval if Junction is free
         self.junction_free = True
@@ -32,7 +32,7 @@ class SpeedStateMachine(metaclass=SingletonMeta):
         self.dist_next_obstacle_m = 1000
 
         # Evaluated Speed decision
-        self.target_limit_ms = 30 / 3.6
+        self.target_limit_ms = 200 / 3.6
 
     def update_state(self):
         """Builds our Statemachine"""
