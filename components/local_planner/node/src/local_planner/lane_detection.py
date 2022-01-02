@@ -2,7 +2,7 @@
 from cv2 import cv2
 import numpy as np
 import yaml
-import rospy
+
 
 
 class LaneDetection:  # pylint: disable=too-few-public-methods
@@ -147,14 +147,12 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
         if len(left_half) >= 1:
             left_half = [self._get_projection(line, img_height) for line in left_half
                          if line[0] <= img_width * 0.7]
-            rospy.loginfo(f'left: {left_half}')
             if len(left_half) >= 1:
                 left_proj = left_half[np.argmax([line[0] for line in left_half])]
 
         if len(right_half) >= 1:
             right_half = [self._get_projection(
-                line, img_height) for line in right_half if line[0] > img_width * 0.5]
-            rospy.loginfo(f'right: {right_half}')
+                line, img_height) for line in right_half if line[0] > img_width * 0.7]
             if len(right_half) >= 1:
                 right_proj = right_half[np.argmin([line[0] for line in right_half
                                                    ])]
@@ -184,7 +182,6 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
 
         else:
             angle = 0
-        rospy.loginfo(f'angle: {angle}')
         return [right_proj, left_proj, middle], angle
 
     def get_angle_to_middle(self, angle, distance):

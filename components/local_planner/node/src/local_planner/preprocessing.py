@@ -4,6 +4,7 @@ from cv2 import cv2
 from sensor_msgs.msg import Image as ImageMsg
 from cv_bridge import CvBridge
 
+#TODO: move Singleton to own util class
 class SingletonMeta(type):
     """
     Makes sure every module uses the same data

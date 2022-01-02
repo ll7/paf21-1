@@ -3,15 +3,22 @@
 from dataclasses import dataclass, field
 from math import dist, sin, cos
 from typing import List, Tuple
-
 from cv2 import cv2
+
+import rospy
 import numpy as np
+# from numpy.core.fromnumeric import argsort
+# from std_msgs.msg import String as StringMsg
+from sensor_msgs.msg import Imu as ImuMsg
+from nav_msgs.msg import Odometry as OdometryMsg
 
 from local_planner.vehicle_control import DrivingController
 from local_planner.traffic_light_detection import TrafficLightDetector
 from local_planner.lane_detection import LaneDetection
 from local_planner.preprocessing import SensorCameraPreprocessor
+from local_planner.preprocessing import SingletonMeta
 from local_planner.speed_state_machine import SpeedStateMachine
+from local_planner.vehicle_control.vehicle import Vehicle
 
 
 @dataclass
@@ -22,11 +29,14 @@ class RouteInfo(): # pylint: disable=too-many-locals
 
     driving_control: DrivingController
     vehicle_vector: Tuple[float, float] = None
+    last_vehicle_position: Tuple[float, float] = None
     vehicle_position: Tuple[float, float] = None
     global_route: List[Tuple[float, float]] = field(default_factory=list)
     cached_local_route: List[Tuple[float, float]] = field(default_factory=list)
     orientation: float = 0
     step_semantic: int = 0
+    velocity: float = 0
+    vehicle: Vehicle = Vehicle()
     lane_detect_config: str = "/app/src/local_planner/config/config_lane_detection.yml"
     traffic_light_config: str = "/app/src/local_planner" \
                                 "/config/config_traffic_light_detection.yml"
@@ -67,9 +77,16 @@ class RouteInfo(): # pylint: disable=too-many-locals
     def compute_local_route(self):
         """Modifies the global route based on sensor data
         to fit the current diving circumstances"""
+        print(self.step_semantic)
         if self.vehicle_position is None or len(self.cached_local_route) == 0:
             return []
         self.step_semantic += 1
+
+        if self.last_vehicle_position is not None:
+            distance = dist(self.last_vehicle_position, self.vehicle_position)
+            self.velocity = (distance/(1/10)) * 3.6
+            self.vehicle.actual_velocity_mps = self.velocity
+        self.last_vehicle_position = self.vehicle_position
         # interpolate the route such that the route points are closely aligned
         # filter the parts of the global route of the near future
         images = SensorCameraPreprocessor()
@@ -87,20 +104,20 @@ class RouteInfo(): # pylint: disable=too-many-locals
         # self.cached_local_route = self.global_route[max(neighbour_ids[0], neighbour_ids[1]):]
         short_term_route = self.cached_local_route[:min(50, len(self.cached_local_route))]
         turned_on_traffic_light_detection = True
-        turned_on = False
+        turned_on = True
         short_term_route = self.lane_keeping_assistant(images, short_term_route, turned_on)
-
         tl_state, dist_m = self.traffic_light_detec(images_list, turned_on_traffic_light_detection)
-        # self.speed_state_machine.tl_state = tl_state
-        # print(f'{tl_state}, {self.speed_state_machine.current_state}')
-
-        if tl_state == 'Red' and dist_m <= 50:
-            print(f'traffic lights are red. initiate brake in {dist_m} meters')
-            self.driving_control.update_target_velocity(dist_m, 0)
-        else:
-            self.driving_control.update_target_velocity(dist_m, 10)
-
-        # don't return this, just call the driving controller directly (it's an attribute of this class)
+        print(tl_state == "Backside")
+        if tl_state == "Backside":
+            tl_state == "Green"
+        # if tl_state == 'Red' and dist_m <= 50:
+        #     print(f'traffic lights are red. initiate brake in {dist_m} meters')
+        #     self.driving_control.update_target_velocity(dist_m, 0)
+        # else:
+        #     self.driving_control.update_target_velocity(dist_m, 10)
+        self.speed_state_machine.tl_state = tl_state
+        self.speed_state_machine.current_speed = self.velocity
+        self.speed_state_machine.update_state()
         return short_term_route
 
     def traffic_light_detec(self, images_list, turned_on_traffic_light_detection):
@@ -115,8 +132,7 @@ class RouteInfo(): # pylint: disable=too-many-locals
             semantic_image = images_list['semantic'][:, :, :3]
             meters, tl_color, highlighted_img = self.traffic_light_detection. \
                 detect_traffic_light(semantic_image, rgb_image, depth_image)
-            print(meters)
-            if self.step_semantic % 10 == 0 and self.step_semantic < 0:
+            if self.step_semantic % 10 == 0 and self.step_semantic < 10000:
                 cv2.imwrite(f"/app/logs/img_{self.step_semantic}_traffic_light.png",
                             highlighted_img)
 
@@ -141,13 +157,10 @@ class RouteInfo(): # pylint: disable=too-many-locals
                     cos_angle = np.dot(route_vector, predicted_vector) / np.linalg.norm(
                         route_vector) / np.linalg.norm(predicted_vector)
                     off_set_angle = np.rad2deg(np.arccos(cos_angle))
-                    print(f'off_set_angle:{off_set_angle}')
                     if abs(off_set_angle) < 30:
                         short_term_route.insert(0, predicted_position)
-                    print(f'step: {self.step_semantic}')
-                    print(f'next: {short_term_route[0]}')
                 else:
                     short_term_route.insert(0, predicted_position)
-            if self.step_semantic % 10 == 0 and self.step_semantic < 10000:
+            if self.step_semantic % 10 == 0 and self.step_semantic < 0:
                 cv2.imwrite(f"/app/logs/img_{self.step_semantic}_highlighted.png", highlighted_img)
         return short_term_route
