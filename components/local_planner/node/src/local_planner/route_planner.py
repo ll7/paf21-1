@@ -2,13 +2,12 @@
 
 from dataclasses import dataclass, field
 from math import dist, sin, cos
-from typing import List, Tuple
+from typing import List, Tuple, Dict
+
 from cv2 import cv2
+import numpy as np
 
 import rospy
-import numpy as np
-# from numpy.core.fromnumeric import argsort
-# from std_msgs.msg import String as StringMsg
 from sensor_msgs.msg import Imu as ImuMsg
 from nav_msgs.msg import Odometry as OdometryMsg
 
@@ -16,8 +15,7 @@ from local_planner.vehicle_control import DrivingController
 from local_planner.traffic_light_detection import TrafficLightDetector
 from local_planner.lane_detection import LaneDetection
 from local_planner.preprocessing import SensorCameraPreprocessor
-from local_planner.preprocessing import SingletonMeta
-from local_planner.stateMaschine.speed_state_machine import SpeedStateMachine
+from local_planner.stateMaschine.speed_state_machine import SpeedObservation, SpeedStateMachine, TrafficLightPhase
 from local_planner.vehicle_control.vehicle import Vehicle
 
 
@@ -35,7 +33,7 @@ class RouteInfo(): # pylint: disable=too-many-locals
     cached_local_route: List[Tuple[float, float]] = field(default_factory=list)
     orientation: float = 0
     step_semantic: int = 0
-    velocity: float = 0
+    # velocity: float = 0
     vehicle: Vehicle = Vehicle()
     lane_detect_config: str = "/app/src/local_planner/config/config_lane_detection.yml"
     traffic_light_config: str = "/app/src/local_planner" \
@@ -74,7 +72,7 @@ class RouteInfo(): # pylint: disable=too-many-locals
         else:
             self.cached_local_route = self.global_route
 
-    def compute_local_route(self):
+    def compute_local_route(self) -> List[Tuple[float, float]]:
         """Modifies the global route based on sensor data
         to fit the current diving circumstances"""
         print(self.step_semantic)
@@ -82,10 +80,13 @@ class RouteInfo(): # pylint: disable=too-many-locals
             return []
         self.step_semantic += 1
 
+        # TODO: fix this!!! let the car either compute the velocity by itself or use a sensor
+        #       don't assume that this function gets called 10 times per second
         if self.last_vehicle_position is not None:
             distance = dist(self.last_vehicle_position, self.vehicle_position)
-            self.velocity = (distance/(1/10)) * 3.6
-            self.vehicle.actual_velocity_mps = self.velocity
+            velocity = (distance/(1/10)) * 3.6
+            self.vehicle.actual_velocity_mps = velocity
+
         self.last_vehicle_position = self.vehicle_position
         # interpolate the route such that the route points are closely aligned
         # filter the parts of the global route of the near future
@@ -115,13 +116,12 @@ class RouteInfo(): # pylint: disable=too-many-locals
         #     self.driving_control.update_target_velocity(dist_m, 0)
         # else:
         #     self.driving_control.update_target_velocity(dist_m, 10)
-        self.speed_state_machine.dist_next_obstacle_m = dist_m
-        self.speed_state_machine.tl_state = tl_state
-        self.speed_state_machine.current_speed = self.velocity
-        self.speed_state_machine.update_state()
+        speed_obs = SpeedObservation(tl_state, dist_next_obstacle_m = dist_m)
+        self.speed_state_machine.update_state(speed_obs)
         return short_term_route
 
-    def traffic_light_detec(self, images_list, turned_on_traffic_light_detection):
+    def traffic_light_detec(self, images_list: Dict[str, np.ndarray],
+                            turned_on_traffic_light_detection: bool) -> Tuple[TrafficLightPhase, float]:
         """set traffic lane color"""
 
         tl_color = 'Green'
@@ -134,13 +134,16 @@ class RouteInfo(): # pylint: disable=too-many-locals
             meters, tl_color, highlighted_img = self.traffic_light_detection. \
                 detect_traffic_light(semantic_image, rgb_image, depth_image)
             if self.step_semantic % 10 == 0 and self.step_semantic < 10000:
-                cv2.imwrite(f"/app/logs/img_{self.step_semantic}_traffic_light.png",
-                            highlighted_img)
+                img_log_path = f"/app/logs/img_{self.step_semantic}_traffic_light.png"
+                cv2.imwrite(img_log_path, highlighted_img)
 
         # TODO: return the traffic light's position in case something was found
-        return tl_color, meters
+        tl_phase = TrafficLightPhase.Green if tl_color == 'Green' else TrafficLightPhase.Red
+        return tl_phase, meters
 
-    def lane_keeping_assistant(self, images, short_term_route, turned_on):
+    def lane_keeping_assistant(self, images: SensorCameraPreprocessor,
+                               short_term_route: List[Tuple[float, float]], turned_on: bool) \
+                                   -> List[Tuple[float, float]]:
         """starts lane detection for this cycle"""
         if images.semantic_image is not None and turned_on:
             image = images.semantic_image[:, :, :3]  # cut off alpha channel
