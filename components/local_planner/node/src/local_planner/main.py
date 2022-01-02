@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 """Main script defining the ROS node"""
-from typing import Callable, Tuple, List
+from typing import Callable, List
 from dataclasses import dataclass, field
 
 import rospy
 from sensor_msgs.msg import Image as ImageMsg, Imu as ImuMsg
 from nav_msgs.msg import Odometry as OdometryMsg
 from ackermann_msgs.msg import AckermannDrive
-from std_msgs.msg import String as StringMsg, Float32 as FloatMsg
-# from nav_msgs.msg import Path as WaypointsMsg
+from std_msgs.msg import String as StringMsg
 
 from local_planner.preprocessing import SensorCameraPreprocessor
 from local_planner.route_planner import RouteInfo
@@ -44,7 +43,6 @@ class LocalPlannerNode:
 
         self._init_ros()
         rate = rospy.Rate(self.publish_rate_in_hz)
-        # self.route_planner.driving_control.target_velocity_mps = 10.0
 
         while not rospy.is_shutdown():
             local_route = self.route_planner.compute_local_route()
@@ -63,7 +61,6 @@ class LocalPlannerNode:
         self._init_vehicle_orientation_subscriber()
         self._init_global_route_subscriber()
         self._init_front_camera_subscribers()
-        self._init_target_velocity_subscriber()
 
     def _init_global_route_subscriber(self):
         in_topic = f"/drive/{self.vehicle_name}/global_route"
@@ -71,13 +68,6 @@ class LocalPlannerNode:
         process_route = self.route_planner.update_global_route
         callback = lambda msg: process_route(msg_to_route(msg))
         rospy.Subscriber(in_topic, StringMsg, callback)
-
-    def _init_target_velocity_subscriber(self):
-        in_topic = f"/drive/{self.vehicle_name}/target_velocity"
-        msg_to_velocity = RosDrivingMessagesAdapter.message_to_target_velocity
-        process_velocity = self.route_planner.driving_control.update_target_velocity
-        callback = lambda msg: process_velocity(msg_to_velocity(msg))
-        rospy.Subscriber(in_topic, FloatMsg, callback)
 
     def _init_vehicle_orientation_subscriber(self):
         in_topic = f"/carla/{self.vehicle_name}/imu/imu1"
@@ -113,44 +103,6 @@ class LocalPlannerNode:
     def _init_driving_signal_publisher(self):
         out_topic = f"/carla/{self.vehicle_name}/ackermann_cmd"
         return rospy.Publisher(out_topic, AckermannDrive, queue_size=100)
-
-
-
-
-    # def _init_global_route_subscriber(self):
-    #     """Initialize the ROS subscriber receiving global routes"""
-    #     in_topic = f"/drive/{self.vehicle_name}/global_route"
-    #     callback = lambda msg: self.route_planner.update_global_route(
-    #         self.json_message_to_waypoints(msg))
-    #     rospy.Subscriber(in_topic, StringMsg, callback)
-
-    # @staticmethod
-    # def json_message_to_waypoints(msg: StringMsg) -> List[Tuple[float, float]]:
-    #     """Convert a ROS message into waypoints"""
-    #     json_list = json.loads(msg.data)
-    #     waypoints = [[wp['x'], wp['y']] for wp in json_list]
-    #     return waypoints
-
-    # def init_gps_subscriber(self):
-    #     """Initialize the ROS subscriber receiving GPS data"""
-    #     in_topic = f"/carla/{self.vehicle_name}/odometry"
-    #     rospy.Subscriber(in_topic, OdometryMsg, self.route_planner.update_gps)
-
-    # def init_vehicle_orientation_subscriber(self):
-    #     """Initialize the ROS subscriber receiving the orientation of the vehicle"""
-    #     in_topic = f"/carla/{self.vehicle_name}/imu/imu1"
-    #     rospy.Subscriber(in_topic, ImuMsg, self.route_planner.update_vehicle_vector)
-
-    # def init_local_route_publisher(self):
-    #     """Initialize the ROS publisher for submitting local routes"""
-    #     out_topic = f"/drive/{self.vehicle_name}/local_route"
-    #     return rospy.Publisher(out_topic, StringMsg, queue_size=100)
-
-    # @classmethod
-    # def parse_route(cls, route_json: StringMsg):
-    #     """Parse the route from JSON given a ROS message"""
-    #     json_data = route_json.data
-    #     return json.load(json_data)
 
 
 def main():
