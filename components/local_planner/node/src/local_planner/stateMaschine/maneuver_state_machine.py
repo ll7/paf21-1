@@ -1,77 +1,98 @@
 """Builds our Statemachine"""
+from dataclasses import dataclass, field
+from enum import IntEnum
+from typing import List
 from local_planner.preprocessing import SingletonMeta
 from local_planner.vehicle_control.vehicle import Vehicle
 
+class ManeuverState(IntEnum):
+    Keep_Lane = 0
+    Left_Change = 1
+    Right_Change = 2
+    Calc_New_Route = 3
 
+@dataclass
+class ManeuverObservation():
+        
+    actual_track: int = 1
+    left_lane_free: bool = False
+    targeted_track: int = 1
+    right_lane_free: bool = False
+    distance_next_turn_m: float = 999
+    lanes_at_turn: List[int] = field(default_factory=list)
+    speed_limit_ms: int = 50
+        
+    # All possible drivable lanes including opposite track e.G. [-1,1,2]
+    
+    possible_lanes: List[int] = field(default_factory=list)
+    blocking_object: bool = False
+    new_route_is_ready: bool = False
+
+@dataclass
 class ManeuverStateMachine(metaclass=SingletonMeta):
     """Doc"""
-    def __init__(self):
-        """Doc"""
-        self.states = ['Keep_lane', 'Left_Change', 'Right_Change', 'Calc_New_Route']
-        self.current_state = "Keep_lane"
-        # All possible drivable lanes including opposite track e.G. [-1,1,2]
-        self.possible_lanes = []
-        # Variable to detect if it is reasonable to do maneuver
-        self.actual_track = 1
-        self.targeted_track = 1
-        self.left_lane_free = False
-        self.right_lane_free = False
-        self.distance_next_turn_m = 999
-        self.vehicle = Vehicle()
-        self.lanes_at_turn = []
-        self.speed_limit_ms = 50
-        self.blocking_object = False
-        self.new_route_is_ready = False
-        # Values
-        self.distance_no_more_overtake_m = 100
-        self.distance_no_more_lane_swap_m = 100
-        self.distance_failed_lane_swap_m = 10
 
-    def update_state(self):
+    states: List[ManeuverState] = field(default_factory=lambda: [e.value for e in ManeuverState]) 
+    current_state: ManeuverState = ManeuverState.Keep_Lane
+
+    # Variable to detect if it is reasonable to do maneuver
+
+    vehicle: Vehicle = Vehicle()
+
+    # Statemachine Ruleset Params
+
+    distance_no_more_overtake_m: float = 100
+    distance_no_more_lane_swap_m: float = 100
+    distance_failed_lane_swap_m: float = 10
+
+    def update_state(self, observation: ManeuverObservation):
         """Doc"""
         # Popssible lane to turn?
-        possible_turnlane = self.actual_track in self.lanes_at_turn
+        possible_turnlane = observation.actual_track in observation.lanes_at_turn
         need_to_swap_lane_count = 0
         if not possible_turnlane:
-            need_to_swap_lane_count = self.lanes_at_turn[0]- self.actual_track
+            need_to_swap_lane_count = observation.lanes_at_turn[0]- observation.actual_track
 
 
-
+        track_index = observation.possible_lanes.index(observation.actual_track)
 
         # Distance possible for takeover
-        possible_takeover = self.distance_next_turn_m >= self.distance_no_more_overtake_m
+        possible_takeover = observation.distance_next_turn_m >= self.distance_no_more_overtake_m
 
         # Distance possible for lane swap
-        possible_laneswap = self.distance_next_turn_m >= self.distance_no_more_lane_swap_m
+        possible_laneswap = observation.distance_next_turn_m >= self.distance_no_more_lane_swap_m
 
-        maneuver_to_late = self.distance_next_turn_m <= self.distance_failed_lane_swap_m
+        maneuver_to_late = observation.distance_next_turn_m <= self.distance_failed_lane_swap_m
 
 
-        if self.current_state == "Keep_lane":
+        if self.current_state == ManeuverState.Keep_Lane:
             # Frei Fahrt und auf richtigen Spur oder beide spuren sind besetzt
-            if possible_turnlane and (not self.blocking_object or not possible_laneswap) \
-                    or not (self.left_lane_free or self.right_lane_free):
+            if possible_turnlane and (not observation.blocking_object or not possible_laneswap) \
+                    or not (observation.left_lane_free or observation.right_lane_free):
+                observation.targeted_track = observation.actual_track
                 pass
             # ToDo Rechtsfahrgebot??
             # Left Turn -> Ueberholen, Spurwechsel (turn)
-            elif (self.left_lane_free and not maneuver_to_late and
+            elif (observation.left_lane_free and not maneuver_to_late and
                   (possible_takeover or
                    (need_to_swap_lane_count < 0))):
-                self.current_state = "Left_Change"
-                self.targeted_track += 1
+                self.current_state = ManeuverState.Left_Change
+                observation.targeted_track = observation.possible_lanes[track_index - 1]
                 # todo update actual lane
-            elif (self.right_lane_free and not maneuver_to_late and
+            elif (observation.right_lane_free and not maneuver_to_late and
                       (possible_takeover or
                        (need_to_swap_lane_count > 0))):
-                self.current_state = "Right_Change"
-                self.targeted_track -= 1
+                self.current_state = ManeuverState.Right_Change
+                observation.targeted_track = observation.possible_lanes[track_index + 1]
             else:
-                self.current_state = 'Calc_New_Route'
+                self.current_state = ManeuverState.Calc_New_Route
 
-        elif self.current_state == "Left_Change" or self.current_state == "Right_Change":
-            if self.actual_track == self.targeted_track:
-                self.current_state = "Keep_lane"
+        elif self.current_state == ManeuverState.Left_Change or self.current_state == ManeuverState.Right_Change:
+            if observation.actual_track == observation.targeted_track:
+                self.current_state = ManeuverState.Keep_Lane
 
-        elif self.current_state == "Calc_New_Route":
-            if self.new_route_is_ready:
-                self.current_state = "Keep_lane"
+        elif self.current_state == ManeuverState.Calc_New_Route:
+            if observation.new_route_is_ready:
+                self.current_state = ManeuverState.Keep_Lane
+        else: 
+            self.current_state = ManeuverState.Calc_New_Route
