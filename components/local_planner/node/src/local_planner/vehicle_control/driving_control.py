@@ -1,13 +1,8 @@
 """Module for transitioning a fine-grained, idealistic route
 and other driving metadata into actionable driving signals"""
 
-# from math import dist as euclid_dist
-from math import degrees
 from typing import Tuple, List
 from dataclasses import dataclass, field
-
-# import numpy as np
-# import rospy
 
 from local_planner.stateMaschine.speed_state_machine import SpeedStateMachine
 from local_planner.vehicle_control.vehicle import Vehicle
@@ -26,14 +21,12 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
     route_waypoints: List[Tuple[float, float]] = field(default_factory=list)
     target_velocity_mps: float = 0.0
     target_distance_m: float = 0.0
-    # current_wp_id: int = 0
     vehicle: Vehicle = Vehicle()
     speed_state_machine: SpeedStateMachine = SpeedStateMachine()
 
     def update_route(self, waypoints: List[Tuple[float, float]]):
         """Update the route to be followed"""
         self.route_waypoints = waypoints
-        # print(f'waypoints {waypoints}')
 
     def update_target_velocity(self, target_distance_m: float, target_velocity_mps: float):
         """Update the route to be followed"""
@@ -55,11 +48,10 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
         steering_angle = self._compute_steering_angle()
         velocity = self._compute_velocity()
         signal = DrivingSignal(steering_angle, velocity)
-        # print(f'vehicle {self.vehicle}')
         return signal
 
     def _compute_velocity(self) -> float:
-        target_velocity = self.speed_state_machine.update_speed()
+        target_velocity = self.speed_state_machine.get_target_speed()
         return 0.0 if len(self.route_waypoints) == 0 else target_velocity
 
     def _compute_steering_angle(self) -> float:
@@ -68,12 +60,6 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
 
         aim_point = self._get_aim_point()
         self.vehicle.steer_towards(aim_point)
-
-        # is_car_moving = self.target_velocity_mps > 0
-        # if is_car_moving:
-        #  print(f'aim_point {aim_point}, vehicle_position {self.vehicle.pos} '
-        #    + f'steer {degrees(self.vehicle.steering_angle)}, '
-        #   + f'orientation {degrees(self.vehicle.orientation_rad)}')
 
         return self.vehicle.steering_angle
 
@@ -84,9 +70,3 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
 
     def _get_aim_point(self):
         return self.route_waypoints[0]
-        # aim_point = self.route_waypoints[self.current_wp_id]
-        # while euclid_dist(aim_point, self.vehicle.pos) < 7 \
-        #         and self.current_wp_id < len(self.route_waypoints) - 1:
-        #     self.current_wp_id += 1
-        #     aim_point = self.route_waypoints[self.current_wp_id]
-        # return aim_point
