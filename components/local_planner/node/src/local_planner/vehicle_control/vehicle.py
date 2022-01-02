@@ -22,6 +22,13 @@ class Vehicle(metaclass=SingletonMeta):
     steering_angle: float = 0.0
     target_velocity: float = 0.0
 
+
+    length_between_axles_m: float = 3.1
+    max_steering_angle_rad: float = 0.5
+    base_accel_mps2: float = 8.0
+    base_brake_mps2: float = -8.0
+    vehicle_reaction_time_s: float = 3.5
+
     # speed_state_machine: SpeedStateMachine = SpeedStateMachine()
 
     def move(self, new_pos: Tuple[float, float]):

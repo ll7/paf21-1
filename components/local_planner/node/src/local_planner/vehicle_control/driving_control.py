@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 # import numpy as np
 # import rospy
 
-from local_planner.speed_state_machine import SpeedStateMachine
+from local_planner.stateMaschine.speed_state_machine import SpeedStateMachine
 from local_planner.vehicle_control.vehicle import Vehicle
 
 @dataclass

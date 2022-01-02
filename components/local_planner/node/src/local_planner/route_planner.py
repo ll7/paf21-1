@@ -17,7 +17,7 @@ from local_planner.traffic_light_detection import TrafficLightDetector
 from local_planner.lane_detection import LaneDetection
 from local_planner.preprocessing import SensorCameraPreprocessor
 from local_planner.preprocessing import SingletonMeta
-from local_planner.speed_state_machine import SpeedStateMachine
+from local_planner.stateMaschine.speed_state_machine import SpeedStateMachine
 from local_planner.vehicle_control.vehicle import Vehicle
 
 
@@ -104,7 +104,7 @@ class RouteInfo(): # pylint: disable=too-many-locals
         # self.cached_local_route = self.global_route[max(neighbour_ids[0], neighbour_ids[1]):]
         short_term_route = self.cached_local_route[:min(50, len(self.cached_local_route))]
         turned_on_traffic_light_detection = True
-        turned_on = True
+        turned_on = False
         short_term_route = self.lane_keeping_assistant(images, short_term_route, turned_on)
         tl_state, dist_m = self.traffic_light_detec(images_list, turned_on_traffic_light_detection)
         print(tl_state == "Backside")
