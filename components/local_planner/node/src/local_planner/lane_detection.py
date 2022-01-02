@@ -1,8 +1,8 @@
 """This module highlights road surface markings"""
+from typing import Tuple, List
 from cv2 import cv2
 import numpy as np
 import yaml
-
 
 
 class LaneDetection:  # pylint: disable=too-few-public-methods
@@ -10,10 +10,10 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
     # pylint: disable=chained-comparison
 
     """This module highlights road surface markings"""
-    lower_bound: [int, int, int]
-    upper_bound: [int, int, int]
-    lower_bound_car: [int, int, int]
-    upper_bound_car: [int, int, int]
+    lower_bound: Tuple[int, int, int]
+    upper_bound: Tuple[int, int, int]
+    lower_bound_car: Tuple[int, int, int]
+    upper_bound_car: Tuple[int, int, int]
     canny_lower: int
     canny_upper: int
     fov: float
@@ -23,7 +23,7 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
     hough_max_line_gap: int
     angle_lower_bound: int
     angle_upper_bound: int
-    last_middle: [int, int, int, int] = None
+    last_middle: Tuple[int, int, int, int] = None
     x_offset_left: int = 300
     x_offset_right: int = -300
     counter_angle = 18
@@ -61,8 +61,7 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
         image = self._preprocess_image(orig_image)
         image = self._cut_roi_patch(image)
         lines = self._preprocess_lines(image)
-        proj, angle = self._get_lane_boundary_projections(
-            lines, image.shape[0], image.shape[1])
+        proj, angle = self._get_lane_boundary_projections(lines, image.shape[0], image.shape[1])
         return proj, abs(angle) >= self.deviation_threshold, angle
 
     @staticmethod
@@ -116,7 +115,7 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
         cv2.fillPoly(mask, [vertices], (255))
         return cv2.bitwise_and(img, mask)
 
-    def _preprocess_lines(self, image: np.ndarray):
+    def _preprocess_lines(self, image: np.ndarray) -> np.ndarray:
         lines = cv2.HoughLinesP(image, rho=self.hough_rho, theta=np.pi / 180,
                                 threshold=self.hough_threshold,
                                 lines=np.array([]), minLineLength=self.hough_min_line_length,
@@ -126,7 +125,7 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
         lines = np.squeeze(lines, axis=1)
         return self._filter_relevant_lines(lines)
 
-    def _filter_relevant_lines(self, lines):
+    def _filter_relevant_lines(self, lines: List[Tuple[float, float, float, float]]) -> np.ndarray:
         cleared_lines = []
         for line in lines:
             vector = [line[2] - line[0], line[3] - line[1]]
@@ -139,7 +138,7 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
             return np.array([])
         return np.squeeze(np.array(cleared_lines), axis=1)
 
-    def _get_lane_boundary_projections(self, lines: list, img_height: int, img_width: int):
+    def _get_lane_boundary_projections(self, lines: np.ndarray, img_height: int, img_width: int):
         lines = np.array(lines).reshape(-1, 4)
         right_half = [line for line in lines if LaneDetection.slope(line)]
         left_half = [line for line in lines if not LaneDetection.slope(line)]
