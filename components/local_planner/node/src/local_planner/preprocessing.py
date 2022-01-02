@@ -1,5 +1,6 @@
 """Module for preprocessing CARLA sensor data"""
 from cv2 import cv2
+import numpy as np
 
 from sensor_msgs.msg import Image as ImageMsg
 from cv_bridge import CvBridge
@@ -19,11 +20,11 @@ class SingletonMeta(type):
 
 class SensorCameraPreprocessor(metaclass=SingletonMeta):  # pylint: disable=too-few-public-methods
     """A class for preprocessing image data from sensors"""
-    semantic_image = None
-    depth_image = None
-    rgb_image = None
-    write_images = False
-    step_semantic : int  = 0
+    semantic_image: np.ndarray = None
+    depth_image: np.ndarray = None
+    rgb_image: np.ndarray = None
+    write_images: bool = False
+    step_semantic: int  = 0
     step_rgb: int = 0
     step_depth: int = 0
 
