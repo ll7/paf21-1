@@ -51,18 +51,15 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
 
     def detect_lanes(self, image):
         """Detect lanes"""
-        projections, keep_lane, angle = self.highlight_lines(image)
-        highl_image = LaneDetection.augment_image_with_lines(image, projections)
-        # modify this to return recalculation of driving vector
-        return highl_image, keep_lane, angle
-
-    def highlight_lines(self, orig_image: np.ndarray):
-        """Highlight road surface markings"""
-        image = self._preprocess_image(orig_image)
+        image = self._preprocess_image(image)
         image = self._cut_roi_patch(image)
         lines = self._preprocess_lines(image)
         proj, angle = self._get_lane_boundary_projections(lines, image.shape[0], image.shape[1])
-        return proj, abs(angle) >= self.deviation_threshold, angle
+
+        projections, keep_lane, angle = proj, abs(angle) >= self.deviation_threshold, angle
+        highl_image = LaneDetection.augment_image_with_lines(image, projections)
+
+        return highl_image, keep_lane, angle
 
     @staticmethod
     def augment_image_with_lines(orig_img: np.ndarray, lines):
