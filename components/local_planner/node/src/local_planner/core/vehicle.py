@@ -37,10 +37,9 @@ class Vehicle(metaclass=SingletonMeta):
             dist = euclid_dist(old_pos, new_pos)
             time = new_timestamp - old_timestamp
             self.actual_velocity_mps = dist / time
-            # TODO: use the in-game time instead of actual time
 
         self.pos = new_pos
-        # self.pos_update_timestamp = new_timestamp
+        self.pos_update_timestamp = new_timestamp
 
     def steer_towards(self, aim_point: Tuple[float, float]):
         """Adjust the steering angle for driving towards the given point"""
