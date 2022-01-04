@@ -1,5 +1,7 @@
 """This module contains a collection of geometric helper functions"""
 
+# TODO: think about putting this into local_planner.core
+
 from math import dist as euclid_dist, atan2, pi, sqrt
 from typing import Tuple
 

@@ -2,8 +2,7 @@
 
 from dataclasses import dataclass
 from enum import IntEnum
-from local_planner.preprocessing import SingletonMeta
-from local_planner.vehicle_control.vehicle import Vehicle
+from local_planner.core import SingletonMeta, Vehicle
 
 
 class SpeedState(IntEnum):

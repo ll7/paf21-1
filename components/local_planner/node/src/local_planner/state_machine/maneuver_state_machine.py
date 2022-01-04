@@ -3,8 +3,7 @@
 from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import List
-from local_planner.preprocessing import SingletonMeta
-from local_planner.vehicle_control.vehicle import Vehicle
+from local_planner.core import SingletonMeta, Vehicle
 
 
 class ManeuverState(IntEnum):

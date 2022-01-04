@@ -15,8 +15,8 @@ from local_planner.vehicle_control import DrivingController
 from local_planner.traffic_light_detection import TrafficLightDetector
 from local_planner.lane_detection import LaneDetection
 from local_planner.preprocessing import SensorCameraPreprocessor
-from local_planner.stateMaschine.speed_state_machine import SpeedObservation, SpeedStateMachine, TrafficLightPhase
-from local_planner.vehicle_control.vehicle import Vehicle
+from local_planner.state_machine import SpeedObservation, SpeedStateMachine, TrafficLightPhase
+from local_planner.core.vehicle import Vehicle
 
 
 @dataclass
