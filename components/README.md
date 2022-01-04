@@ -15,6 +15,20 @@ to speed up the server-side GitHub workflows because building the Docker images
 from scratch on each commit would imply downloading ~15 GB of pre-built Docker images
 which is not feasible*
 
+For running the automated integration tests, execute following command:
+
+```sh
+# simulate ROS messages and test whether containers fail to handle the messages
+docker-compose -f integration-tests-compose.yml up --abort-on-container-exit
+
+# evaluate the error code of docker-compose
+if [ $? -eg 0 ]; then
+    echo 'success!'
+else
+    echo 'failure!'
+fi
+```
+
 ## CARLA Simulation Components
 The CARLA simulation involves following components:
 - **CARLA simulator**: runs the basic CARLA simulation environment including world rendering, etc.
