@@ -1,4 +1,6 @@
 """Module for preprocessing CARLA sensor data"""
+from typing import Dict
+
 from cv2 import cv2
 import numpy as np
 
@@ -17,6 +19,11 @@ class SensorCameraPreprocessor(metaclass=SingletonMeta):  # pylint: disable=too-
     step_semantic: int  = 0
     step_rgb: int = 0
     step_depth: int = 0
+
+    def get_image_lists(self) -> Dict[str, np.ndarray]:
+        return {'semantic': self.semantic_image,
+                'rgb': self.rgb_image,
+                'depth': self.depth_image}
 
     def process_semantic_image(self, msg: ImageMsg):
         """Preprocess the semantic image"""
