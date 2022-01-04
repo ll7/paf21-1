@@ -2,8 +2,7 @@
 
 from dataclasses import dataclass
 from enum import IntEnum
-from local_planner.preprocessing import SingletonMeta
-from local_planner.vehicle_control.vehicle import Vehicle
+from local_planner.core import SingletonMeta, Vehicle
 
 
 class SpeedState(IntEnum):
@@ -33,7 +32,7 @@ class SpeedStateMachine(metaclass=SingletonMeta):
     """Representing a state machine for speed control decision-making."""
     current_state: SpeedState = SpeedState.Stop
     vehicle: Vehicle = Vehicle()
-    target_limit_ms: float = 50 / 3.6 # TODO: ????????
+    target_speed_mps: float = 50 / 3.6
 
     def update_state(self, obs: SpeedObservation):
         """Update the machine's state given a speed observation."""
@@ -48,7 +47,7 @@ class SpeedStateMachine(metaclass=SingletonMeta):
         else:
             raise ValueError(f'Unsupported speed state {self.current_state}!')
 
-        print(self.target_limit_ms, obs.is_junction_free, obs.tl_phase)
+        print(self.target_speed_mps, obs.is_junction_free, obs.tl_phase)
         print(self.vehicle.actual_velocity_mps)
         print(self.current_state)
 
@@ -57,31 +56,31 @@ class SpeedStateMachine(metaclass=SingletonMeta):
             self.current_state = SpeedState.Accel
 
     def _handle_keep(self, obs: SpeedObservation):
-        if self.target_limit_ms < self.vehicle.actual_velocity_mps or not obs.is_junction_free \
+        if self.target_speed_mps < self.vehicle.actual_velocity_mps or not obs.is_junction_free \
                 or (obs.tl_phase == TrafficLightPhase.Red and self._is_brake_required(obs)):
             self.current_state = SpeedState.Brake
-        elif self.target_limit_ms > self.vehicle.actual_velocity_mps \
+        elif self.target_speed_mps > self.vehicle.actual_velocity_mps \
                 and obs.is_junction_free and obs.tl_phase == TrafficLightPhase.Green:
             self.current_state = SpeedState.Accel
 
     def _handle_accel(self, obs: SpeedObservation):
-        if self.target_limit_ms < self.vehicle.actual_velocity_mps or not obs.is_junction_free \
+        if self.target_speed_mps < self.vehicle.actual_velocity_mps or not obs.is_junction_free \
                 or (obs.tl_phase == TrafficLightPhase.Red and self._is_brake_required(obs)):
             self.current_state = SpeedState.Brake
-        elif self.target_limit_ms == self.vehicle.actual_velocity_mps:
+        elif self.target_speed_mps == self.vehicle.actual_velocity_mps:
             self.current_state = SpeedState.Keep
 
     def _handle_brake(self, obs: SpeedObservation):
-        if self.target_limit_ms > self.vehicle.actual_velocity_mps \
+        if self.target_speed_mps > self.vehicle.actual_velocity_mps \
                 and obs.is_junction_free and obs.tl_phase == TrafficLightPhase.Green:
             self.current_state = SpeedState.Accel
-        elif self.target_limit_ms == self.vehicle.actual_velocity_mps:
+        elif self.target_speed_mps == self.vehicle.actual_velocity_mps:
             self.current_state = SpeedState.Keep
         elif self.vehicle.actual_velocity_mps == 0:
             self.current_state = SpeedState.Stop
 
     def _is_brake_required(self, obs: SpeedObservation):
-        wait_time_s = self._time_until_brake(obs.dist_next_obstacle_m, self.target_limit_ms)
+        wait_time_s = self._time_until_brake(obs.dist_next_obstacle_m, self.target_speed_mps)
         return wait_time_s <= self.vehicle.vehicle_reaction_time_s
 
     def _time_until_brake(self, distance_m: float, target_velocity: float = 0) -> float:
@@ -105,13 +104,10 @@ class SpeedStateMachine(metaclass=SingletonMeta):
             if self.vehicle.actual_velocity_mps > 0 else 0
         return time_until_brake
 
-    def get_target_speed(self):
+    def get_target_speed(self) -> float:
         action = self.current_state
         if action == SpeedState.Keep:
             return self.vehicle.actual_velocity_mps
-
         if action == SpeedState.Stop:
             return 0
-
-        # TODO: accel or brake (why do they share the same target speed???)
-        return self.target_limit_ms
+        return self.target_speed_mps

@@ -1,22 +1,14 @@
 """Module for preprocessing CARLA sensor data"""
+from typing import Dict
+
 from cv2 import cv2
 import numpy as np
 
 from sensor_msgs.msg import Image as ImageMsg
 from cv_bridge import CvBridge
 
-#TODO: move Singleton to own util class
-class SingletonMeta(type):
-    """
-    Makes sure every module uses the same data
-    """
-    _instances = {}
+from local_planner.core import SingletonMeta
 
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            instance = super().__call__(*args, **kwargs)
-            cls._instances[cls] = instance
-        return cls._instances[cls]
 
 class SensorCameraPreprocessor(metaclass=SingletonMeta):  # pylint: disable=too-few-public-methods
     """A class for preprocessing image data from sensors"""
@@ -27,6 +19,11 @@ class SensorCameraPreprocessor(metaclass=SingletonMeta):  # pylint: disable=too-
     step_semantic: int  = 0
     step_rgb: int = 0
     step_depth: int = 0
+
+    def get_image_lists(self) -> Dict[str, np.ndarray]:
+        return {'semantic': self.semantic_image,
+                'rgb': self.rgb_image,
+                'depth': self.depth_image}
 
     def process_semantic_image(self, msg: ImageMsg):
         """Preprocess the semantic image"""

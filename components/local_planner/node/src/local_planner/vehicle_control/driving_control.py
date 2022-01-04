@@ -4,8 +4,8 @@ and other driving metadata into actionable driving signals"""
 from typing import Tuple, List
 from dataclasses import dataclass, field
 
-from local_planner.stateMaschine.speed_state_machine import SpeedStateMachine
-from local_planner.vehicle_control.vehicle import Vehicle
+from local_planner.state_machine import SpeedStateMachine
+from local_planner.core import Vehicle
 
 @dataclass
 class DrivingSignal:

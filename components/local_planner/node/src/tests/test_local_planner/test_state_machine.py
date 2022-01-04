@@ -1,7 +1,5 @@
-import numpy as np
-from cv2 import cv2
-from local_planner.stateMaschine.maneuver_state_machine import ManeuverStateMachine, ManeuverObservation, ManeuverState
-from local_planner.stateMaschine.speed_state_machine import SpeedStateMachine
+from local_planner.state_machine import ManeuverStateMachine, ManeuverObservation, ManeuverState
+# from local_planner.vehicle_control import DrivingController
 
 def test_should_stay_in_lane():
     st_machine = ManeuverStateMachine()
@@ -70,6 +68,3 @@ def test_should_over_take_right():
     st_machine.update_state(st_machine_observation)
     assert(st_machine.current_state == ManeuverState.Right_Change)
     assert(st_machine_observation.targeted_track == 2)
-
-def load_image(file_name: str) -> np.ndarray:
-    return cv2.imread('foobar', f'./test_resources/{file_name}')

@@ -10,7 +10,7 @@ from ackermann_msgs.msg import AckermannDrive
 from std_msgs.msg import String as StringMsg
 
 from local_planner.preprocessing import SensorCameraPreprocessor
-from local_planner.route_planner import RouteInfo
+from local_planner.route_planner import TrajectoryPlanner
 from local_planner.vehicle_control import DrivingController
 from local_planner.ros_msg_adapter import RosDrivingMessagesAdapter
 
@@ -35,7 +35,7 @@ class LocalPlannerNode:
     publish_rate_in_hz: int
     driving_signal_publisher: rospy.Publisher = None
     image_preprocessor: SensorCameraPreprocessor = SensorCameraPreprocessor()
-    route_planner: RouteInfo = RouteInfo(driving_control=DrivingController())
+    route_planner: TrajectoryPlanner = TrajectoryPlanner(driving_control=DrivingController())
 
     def run_node(self):
         """Launch the ROS node to receive globally planned routes
@@ -74,7 +74,7 @@ class LocalPlannerNode:
         msg_to_orientation = RosDrivingMessagesAdapter.message_to_orientation
         multi_callback = RosMsgMultiplexer(consumers=[
             lambda msg: self.route_planner.driving_control.update_vehicle_orientation(msg_to_orientation(msg)),
-            lambda msg: self.route_planner.update_vehicle_orientation(msg_to_orientation(msg))
+            # lambda msg: self.route_planner.update_vehicle_orientation(msg_to_orientation(msg))
         ])
         rospy.Subscriber(in_topic, ImuMsg, multi_callback.forward_msg)
 
@@ -83,7 +83,7 @@ class LocalPlannerNode:
         msg_to_position = RosDrivingMessagesAdapter.message_to_vehicle_position
         multi_callback = RosMsgMultiplexer(consumers=[
             lambda msg: self.route_planner.driving_control.update_vehicle_position(msg_to_position(msg)),
-            lambda msg: self.route_planner.update_vehicle_position(msg_to_position(msg))
+            # lambda msg: self.route_planner.update_vehicle_position(msg_to_position(msg))
         ])
         rospy.Subscriber(in_topic, OdometryMsg, multi_callback.forward_msg)
 
