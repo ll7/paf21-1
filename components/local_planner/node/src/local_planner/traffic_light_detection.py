@@ -147,7 +147,6 @@ class TrafficLightDetector:
         choice_sum = np.sum(choice)
         choice = np.divide(choice, choice_sum)
         max_index = np.argmax(choice)
-        print(choice)
         if choice[max_index] > 0.50 and max_index != 0:
             decision = self.states[max_index]
         elif choice[max_index] > 0.50 and max_index == 0:

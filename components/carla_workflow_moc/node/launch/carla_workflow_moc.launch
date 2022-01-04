@@ -1,0 +1,5 @@
+<!-- -->
+<launch>
+  <node pkg="carla_workflow_moc" name="carla_workflow_moc"
+        type="main.py" output="screen" required="true" />
+</launch>

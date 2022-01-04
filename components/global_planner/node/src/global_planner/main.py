@@ -22,6 +22,7 @@ class GlobalPlannerNode:
     """A class representing a ROS node that's planning a global route."""
 
     vehicle_name: str
+
     global_route_publisher: rospy.Publisher = None
     path = Path("/app/res/xodr/Town01.xodr")
     xodr_map: XodrMap = None

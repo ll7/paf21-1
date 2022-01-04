@@ -108,7 +108,6 @@ class RouteInfo(): # pylint: disable=too-many-locals
         turned_on = False
         short_term_route = self.lane_keeping_assistant(images, short_term_route, turned_on)
         tl_state, dist_m = self.traffic_light_detec(images_list, turned_on_traffic_light_detection)
-        print(tl_state == "Backside")
         if tl_state == "Backside":
             tl_state == "Green"
         # if tl_state == 'Red' and dist_m <= 50:
@@ -133,7 +132,7 @@ class RouteInfo(): # pylint: disable=too-many-locals
             semantic_image = images_list['semantic'][:, :, :3]
             meters, tl_color, highlighted_img = self.traffic_light_detection. \
                 detect_traffic_light(semantic_image, rgb_image, depth_image)
-            if self.step_semantic % 10 == 0 and self.step_semantic < 10000:
+            if self.step_semantic % 10 == 0 and self.step_semantic < 0:
                 img_log_path = f"/app/logs/img_{self.step_semantic}_traffic_light.png"
                 cv2.imwrite(img_log_path, highlighted_img)
 

@@ -15,3 +15,8 @@ services:
     image: global_planner
     build:
       context: ./global_planner
+
+  carla-workflow-moc:
+    image: carla_workflow_moc
+    build:
+      context: ./carla_workflow_moc

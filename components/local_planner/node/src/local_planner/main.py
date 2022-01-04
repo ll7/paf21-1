@@ -43,12 +43,12 @@ class LocalPlannerNode:
 
         self._init_ros()
         rate = rospy.Rate(self.publish_rate_in_hz)
-
         while not rospy.is_shutdown():
             local_route = self.route_planner.compute_local_route()
             self.route_planner.driving_control.update_route(local_route)
             driving_signal = self.route_planner.driving_control.next_signal()
             msg = RosDrivingMessagesAdapter.signal_to_message(driving_signal)
+            print(msg)
             self.driving_signal_publisher.publish(msg)
             rate.sleep()
 
