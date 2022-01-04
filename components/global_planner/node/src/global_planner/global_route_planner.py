@@ -33,7 +33,7 @@ class ShortestPath:
         return matrix
 
     @staticmethod
-    def _extend_matrix(start_pos, end_pos, xodr_map: XodrMap):
+    def _extend_matrix(start_pos: Tuple[float, float], end_pos: Tuple[float, float], xodr_map: XodrMap):
         """Find the nearest road to the start and end point."""
         # append two rows and columns to graph and append start and end to mapping
         xodr_map.matrix = ShortestPath._append_start_end(xodr_map.matrix, xodr_map.mapping)
@@ -126,7 +126,7 @@ class ShortestPath:
         return parent
 
     @staticmethod
-    def shortest_path(start_pos: int, end_pos: int, matrix: np.ndarray):
+    def shortest_path(start_pos: int, end_pos: int, matrix: np.ndarray) -> List[int]:
         parent = ShortestPath._dijkstra(start_pos, matrix)
 
         path = [end_pos]
@@ -176,6 +176,7 @@ class GlobalPlanner:
 
     def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
         """Update the vehicle's current position"""
+        print(f'new vehicle position: {vehicle_pos}')
         self.start_pos = vehicle_pos
 
     def update_vehicle_orientation(self, orientation: float):
@@ -274,88 +275,49 @@ class GlobalPlanner:
         return lin_points
 
     @staticmethod
-    def get_shortest_path(start_pos: int, end_pos: int, xodr_map: XodrMap) -> List[str]:
+    def get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
+                          xodr_map: XodrMap) -> List[str]:
         """Compute the route."""
         start_key = '-1_0_0'
         end_key = '-2_0_0'
 
         ShortestPath._extend_matrix(start_pos, end_pos, xodr_map)
-        path_id = ShortestPath.shortest_path(xodr_map.mapping[start_key],
-                                             xodr_map.mapping[end_key],
-                                             xodr_map.matrix)
+        path_ids = ShortestPath.shortest_path(xodr_map.mapping[start_key],
+                                              xodr_map.mapping[end_key],
+                                              xodr_map.matrix)
 
         key_list = list(sorted(xodr_map.mapping.keys()))
-        return [key_list[p_id] for p_id in path_id]
+        return [key_list[p_id] for p_id in path_ids]
 
     @staticmethod
-    def generate_waypoints(start_pos: int, end_pos: int, xodr_map: XodrMap):
+    def generate_waypoints(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
+                           xodr_map: XodrMap) -> List[Tuple[float, float]]:
+
+        print(f'generating path from {start_pos} to {end_pos} ...')
         path = GlobalPlanner.get_shortest_path(start_pos, end_pos, xodr_map)
         print(path)
 
-        # key_list = list(mapping.keys())
-        # mini_mapping = {}
-        # last_road = -np.inf
-        # for elem in self.path:
-        #     road_key = int((key_list[elem]).split('_')[0])
-        #     if last_road == road_key:
-        #         list_index = mini_mapping[road_key]
-        #         list_index.append(elem)
-        #         mini_mapping[road_key] = list_index
-        #     else:
-        #         list_index = [elem]
-        #         mini_mapping[road_key] = list_index
-        #     last_road = road_key
-
         id2road = dict([(road.road_id, road) for road in xodr_map.lane_lets])
-        print(id2road)
-        path_roads = []
-        for lane_key in path:
-            key = int(lane_key.split('_')[0])
-            path_roads.append(id2road[key])
-        print(path_roads)
+        route_waypoints = []
 
-        # for i in range(1, len(id2road)):
-        #     mapping[id2road[i]]
-        #
-        #     dif = mapping[id2road[i-1]] - mapping[id2road[i]]
-        #     if dif < 0:
-        #         for i, list_wp in enumerate(pd):
-        #             # 2. Element und 2. letztes Element
-        #             if index == 1 and i == 0:
-        #                 continue
-        #             else:
-        #                 # TODO: update call to new function signature
-        #
-        #                 new_points = self.calculate_offset2points(pd[i].start_point,
-        #                                                           pd[i].end_point,
-        #                                                           2.0, -1)
-        #                 list_waypoints.append({'x': new_points[0][0],
-        #                                        'y': new_points[0][1],
-        #                                        'trafficSign': road.traffic_signs})
-        #     else:
-        #         for i, list_wp in enumerate(pd):
-        #             if index == 1 and i == 0:
-        #                 continue
-        #             else:
-        #                 # TODO: update call to new function signature
-        #                 new_points = self.calculate_offset2points(pd[-i-1].start_point,
-        #                                                           pd[-i-1].end_point,
-        #                                                           2.0, 1)
-        #                 list_waypoints.append({'x': new_points[0][0],
-        #                                        'y': new_points[0][1],
-        #                                        'trafficSign': traffic_sign})
-        #
-        # interpolated_list = []
-        # for i in range(1, len(list_waypoints)):
-        #     interpolated_list.append(list_waypoints[i-1])
-        #     interpolated_points = self._linear_interpolation(list_waypoints[i - 1], list_waypoints[i], 10)
-        #     for point in interpolated_points:
-        #         interpolated_list.append({'x': point[0], 'y': point[1], 'trafficSign': None})
-        #
-        # rospy.loginfo(f'Found Route {list_waypoints}')
-        # rospy.loginfo(f"List Lanes: {list_lanes}")
-        # rospy.loginfo(f"List Lanes: {interpolated_list}")
-        #
-        # # output the interpolated route list as json
-        # return json.dumps(interpolated_list, cls=EnhancedJSONEncoder)
+        for path_id, lane_key in enumerate(path):
+            road_id = int(lane_key.split('_')[0])
 
+            road = id2road[road_id]
+            is_road_end = int(lane_key.split('_')[1])
+
+            road_geometries = list(reversed(road.geometries)) if is_road_end else road.geometries
+            road_waypoints = [geo.start_point for geo in road_geometries] + [road_geometries[-1].end_point]
+
+            is_start_road = path_id == 0
+            if is_start_road:
+                print(f'generating path from {start_pos} to {end_pos} ...')
+                print(f'waypoints first road: {road_waypoints}')
+
+            route_waypoints += road_waypoints
+
+        # TODO: add traffic signs and interpolation
+        #       prob. need to create a class representing a route
+
+        print(route_waypoints)
+        return route_waypoints
