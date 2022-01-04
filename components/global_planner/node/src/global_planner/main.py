@@ -2,6 +2,7 @@
 """Main script defining the ROS node"""
 
 import math
+import json
 from time import sleep
 
 from dataclasses import dataclass
@@ -40,18 +41,24 @@ class GlobalPlannerNode:
 
         self.init_ros()
 
-        while not self.global_planner.start_pos:
+        print('waiting for car position ...')
+        while self.global_planner.start_pos is None:
+            print('waiting for car position ...')
             sleep(1)
 
         end_pos = (144.99, -57.5)
-        global_route = GlobalPlanner.generate_waypoints(self.global_planner.start_pos, end_pos,
-                                                        self.xodr_map)
-        self.global_route_publisher.publish(StringMsg(data=global_route))
+        global_route = GlobalPlanner.generate_waypoints(
+            self.global_planner.start_pos, end_pos, self.xodr_map)
+
+        route_as_json = [{ 'x': pos[0], 'y': pos[1] } for pos in global_route]
+        msg = StringMsg(data=json.dumps(route_as_json))
+        self.global_route_publisher.publish(msg)
 
         rospy.spin()
 
     def init_ros(self):
         """Initialize the ROS node's publishers and subscribers"""
+        print('initializing ros nodes')
         self.global_route_publisher = self.init_global_route_publisher()
         self._init_gps_subscriber()
         self._init_vehicle_orientation_subscriber()
