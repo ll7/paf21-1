@@ -4,7 +4,6 @@ and other driving metadata into actionable driving signals"""
 from typing import Tuple, List
 from dataclasses import dataclass, field
 
-from local_planner.state_machine import SpeedStateMachine
 from local_planner.core import Vehicle
 
 @dataclass
@@ -17,21 +16,19 @@ class DrivingSignal:
 class DrivingController: # pylint: disable=too-many-instance-attributes
     """A class for processing waypoints and driving metadata into
     actionable driving signals regarding velocity and steering control"""
-
+    vehicle: Vehicle
     route_waypoints: List[Tuple[float, float]] = field(default_factory=list)
     target_velocity_mps: float = 0.0
     target_distance_m: float = 0.0
-    vehicle: Vehicle = Vehicle()
-    speed_state_machine: SpeedStateMachine = SpeedStateMachine()
 
     def update_route(self, waypoints: List[Tuple[float, float]]):
         """Update the route to be followed"""
         self.route_waypoints = waypoints
 
-    def update_target_velocity(self, target_distance_m: float, target_velocity_mps: float):
+    def update_target_velocity(self, target_velocity_mps: float):
         """Update the route to be followed"""
         self.target_velocity_mps = target_velocity_mps
-        self.target_distance_m = target_distance_m
+        #self.target_distance_m = target_distance_m
 
     def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
         """Update the vehicle's current position"""
@@ -51,7 +48,7 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
         return signal
 
     def _compute_velocity(self) -> float:
-        target_velocity = self.speed_state_machine.get_target_speed()
+        target_velocity = self.target_velocity_mps
         return 0.0 if len(self.route_waypoints) == 0 else target_velocity
 
     def _compute_steering_angle(self) -> float:

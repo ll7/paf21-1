@@ -51,13 +51,15 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
 
     def detect_lanes(self, image):
         """Detect lanes"""
+        highl_image = None
+        orig_image = image
         image = self._preprocess_image(image)
         image = self._cut_roi_patch(image)
         lines = self._preprocess_lines(image)
         proj, angle = self._get_lane_boundary_projections(lines, image.shape[0], image.shape[1])
 
         projections, keep_lane, angle = proj, abs(angle) >= self.deviation_threshold, angle
-        highl_image = LaneDetection.augment_image_with_lines(image, projections)
+        #highl_image = LaneDetection.augment_image_with_lines(orig_image, projections)
 
         return highl_image, keep_lane, angle
 
@@ -84,6 +86,7 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
         # augment the original image with the lines
         if all(map(lambda l: l is None, lines)):
             return orig_img
+        print(orig_img.shape, lines_img.shape)
         return cv2.addWeighted(orig_img, 0.5, lines_img, 1, 0.0)
 
     def _preprocess_image(self, orig_image: np.ndarray):

@@ -18,13 +18,12 @@ from local_planner.preprocessing import SensorCameraPreprocessor
 from local_planner.state_machine import SpeedObservation, SpeedStateMachine, TrafficLightPhase
 from local_planner.core.vehicle import Vehicle
 
-
 lane_detect_config: str = "/app/src/local_planner/config/config_lane_detection.yml"
 traffic_light_config: str = "/app/src/local_planner/config/config_traffic_light_detection.yml"
 
 
 @dataclass
-class TrajectoryPlanner(): # pylint: disable=too-many-locals
+class TrajectoryPlanner:  # pylint: disable=too-many-locals
     # pylint: disable=too-many-instance-attributes
     """A class that keeps all the necessary information needed by all the modules,
     this class should be expanded if needed"""
@@ -33,17 +32,20 @@ class TrajectoryPlanner(): # pylint: disable=too-many-locals
     #       don't execute the play right away -> add another component that executes the plan
     #       add a data structure representing a short-term plan (waypoints + respective velocity)
 
-    driving_control: DrivingController
-    vehicle: Vehicle = Vehicle()
+    vehicle: Vehicle
+    image_sensor_collection: SensorCameraPreprocessor
+    driving_control: DrivingController = None
     lane_detection: LaneDetection = LaneDetection(lane_detect_config)
     traffic_light_detection: TrafficLightDetector = TrafficLightDetector(traffic_light_config)
-    speed_state_machine: SpeedStateMachine = SpeedStateMachine()
-    images: SensorCameraPreprocessor = SensorCameraPreprocessor() # TODO: rename variable
-
+    speed_state_machine: SpeedStateMachine = None
     global_route: List[Tuple[float, float]] = field(default_factory=list)
     cached_local_route: List[Tuple[float, float]] = field(default_factory=list)
 
     step_semantic: int = 0
+
+    def __post_init__(self):
+        self.speed_state_machine = SpeedStateMachine(vehicle=self.vehicle)
+        self.driving_control = DrivingController(self.vehicle)
 
     def update_global_route(self, waypoints: List[Tuple[float, float]]):
         """Update the global route to follow"""
@@ -55,11 +57,6 @@ class TrajectoryPlanner(): # pylint: disable=too-many-locals
         """Modifies the global route based on sensor data
         to fit the current diving circumstances"""
         print(self.step_semantic)
-
-        vehicle_not_ready = self.vehicle.pos is None \
-            or len(self.cached_local_route) == 0
-        if vehicle_not_ready:
-            return []
 
         # interpolate the route such that the route points are closely aligned
         # filter the parts of the global route of the near future
@@ -75,30 +72,38 @@ class TrajectoryPlanner(): # pylint: disable=too-many-locals
         self.cached_local_route = self.cached_local_route[enumerator:]
         short_term_route = self.cached_local_route[:min(50, len(self.cached_local_route))]
 
-        activate_lane_keeping = False
+        activate_lane_keeping = True
         if activate_lane_keeping:
-            short_term_route = self._keep_lane(self.images, short_term_route)
+            short_term_route = self._keep_lane(self.image_sensor_collection, short_term_route)
 
-        # TODO: don't invoke this function here ...
-        self._update_vehicle_speed(short_term_route)
+        # target_velocity = self._update_vehicle_speed(short_term_route)
 
         return short_term_route
 
-    def _update_vehicle_speed(self, short_term_route: List[Tuple[float, float]]):
+    def _calculate_vehicle_speed(self):
         turned_on_traffic_light_detection = True
-
-        is_traffic_light_detection_active = \
-            all(image is not None for image in self.images.get_image_lists().values()) \
-            and turned_on_traffic_light_detection
-        
         tl_state, dist_m = TrafficLightPhase.Green, 300
-        if is_traffic_light_detection_active:
+        if turned_on_traffic_light_detection:
             tl_state, dist_m = self._detect_traffic_lights()
         speed_obs = SpeedObservation(tl_state, dist_next_obstacle_m=dist_m)
         self.speed_state_machine.update_state(speed_obs)
+        return self.speed_state_machine.get_target_speed()
+
+    def calculate_trajectory(self):
+        """combines trajectory and respective velocity to one data struct"""
+
+        vehicle_not_ready = self.vehicle.pos is None \
+                            or len(self.cached_local_route) == 0
+        cameras_ready = all(image is not None for image in
+                            self.image_sensor_collection.get_image_lists().values())
+        if vehicle_not_ready or not cameras_ready:
+            return [], 0
+        trajectory = self.compute_local_route()
+        velocity = self._calculate_vehicle_speed()
+        return trajectory, velocity
 
     def _detect_traffic_lights(self) -> Tuple[TrafficLightPhase, float]:
-        images_list = self.images.get_image_lists()
+        images_list = self.image_sensor_collection.get_image_lists()
         rgb_image = images_list['rgb'][:, :, :3]
         depth_image = images_list['depth']
         semantic_image = images_list['semantic'][:, :, :3]
@@ -117,10 +122,10 @@ class TrajectoryPlanner(): # pylint: disable=too-many-locals
         return tl_phase, meters
 
     def _keep_lane(self, images: SensorCameraPreprocessor,
-                               short_term_route: List[Tuple[float, float]]) \
-                                   -> List[Tuple[float, float]]:
+                   short_term_route: List[Tuple[float, float]]) \
+            -> List[Tuple[float, float]]:
         route = short_term_route.copy()
-        image = images.semantic_image[:, :, :3] # cut off alpha channel
+        image = images.semantic_image[:, :, :3]  # cut off alpha channel
         _, keep_lane, angle = self.lane_detection.detect_lanes(image)
 
         if keep_lane:

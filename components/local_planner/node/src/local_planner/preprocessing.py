@@ -7,10 +7,8 @@ import numpy as np
 from sensor_msgs.msg import Image as ImageMsg
 from cv_bridge import CvBridge
 
-from local_planner.core import SingletonMeta
 
-
-class SensorCameraPreprocessor(metaclass=SingletonMeta):  # pylint: disable=too-few-public-methods
+class SensorCameraPreprocessor:  # pylint: disable=too-few-public-methods
     """A class for preprocessing image data from sensors"""
     semantic_image: np.ndarray = None
     depth_image: np.ndarray = None

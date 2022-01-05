@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from enum import IntEnum
-from local_planner.core import SingletonMeta, Vehicle
+from local_planner.core import Vehicle
 
 
 class SpeedState(IntEnum):
@@ -28,10 +28,11 @@ class SpeedObservation:
     dist_next_obstacle_m: float = 1000
 
 
-class SpeedStateMachine(metaclass=SingletonMeta):
+@dataclass
+class SpeedStateMachine:
     """Representing a state machine for speed control decision-making."""
+    vehicle: Vehicle
     current_state: SpeedState = SpeedState.Stop
-    vehicle: Vehicle = Vehicle()
     target_speed_mps: float = 50 / 3.6
 
     def update_state(self, obs: SpeedObservation):

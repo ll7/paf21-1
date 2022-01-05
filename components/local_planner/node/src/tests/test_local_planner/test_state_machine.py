@@ -1,9 +1,10 @@
 from local_planner.state_machine import ManeuverStateMachine, ManeuverObservation, ManeuverState
 # from local_planner.vehicle_control import DrivingController
+from local_planner.core.vehicle import Vehicle
 
 def test_should_stay_in_lane():
-    st_machine = ManeuverStateMachine()
-
+    vehicle = Vehicle('test_vehicle')
+    st_machine = ManeuverStateMachine(vehicle)
     st_machine_observation = ManeuverObservation()
     st_machine_observation.blocking_object = False
     st_machine_observation.actual_track = 1
@@ -14,12 +15,13 @@ def test_should_stay_in_lane():
     st_machine_observation.distance_next_turn_m = 200
 
     st_machine.update_state(st_machine_observation)
-    assert(st_machine.current_state == ManeuverState.Keep_Lane)
+    assert(st_machine.current_state == ManeuverState.KEEP_LANE)
     assert(st_machine_observation.targeted_track == 1)
  
 def test_should_over_take_left_with_right_option():
-    st_machine = ManeuverStateMachine()
-    st_machine.current_state = ManeuverState.Keep_Lane
+    vehicle = Vehicle('test_vehicle')
+    st_machine = ManeuverStateMachine(vehicle)
+    st_machine.current_state = ManeuverState.KEEP_LANE
 
     st_machine_observation = ManeuverObservation()
     st_machine_observation.blocking_object = True
@@ -31,12 +33,12 @@ def test_should_over_take_left_with_right_option():
     st_machine_observation.distance_next_turn_m = 200
 
     st_machine.update_state(st_machine_observation)
-    assert(st_machine.current_state == ManeuverState.Left_Change)
+    assert(st_machine.current_state == ManeuverState.LEFT_CHANGE)
     assert(st_machine_observation.targeted_track == -1)
 
 def test_should_over_take_left():
-    st_machine = ManeuverStateMachine()
-    st_machine.current_state = ManeuverState.Keep_Lane
+    vehicle = Vehicle('test_vehicle')
+    st_machine = ManeuverStateMachine(vehicle)
 
     st_machine_observation = ManeuverObservation()
     st_machine_observation.blocking_object = True
@@ -48,14 +50,15 @@ def test_should_over_take_left():
     st_machine_observation.distance_next_turn_m = 200
 
     st_machine.update_state(st_machine_observation)
-    assert(st_machine.current_state == ManeuverState.Left_Change)
+    assert(st_machine.current_state == ManeuverState.LEFT_CHANGE)
     assert(st_machine_observation.targeted_track == -1)
 
 def test_should_over_take_right():
-    st_machine = ManeuverStateMachine()
+    vehicle = Vehicle('test_vehicle')
+    st_machine = ManeuverStateMachine(vehicle)
 
     st_machine_observation = ManeuverObservation()
-    st_machine.current_state = ManeuverState.Keep_Lane
+    st_machine.current_state = ManeuverState.KEEP_LANE
 
     st_machine_observation.blocking_object = True
     st_machine_observation.actual_track = 1
@@ -66,5 +69,5 @@ def test_should_over_take_right():
     st_machine_observation.distance_next_turn_m = 200
     
     st_machine.update_state(st_machine_observation)
-    assert(st_machine.current_state == ManeuverState.Right_Change)
+    assert(st_machine.current_state == ManeuverState.RIGHT_CHANGE)
     assert(st_machine_observation.targeted_track == 2)

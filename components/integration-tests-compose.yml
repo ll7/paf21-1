@@ -27,7 +27,7 @@ services:
     networks:
       - ros
 
-  carla-workflow-mock:
+  carla-workflow-moc:
     image: carla_workflow_moc
     environment:
       ROS_MASTER_URI: http://roscore:11311
