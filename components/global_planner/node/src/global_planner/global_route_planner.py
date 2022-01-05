@@ -6,9 +6,9 @@ import numpy as np
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 from typing import Tuple, List
-from global_planner.xodr_converter import XodrMap, Geometry, Road, create_key
+# from global_planner.xodr_converter import XodrMap, Geometry, Road, create_key
 # only for debugging
-# from xodr_converter import XODRConverter, XodrMap, Geometry, Road, create_key
+from xodr_converter import XODRConverter, XodrMap, Geometry, Road, create_key
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -298,6 +298,7 @@ class GlobalPlanner:
             is_final_section = road_id2 == -2
 
             if drive_road_from_start_to_end:
+                print(f'compute intermediate road section {road_id1}')
                 road = id2road[road_id1]
                 moving_towards_end = int(p1.split('_')[1])
                 road_geometries = list(reversed(road.geometries)) if moving_towards_end else road.geometries
@@ -305,6 +306,7 @@ class GlobalPlanner:
                 route_waypoints += road_waypoints
 
             elif is_initial_section:
+                print('compute initial section')
                 route_waypoints.append(start_pos)
                 road = id2road[road_id2]
                 moving_towards_end = int(p2.split('_')[1])
@@ -313,12 +315,16 @@ class GlobalPlanner:
                 route_waypoints.append(road_end_point)
 
             elif is_final_section:
+                print('compute final section')
                 road = id2road[road_id1]
                 moving_towards_end = int(p1.split('_')[1])
                 road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
                 road_end_point = road_end_point.end_point if moving_towards_end else road_end_point.start_point
                 route_waypoints.append(road_end_point)
                 route_waypoints.append(end_pos)
+
+            else:
+                print('should never happen')
 
         # TODO: add traffic signs and interpolation
         #       prob. need to create a class representing a route
