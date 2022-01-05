@@ -3,7 +3,6 @@ from math import atan2, pi, sin, cos, ceil, dist as euclid_dist
 import json
 import dataclasses
 import numpy as np
-import networkx as nx
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 from typing import Tuple, List
@@ -68,15 +67,15 @@ class ShortestPath:
                 distance = GlobalPlanner.accumulate_dist(road.geometries, ref_id, index)
                 key_index = GlobalPlanner.find_mapping(road.road_id, ref_id, lane_link,
                                                        xodr_map.mapping)
-                # TODO 4 cases
+
+                # TODO: handle one-way streets
                 if is_start_within_inner:
-                    xodr_map.matrix[key_index][num_nodes - 2] = distance
+                    # xodr_map.matrix[key_index][num_nodes - 2] = distance
                     xodr_map.matrix[num_nodes - 2][key_index] = distance
 
                 if is_end_within_inner:
-                    xodr_map.matrix[num_nodes - 1][key_index] = distance
+                    # xodr_map.matrix[num_nodes - 1][key_index] = distance
                     xodr_map.matrix[key_index][num_nodes - 1] = distance
-
 
     @staticmethod
     def _edge_relaxation(queue: List[int], dist: np.ndarray) -> int:
@@ -180,16 +179,6 @@ class GlobalPlanner:
     def update_vehicle_orientation(self, orientation: float):
         """Update the vehicle's current orientation"""
         self.orientation = orientation
-
-    def show_graph_with_labels(self):
-        """Draw a graph with labeled nodes."""
-        # get all edges out of the graph with value greater 0
-        edges = np.where(self.matrix > 0)
-        graph = nx.Graph()
-        # add all edges
-        graph.add_edges_from(edges)
-        # draw the graph
-        nx.draw(graph, node_size=500, labels=list(self.mapping.keys()), with_labels=True)
 
     @staticmethod
     def _calculate_offset(start_point: Tuple[float, float], end_point: Tuple[float, float],
@@ -303,28 +292,33 @@ class GlobalPlanner:
         for p1, p2 in path:
             road_id1 = int(p1.split('_')[0])
             road_id2 = int(p2.split('_')[0])
-            if road_id1 == road_id2:
+
+            drive_road_from_start_to_end = road_id1 == road_id2
+            is_initial_section = road_id1 == -1
+            is_final_section = road_id2 == -2
+
+            if drive_road_from_start_to_end:
                 road = id2road[road_id1]
                 moving_towards_end = int(p1.split('_')[1])
                 road_geometries = list(reversed(road.geometries)) if moving_towards_end else road.geometries
                 road_waypoints = [geo.start_point for geo in road_geometries] + [road_geometries[-1].end_point]
                 route_waypoints += road_waypoints
-            else:
-                if road_id1 == -1:
-                    route_waypoints.append(start_pos)
-                    road = id2road[road_id2]
-                    moving_towards_end = int(p2.split('_')[1])
-                    road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
-                    road_end_point = road_end_point.end_point if moving_towards_end else road_end_point.start_point
-                    route_waypoints.append(road_end_point)
 
-                if road_id2 == -2:
-                    road = id2road[road_id1]
-                    moving_towards_end = int(p1.split('_')[1])
-                    road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
-                    road_end_point = road_end_point.end_point if moving_towards_end else road_end_point.start_point
-                    route_waypoints.append(road_end_point)
-                    route_waypoints.append(end_pos)
+            elif is_initial_section:
+                route_waypoints.append(start_pos)
+                road = id2road[road_id2]
+                moving_towards_end = int(p2.split('_')[1])
+                road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
+                road_end_point = road_end_point.end_point if moving_towards_end else road_end_point.start_point
+                route_waypoints.append(road_end_point)
+
+            elif is_final_section:
+                road = id2road[road_id1]
+                moving_towards_end = int(p1.split('_')[1])
+                road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
+                road_end_point = road_end_point.end_point if moving_towards_end else road_end_point.start_point
+                route_waypoints.append(road_end_point)
+                route_waypoints.append(end_pos)
 
         # TODO: add traffic signs and interpolation
         #       prob. need to create a class representing a route
