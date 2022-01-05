@@ -6,11 +6,10 @@ import numpy as np
 import networkx as nx
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
-from typing import Tuple, List, Dict
-import rospy
-# only for debugging
+from typing import Tuple, List
 from global_planner.xodr_converter import XodrMap, Geometry, Road, create_key
-# from xodr_converter import XodrMapAdapter, Geometry, Road, create_key
+# only for debugging
+# from xodr_converter import XODRConverter, XodrMap, Geometry, Road, create_key
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -33,7 +32,7 @@ class ShortestPath:
         return matrix
 
     @staticmethod
-    def _extend_matrix(start_pos: Tuple[float, float], end_pos: Tuple[float, float], xodr_map: XodrMap):
+    def extend_matrix(start_pos: Tuple[float, float], end_pos: Tuple[float, float], xodr_map: XodrMap):
         """Find the nearest road to the start and end point."""
         # append two rows and columns to graph and append start and end to mapping
         xodr_map.matrix = ShortestPath._append_start_end(xodr_map.matrix, xodr_map.mapping)
@@ -43,12 +42,24 @@ class ShortestPath:
             for index, geo in enumerate(road.geometries):
                 poly, poly2 = GlobalPlanner.create_polygons(geo, road.road_width)
 
-                is_within_outer = poly.contains(Point(start_pos)) or poly.contains(Point(end_pos))
-                if not is_within_outer:
+                is_start_within_outer = poly.contains(Point(start_pos))
+                is_end_within_outer = poly.contains(Point(end_pos))
+
+                if not (is_start_within_outer or is_end_within_outer):
                     continue
 
                 is_start_within_inner = poly2.contains(Point(start_pos))
                 is_end_within_inner = poly2.contains(Point(end_pos))
+
+                if is_start_within_inner:
+                    print(f'Start is in inner: {road.road_id}')
+                elif is_start_within_outer:
+                    print(f'Start is in outer: {road.road_id}')
+
+                if is_end_within_inner:
+                    print(f'End is in inner: {road.road_id}')
+                elif is_end_within_outer:
+                    print(f'End is in outer: {road.road_id}')
 
                 is_within_inner = is_start_within_inner or is_end_within_inner
                 lane_link = 1 if is_within_inner else -1
@@ -57,18 +68,15 @@ class ShortestPath:
                 distance = GlobalPlanner.accumulate_dist(road.geometries, ref_id, index)
                 key_index = GlobalPlanner.find_mapping(road.road_id, ref_id, lane_link,
                                                        xodr_map.mapping)
-
+                # TODO 4 cases
                 if is_start_within_inner:
-                    if ref_id == 0:
-                        xodr_map.matrix[key_index][num_nodes - 2] = distance
-                    else:
-                        xodr_map.matrix[num_nodes - 2][key_index] = distance
+                    xodr_map.matrix[key_index][num_nodes - 2] = distance
+                    xodr_map.matrix[num_nodes - 2][key_index] = distance
 
                 if is_end_within_inner:
-                    if ref_id == 0:
-                        xodr_map.matrix[num_nodes - 1][key_index] = distance
-                    else:
-                        xodr_map.matrix[key_index][num_nodes - 1] = distance
+                    xodr_map.matrix[num_nodes - 1][key_index] = distance
+                    xodr_map.matrix[key_index][num_nodes - 1] = distance
+
 
     @staticmethod
     def _edge_relaxation(queue: List[int], dist: np.ndarray) -> int:
@@ -85,9 +93,6 @@ class ShortestPath:
                 # set new index
                 min_index = index
 
-        if min_index == -1:
-            raise AttributeError
-
         # return the index
         return min_index
 
@@ -96,33 +101,24 @@ class ShortestPath:
         """Implementation of the Dijkstra algorithm."""
         num_nodes = matrix.shape[0]
 
-        # init
         dist = np.ones(shape=(num_nodes,)) * np.inf
-        # array for the parents to store shortest path tree
-        parent = np.ones(shape=(num_nodes,)).astype('int32') * start_pos
+        parent = np.ones(shape=(num_nodes,)).astype('int32') * -1
 
-        # distance of source to itself is 0
         dist[start_pos] = 0.0
 
-        # add all nodes_id in queue
         queue = list(range(num_nodes))
-
-        # find the shortest path for all nodes
         while queue:
-            # pick the minimum dist node from the set of nodes
             relaxed_edge = ShortestPath._edge_relaxation(queue, dist)
-            # remove min element
+            if relaxed_edge == -1:
+                break
             queue.remove(relaxed_edge)
 
-            # update dist value and parent
-            for index in queue:
-                # update dist[i] if it is in queue, there is an edge from index_min to i,
-                if matrix[index][relaxed_edge]:
-                    new_dist = dist[relaxed_edge] + matrix[index][relaxed_edge]
+            for index in list(range(num_nodes)):
+                if matrix[relaxed_edge][index]:
+                    new_dist = dist[relaxed_edge] + matrix[relaxed_edge][index]
                     if new_dist < dist[index]:
                         dist[index] = new_dist
                         parent[index] = relaxed_edge
-
         return parent
 
     @staticmethod
@@ -133,6 +129,8 @@ class ShortestPath:
         pos = end_pos
         while pos != start_pos:
             pos = parent[pos]
+            if pos == -1:
+                return [start_pos]
             path.insert(0, pos)
 
         return path
@@ -281,12 +279,12 @@ class GlobalPlanner:
         start_key = '-1_0_0'
         end_key = '-2_0_0'
 
-        ShortestPath._extend_matrix(start_pos, end_pos, xodr_map)
+        ShortestPath.extend_matrix(start_pos, end_pos, xodr_map)
         path_ids = ShortestPath.shortest_path(xodr_map.mapping[start_key],
                                               xodr_map.mapping[end_key],
                                               xodr_map.matrix)
 
-        key_list = list(sorted(xodr_map.mapping.keys()))
+        key_list = list(xodr_map.mapping.keys())
         return [key_list[p_id] for p_id in path_ids]
 
     @staticmethod
@@ -300,24 +298,52 @@ class GlobalPlanner:
         id2road = dict([(road.road_id, road) for road in xodr_map.lane_lets])
         route_waypoints = []
 
-        for path_id, lane_key in enumerate(path):
-            road_id = int(lane_key.split('_')[0])
+        path = [(path[i], path[1+1]) for i in range(len(path)-1)]
 
-            road = id2road[road_id]
-            is_road_end = int(lane_key.split('_')[1])
+        for p1, p2 in path:
+            road_id1 = int(p1.split('_')[0])
+            road_id2 = int(p2.split('_')[0])
+            if road_id1 == road_id2:
+                road = id2road[road_id1]
+                moving_towards_end = int(p1.split('_')[1])
+                road_geometries = list(reversed(road.geometries)) if moving_towards_end else road.geometries
+                road_waypoints = [geo.start_point for geo in road_geometries] + [road_geometries[-1].end_point]
+                route_waypoints += road_waypoints
+            else:
+                if road_id1 == -1:
+                    route_waypoints.append(start_pos)
+                    road = id2road[road_id2]
+                    moving_towards_end = int(p2.split('_')[1])
+                    road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
+                    road_end_point = road_end_point.end_point if moving_towards_end else road_end_point.start_point
+                    route_waypoints.append(road_end_point)
 
-            road_geometries = list(reversed(road.geometries)) if is_road_end else road.geometries
-            road_waypoints = [geo.start_point for geo in road_geometries] + [road_geometries[-1].end_point]
-
-            is_start_road = path_id == 0
-            if is_start_road:
-                print(f'generating path from {start_pos} to {end_pos} ...')
-                print(f'waypoints first road: {road_waypoints}')
-
-            route_waypoints += road_waypoints
+                if road_id2 == -2:
+                    road = id2road[road_id1]
+                    moving_towards_end = int(p1.split('_')[1])
+                    road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
+                    road_end_point = road_end_point.end_point if moving_towards_end else road_end_point.start_point
+                    route_waypoints.append(road_end_point)
+                    route_waypoints.append(end_pos)
 
         # TODO: add traffic signs and interpolation
         #       prob. need to create a class representing a route
 
         print(route_waypoints)
         return route_waypoints
+
+
+if __name__ == '__main__':
+    from pathlib import Path
+
+    file_path = Path("../../../xodr/Town01.xodr")
+    xodr_map2 = XODRConverter.read_xodr(file_path)
+    global_planner = GlobalPlanner(xodr_map2)
+
+    start_position = (245.85, -198.75)
+    end_position = (144.99, -57.5)
+
+    global_route = GlobalPlanner.generate_waypoints(start_position, end_position, xodr_map2)
+
+    route_as_json = [{'x': pos[0], 'y': pos[1]} for pos in global_route]
+    msg = json.dumps(route_as_json)
