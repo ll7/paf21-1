@@ -6,9 +6,9 @@ import numpy as np
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 from typing import Tuple, List
-# from global_planner.xodr_converter import XodrMap, Geometry, Road, create_key
+from global_planner.xodr_converter import XodrMap, Geometry, Road, create_key
 # only for debugging
-from xodr_converter import XODRConverter, XodrMap, Geometry, Road, create_key
+# from xodr_converter import XODRConverter, XodrMap, Geometry, Road, create_key
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -40,7 +40,7 @@ class ShortestPath:
         for road in xodr_map.lane_lets:
             for index, geo in enumerate(road.geometries):
                 poly, poly2 = GlobalPlanner.create_polygons(geo, road.road_width)
-
+                # TODO some roads only one lane !!
                 is_start_within_outer = poly.contains(Point(start_pos))
                 is_end_within_outer = poly.contains(Point(end_pos))
 
@@ -65,34 +65,39 @@ class ShortestPath:
                 ref_id = 0 if is_within_inner else 1
 
                 distance = GlobalPlanner.accumulate_dist(road.geometries, ref_id, index)
+                distance2 = GlobalPlanner.accumulate_dist(road.geometries, 1-ref_id, index)
                 key_index = GlobalPlanner.find_mapping(road.road_id, ref_id, lane_link,
                                                        xodr_map.mapping)
+                key_index2 = GlobalPlanner.find_mapping(road.road_id, 1-ref_id, lane_link,
+                                                        xodr_map.mapping)
 
                 # TODO: handle one-way streets
                 if is_start_within_inner:
-                    # xodr_map.matrix[key_index][num_nodes - 2] = distance
-                    xodr_map.matrix[num_nodes - 2][key_index] = distance
+                    xodr_map.matrix[num_nodes - 2][key_index] = 999
+                    xodr_map.matrix[num_nodes - 2][key_index2] = distance
+                elif is_start_within_outer:
+                    xodr_map.matrix[num_nodes - 2][key_index] = distance2
+                    xodr_map.matrix[num_nodes - 2][key_index2] = 999
 
                 if is_end_within_inner:
-                    # xodr_map.matrix[num_nodes - 1][key_index] = distance
-                    xodr_map.matrix[key_index][num_nodes - 1] = distance
+                    xodr_map.matrix[key_index][num_nodes - 1] = 999
+                    xodr_map.matrix[key_index2][num_nodes - 1] = distance
+                elif is_end_within_outer:
+                    xodr_map.matrix[key_index][num_nodes - 1] = distance2
+                    xodr_map.matrix[key_index2][num_nodes - 1] = 999
+
 
     @staticmethod
     def _edge_relaxation(queue: List[int], dist: np.ndarray) -> int:
         """Calculate the index with the minimum distance."""
-        # initialize min value and min_index as -1
         minimum = np.inf
         min_index = -1
 
-        # from the dist array, pick one which has min value and is till in queue
         for index in queue:
             if dist[index] < minimum:
-                # set the new minimum
                 minimum = dist[index]
-                # set new index
                 min_index = index
 
-        # return the index
         return min_index
 
     @staticmethod
@@ -213,7 +218,7 @@ class GlobalPlanner:
         point_1, point_2, point_3, point_4 = points
 
         return (Polygon([point_1, point_2, point_3, point_4]),
-                Polygon([start_point, point_2, point_3, end_point]))
+                Polygon([start_point, point_1, point_4, end_point]))
 
     @staticmethod
     def find_mapping(road: int, end: int, link: int, mapping: dict) -> int:
@@ -224,11 +229,12 @@ class GlobalPlanner:
         key = create_key(road, end, -link)
         if key in mapping:
             return mapping[key]
-
         raise AttributeError
+
 
     @staticmethod
     def accumulate_dist(geometries: List[Geometry], reference_point, geo_index):
+        # TODO check function
         distance = 0.1
 
         for index, geo in enumerate(geometries):
@@ -287,11 +293,11 @@ class GlobalPlanner:
         id2road = dict([(road.road_id, road) for road in xodr_map.lane_lets])
         route_waypoints = []
 
-        path = [(path[i], path[1+1]) for i in range(len(path)-1)]
+        path = [(path[i], path[i+1]) for i in range(len(path)-1)]
 
-        for p1, p2 in path:
-            road_id1 = int(p1.split('_')[0])
-            road_id2 = int(p2.split('_')[0])
+        for p_1, p_2 in path:
+            road_id1 = int(p_1.split('_')[0])
+            road_id2 = int(p_2.split('_')[0])
 
             drive_road_from_start_to_end = road_id1 == road_id2
             is_initial_section = road_id1 == -1
@@ -300,16 +306,28 @@ class GlobalPlanner:
             if drive_road_from_start_to_end:
                 print(f'compute intermediate road section {road_id1}')
                 road = id2road[road_id1]
-                moving_towards_end = int(p1.split('_')[1])
+                moving_towards_end = int(p_1.split('_')[1])
+                lane_link = int(p_1.split('_')[2])
                 road_geometries = list(reversed(road.geometries)) if moving_towards_end else road.geometries
-                road_waypoints = [geo.start_point for geo in road_geometries] + [road_geometries[-1].end_point]
+
+                road_waypoints = []
+                for geo in road_geometries:
+                    points = GlobalPlanner._calculate_offset2points(geo.start_point,
+                                                                    geo.end_point,
+                                                                    road.road_width/2)
+                    # TODO multiple lanes
+                    if lane_link > 0:
+                        road_waypoints.append(points[0])
+                    else:
+                        road_waypoints.append(points[1])
+
                 route_waypoints += road_waypoints
 
             elif is_initial_section:
                 print('compute initial section')
                 route_waypoints.append(start_pos)
                 road = id2road[road_id2]
-                moving_towards_end = int(p2.split('_')[1])
+                moving_towards_end = int(p_2.split('_')[1])
                 road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
                 road_end_point = road_end_point.end_point if moving_towards_end else road_end_point.start_point
                 route_waypoints.append(road_end_point)
@@ -317,20 +335,25 @@ class GlobalPlanner:
             elif is_final_section:
                 print('compute final section')
                 road = id2road[road_id1]
-                moving_towards_end = int(p1.split('_')[1])
+                moving_towards_end = int(p_1.split('_')[1])
                 road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
                 road_end_point = road_end_point.end_point if moving_towards_end else road_end_point.start_point
                 route_waypoints.append(road_end_point)
                 route_waypoints.append(end_pos)
 
-            else:
-                print('should never happen')
-
         # TODO: add traffic signs and interpolation
         #       prob. need to create a class representing a route
+        print(f'Raw route waypoints: {route_waypoints}')
 
-        print(route_waypoints)
-        return route_waypoints
+        interpolated_route_waypoints = []
+        for index in range(len(route_waypoints) - 1):
+            waypoints = GlobalPlanner._linear_interpolation(route_waypoints[index],
+                                                            route_waypoints[index+1], 2.0)
+            interpolated_route_waypoints.extend(waypoints)
+
+        print(f'Interpolated route waypoints: {interpolated_route_waypoints}')
+
+        return interpolated_route_waypoints
 
 
 if __name__ == '__main__':
@@ -340,8 +363,14 @@ if __name__ == '__main__':
     xodr_map2 = XODRConverter.read_xodr(file_path)
     global_planner = GlobalPlanner(xodr_map2)
 
-    start_position = (245.85, -198.75)
-    end_position = (144.99, -57.5)
+    # start_position = (245.85, -198.75)
+    # end_position = (144.99, -57.5)
+
+    # start_position = (3.3689340432558032e+2, -0.9789686312079139e+1)
+    # end_position = (320.00, -56.5)
+
+    start_position = (396.6376037597656, -208.82986450195312)
+    end_position = (144.99, -55.5)
 
     global_route = GlobalPlanner.generate_waypoints(start_position, end_position, xodr_map2)
 
