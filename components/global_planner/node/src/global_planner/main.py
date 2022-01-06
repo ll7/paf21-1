@@ -46,11 +46,11 @@ class GlobalPlannerNode:
             print('waiting for car position ...')
             sleep(1)
 
-        end_pos = (144.99, -57.5)
+        end_pos = (144.99, -55.5)
         global_route = GlobalPlanner.generate_waypoints(
             self.global_planner.start_pos, end_pos, self.xodr_map)
 
-        route_as_json = [{ 'x': pos[0], 'y': pos[1] } for pos in global_route]
+        route_as_json = [{'x': pos[0], 'y': pos[1]} for pos in global_route]
         msg = StringMsg(data=json.dumps(route_as_json))
         self.global_route_publisher.publish(msg)
 
@@ -58,7 +58,6 @@ class GlobalPlannerNode:
 
     def init_ros(self):
         """Initialize the ROS node's publishers and subscribers"""
-        print('initializing ros nodes')
         self.global_route_publisher = self.init_global_route_publisher()
         self._init_gps_subscriber()
         self._init_vehicle_orientation_subscriber()

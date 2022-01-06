@@ -56,7 +56,6 @@ class RoadLink:
         self.__post_init__()
 
     def __post_init__(self):
-        print('Post_Init_RoadLink')
         if self.contact_point == 'start':
             self.contact_link = 0
             self.sign = -1 if self.link_type == LinkType.PRE else 1
@@ -236,7 +235,6 @@ class XodrMap:
     matrix: np.ndarray = None
 
     def __post_init__(self):
-        print('Post Init XodrMap')
         if self.matrix is None:
             self.matrix = self._create_links()
 
@@ -306,7 +304,6 @@ class XodrMap:
                 matrix[index_link][index_road] = 1e-6
 
     def _get_connected_lane_ids(self, lane_link: int, link: RoadLink, road_id: int):
-        print(link)
         key = create_key(link.road_link_id, link.contact_link, link.sign * lane_link)
         index_link = self.mapping[key]
         key = create_key(road_id, link.contact_road, lane_link)
