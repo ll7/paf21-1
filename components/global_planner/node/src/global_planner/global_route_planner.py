@@ -38,44 +38,52 @@ class ShortestPath:
         xodr_map.matrix = ShortestPath._append_start_end(xodr_map.matrix, xodr_map.mapping)
         num_nodes = xodr_map.matrix.shape[0]
 
-        for road in xodr_map.lane_lets:
-            for index, geo in enumerate(road.geometries):
-                # TODO some roads only one lane !!
-                poly, poly2 = GlobalPlanner.create_polygons(geo, road.road_width)
-                is_start_within_outer = poly.contains(Point(start_pos))
-                is_end_within_outer = poly.contains(Point(end_pos))
+        start_neighbors = ShortestPath.find_neighbor_sections(start_pos, xodr_map)
+        end_neighbors = ShortestPath.find_neighbor_sections(end_pos, xodr_map)
 
-                if not (is_start_within_outer or is_end_within_outer):
+        is_within_inner = is_start_within_inner or is_end_within_inner
+        lane_link = 1 if is_within_inner else -1
+        ref_id = 0 if is_within_inner else 1
+
+        distance = GlobalPlanner.accumulate_dist(road.geometries, ref_id, index)
+        distance2 = GlobalPlanner.accumulate_dist(road.geometries, 1-ref_id, index)
+        key_index = GlobalPlanner.find_mapping(road.road_id, ref_id, lane_link,
+                                               xodr_map.mapping)
+        key_index2 = GlobalPlanner.find_mapping(road.road_id, 1-ref_id, lane_link,
+                                                xodr_map.mapping)
+
+        # TODO: handle one-way streets
+        if is_start_within_inner:
+            xodr_map.matrix[num_nodes - 2][key_index] = 999
+            xodr_map.matrix[num_nodes - 2][key_index2] = distance
+        elif is_start_within_outer:
+            xodr_map.matrix[num_nodes - 2][key_index] = distance2
+            xodr_map.matrix[num_nodes - 2][key_index2] = 999
+
+        if is_end_within_inner:
+            xodr_map.matrix[key_index][num_nodes - 1] = 999
+            xodr_map.matrix[key_index2][num_nodes - 1] = distance
+        elif is_end_within_outer:
+            xodr_map.matrix[key_index][num_nodes - 1] = distance2
+            xodr_map.matrix[key_index2][num_nodes - 1] = 999
+
+    @staticmethod
+    def find_neighbor_sections(pos: Tuple[float, float],
+                               xodr_map: XodrMap) -> List[Tuple[int, bool, Road]]:
+        neighbors = []
+        for road in xodr_map.lane_lets:
+            # TODO some roads only one lane !!
+            for index, geo in enumerate(road.geometries):
+                poly, poly2 = GlobalPlanner.create_polygons(geo, road.road_width)
+                is_within_outer = poly.contains(Point(pos))
+
+                if not is_within_outer:
                     continue
 
-                is_start_within_inner = poly2.contains(Point(start_pos))
-                is_end_within_inner = poly2.contains(Point(end_pos))
+                is_right_road_side = poly2.contains(Point(pos))
+                neighbors.append((index, is_right_road_side, road))
 
-                is_within_inner = is_start_within_inner or is_end_within_inner
-                lane_link = 1 if is_within_inner else -1
-                ref_id = 0 if is_within_inner else 1
-
-                distance = GlobalPlanner.accumulate_dist(road.geometries, ref_id, index)
-                distance2 = GlobalPlanner.accumulate_dist(road.geometries, 1-ref_id, index)
-                key_index = GlobalPlanner.find_mapping(road.road_id, ref_id, lane_link,
-                                                       xodr_map.mapping)
-                key_index2 = GlobalPlanner.find_mapping(road.road_id, 1-ref_id, lane_link,
-                                                        xodr_map.mapping)
-
-                # TODO: handle one-way streets
-                if is_start_within_inner:
-                    xodr_map.matrix[num_nodes - 2][key_index] = 999
-                    xodr_map.matrix[num_nodes - 2][key_index2] = distance
-                elif is_start_within_outer:
-                    xodr_map.matrix[num_nodes - 2][key_index] = distance2
-                    xodr_map.matrix[num_nodes - 2][key_index2] = 999
-
-                if is_end_within_inner:
-                    xodr_map.matrix[key_index][num_nodes - 1] = 999
-                    xodr_map.matrix[key_index2][num_nodes - 1] = distance
-                elif is_end_within_outer:
-                    xodr_map.matrix[key_index][num_nodes - 1] = distance2
-                    xodr_map.matrix[key_index2][num_nodes - 1] = 999
+        return neighbors
 
     @staticmethod
     def _edge_relaxation(queue: List[int], dist: np.ndarray) -> int:
