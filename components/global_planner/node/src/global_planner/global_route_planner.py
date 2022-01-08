@@ -1,5 +1,5 @@
 """A global route planner based on map and hmi data."""
-from math import atan2, pi, sin, cos, ceil, dist as euclid_dist
+from math import floor, dist as euclid_dist
 import json
 import dataclasses
 import numpy as np
@@ -32,57 +32,66 @@ class ShortestPath:
         return matrix
 
     @staticmethod
-    def extend_matrix(start_pos: Tuple[float, float], end_pos: Tuple[float, float], xodr_map: XodrMap):
+    def extend_matrix(start_pos: Tuple[float, float],
+                      end_pos: Tuple[float, float], xodr_map: XodrMap):
         """Find the nearest road to the start and end point."""
         # append two rows and columns to graph and append start and end to mapping
         xodr_map.matrix = ShortestPath._append_start_end(xodr_map.matrix, xodr_map.mapping)
-        num_nodes = xodr_map.matrix.shape[0]
 
         start_neighbors = ShortestPath.find_neighbor_sections(start_pos, xodr_map)
+        ShortestPath._insert_matrix_edges(xodr_map, start_pos, start_neighbors, is_start=True)
         end_neighbors = ShortestPath.find_neighbor_sections(end_pos, xodr_map)
+        ShortestPath._insert_matrix_edges(xodr_map, end_pos, end_neighbors, is_start=False)
 
-        is_within_inner = is_start_within_inner or is_end_within_inner
-        lane_link = 1 if is_within_inner else -1
-        ref_id = 0 if is_within_inner else 1
+    @staticmethod
+    def _insert_matrix_edges(xodr_map: XodrMap, point: Tuple[float, float],
+                             neighbor_sections: List[Tuple[int, bool, Road]], is_start: bool):
+        num_nodes = xodr_map.matrix.shape[0]
+        u_turn_penalty = 100.0
+        for _, is_right_road_side, road in neighbor_sections:
+            # TODO extend multiple lane per side
+            lane_link = -1 if is_right_road_side else 1
+            ref_id = 1 if is_right_road_side else 0
 
-        distance = GlobalPlanner.accumulate_dist(road.geometries, ref_id, index)
-        distance2 = GlobalPlanner.accumulate_dist(road.geometries, 1-ref_id, index)
-        key_index = GlobalPlanner.find_mapping(road.road_id, ref_id, lane_link,
-                                               xodr_map.mapping)
-        key_index2 = GlobalPlanner.find_mapping(road.road_id, 1-ref_id, lane_link,
-                                                xodr_map.mapping)
+            road_start, road_end = road.geometries[0].start_point, road.geometries[-1].end_point
+            dist_start, dist_end = euclid_dist(point, road_start), euclid_dist(point, road_end)
+            if not is_right_road_side:
+                dist_start, dist_end = (dist_end, dist_start)
 
-        # TODO: handle one-way streets
-        if is_start_within_inner:
-            xodr_map.matrix[num_nodes - 2][key_index] = 999
-            xodr_map.matrix[num_nodes - 2][key_index2] = distance
-        elif is_start_within_outer:
-            xodr_map.matrix[num_nodes - 2][key_index] = distance2
-            xodr_map.matrix[num_nodes - 2][key_index2] = 999
-
-        if is_end_within_inner:
-            xodr_map.matrix[key_index][num_nodes - 1] = 999
-            xodr_map.matrix[key_index2][num_nodes - 1] = distance
-        elif is_end_within_outer:
-            xodr_map.matrix[key_index][num_nodes - 1] = distance2
-            xodr_map.matrix[key_index2][num_nodes - 1] = 999
+            key_index = GlobalPlanner.find_mapping(road.road_id, ref_id, lane_link,
+                                                   xodr_map.mapping)
+            key_index2 = GlobalPlanner.find_mapping(road.road_id, 1 - ref_id, lane_link,
+                                                    xodr_map.mapping)
+            if is_start:
+                xodr_map.matrix[num_nodes - 2][key_index] = dist_end
+                xodr_map.matrix[num_nodes - 2][key_index2] = dist_start + u_turn_penalty
+            else:
+                xodr_map.matrix[key_index][num_nodes - 1] = dist_start
+                xodr_map.matrix[key_index2][num_nodes - 1] = dist_end
 
     @staticmethod
     def find_neighbor_sections(pos: Tuple[float, float],
                                xodr_map: XodrMap) -> List[Tuple[int, bool, Road]]:
+        # TODO extend multiple lane per side
         neighbors = []
         for road in xodr_map.lane_lets:
-            # TODO some roads only one lane !!
             for index, geo in enumerate(road.geometries):
-                poly, poly2 = GlobalPlanner.create_polygons(geo, road.road_width)
+                max_road_width = max(len(road.right_ids), len(road.left_ids)) * road.road_width
+                poly, poly2 = GlobalPlanner.create_polygons(geo, max_road_width)
                 is_within_outer = poly.contains(Point(pos))
 
                 if not is_within_outer:
                     continue
 
                 is_right_road_side = poly2.contains(Point(pos))
-                neighbors.append((index, is_right_road_side, road))
+                is_not_on_onesided_lane_right = is_right_road_side and not road.right_ids
+                is_not_on_onesided_lane_left = not is_right_road_side and not road.left_ids
 
+                if is_not_on_onesided_lane_right or is_not_on_onesided_lane_left:
+                    continue
+
+                neighbors.append((index, is_right_road_side, road))
+                print(f'Find roads {road.road_id} for point {pos}')
         return neighbors
 
     @staticmethod
@@ -206,27 +215,13 @@ class GlobalPlanner:
         raise AttributeError
 
     @staticmethod
-    def accumulate_dist(geometries: List[Geometry], reference_point, geo_index):
-        # TODO check function
-        distance = 0.1
-
-        for index, geo in enumerate(geometries):
-            do_increment = (reference_point == 0 and index <= geo_index) or \
-                           (reference_point != 0 and index >= geo_index)
-
-            if do_increment:
-                distance += (1 if index == geo_index else geo.length)
-
-        return distance
-
-    @staticmethod
     def _linear_interpolation(start: Tuple[float, float], end: Tuple[float, float],
                               interval_m: float) -> List[Tuple[float, float]]:
 
         distance = euclid_dist(start, end)
         vector = (end[0] - start[0], end[1] - start[1])
 
-        steps = ceil(distance / interval_m)
+        steps = max(1, floor(distance / interval_m))
         exceeds_interval_cap = distance > interval_m
         step_vector = (vector[0] / steps if exceeds_interval_cap else vector[0],
                        vector[1] / steps if exceeds_interval_cap else vector[1])
@@ -239,6 +234,14 @@ class GlobalPlanner:
         # lin_points = lin_points[1:]
         # pol_points = [first] + [p for p in lin_points if not first == p]
         return lin_points
+
+    @staticmethod
+    def _clean_route_duplicates(route: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+        cleaned_route = [route[0]]
+        for next_p in route[1:]:
+            if euclid_dist(cleaned_route[-1], next_p) >= 0.1:
+                cleaned_route.append(next_p)
+        return cleaned_route
 
     @staticmethod
     def get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
@@ -282,18 +285,12 @@ class GlobalPlanner:
                 moving_towards_end = int(p_1.split('_')[1])
                 lane_link = int(p_1.split('_')[2])
                 road_geometries = list(reversed(road.geometries)) if moving_towards_end else road.geometries
-                road_waypoints = [geo.start_point for geo in road_geometries]
-                # road_waypoints = []
-                # for geo in road_geometries:
-                #     points = GlobalPlanner._calculate_offset2points(geo.start_point,
-                #                                                     geo.end_point,
-                #                                                     road.road_width/2)
-                #     # TODO multiple lanes
-                #     if lane_link > 0:
-                #         road_waypoints.append(points[0])
-                #     else:
-                #         road_waypoints.append(points[1])
-
+                # road_waypoints = [geo.start_point for geo in road_geometries]
+                road_waypoints = []
+                for geo in road_geometries:
+                    points = bounding_box(geo.start_point, geo.end_point, road.road_width/2)
+                    # TODO multiple lanes
+                    road_waypoints.append(points[0] if lane_link < 0 else points[1])
                 route_waypoints += road_waypoints
 
             elif is_initial_section:
@@ -301,17 +298,22 @@ class GlobalPlanner:
                 route_waypoints.append(start_pos)
                 road = id2road[road_id2]
                 moving_towards_end = int(p_2.split('_')[1])
+
                 road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
-                road_end_point = road_end_point.end_point if moving_towards_end else road_end_point.start_point
-                route_waypoints.append(road_end_point)
+                points = bounding_box(road_end_point.start_point, road_end_point.end_point,
+                                      road.road_width / 2)
+                route_waypoints.append(points[3] if moving_towards_end else points[1])
 
             elif is_final_section:
                 print('compute final section')
                 road = id2road[road_id1]
                 moving_towards_end = int(p_1.split('_')[1])
                 road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
-                road_end_point = road_end_point.end_point if moving_towards_end else road_end_point.start_point
-                route_waypoints.append(road_end_point)
+                print(f'Road width {road.road_width}')
+                points = bounding_box(road_end_point.start_point, road_end_point.end_point,
+                                      road.road_width / 2)
+                print(f'Bounding Box {points}')
+                route_waypoints.append(points[2] if moving_towards_end else points[0])
                 route_waypoints.append(end_pos)
 
         # TODO: refactor function, points displacement, check all edges (especially roads with one lane)
@@ -320,15 +322,17 @@ class GlobalPlanner:
         #       prob. need to create a class representing a route
         print(f'Raw route waypoints: {route_waypoints}')
 
-        interpolated_route_waypoints = []
+        interpolated_route = []
         for index in range(len(route_waypoints) - 1):
             waypoints = GlobalPlanner._linear_interpolation(route_waypoints[index],
-                                                            route_waypoints[index+1], 2.0)
-            interpolated_route_waypoints.extend(waypoints)
+                                                            route_waypoints[index+1], interval_m=2.0)
+            interpolated_route.extend(waypoints)
 
-        print(f'Interpolated route waypoints: {interpolated_route_waypoints}')
+        interpolated_route = GlobalPlanner._clean_route_duplicates(interpolated_route)
 
-        return route_waypoints
+        print(f'Interpolated route waypoints: {interpolated_route}')
+
+        return interpolated_route
 
 
 if __name__ == '__main__':
