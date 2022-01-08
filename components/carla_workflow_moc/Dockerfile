@@ -23,11 +23,10 @@ ADD ./requirements.txt /app/requirements.txt
 RUN python -m pip install -r /app/requirements.txt
 
 # test + lint the source code
-ADD ./node /app/src/local_planner
-WORKDIR /app/src/local_planner/src
+ADD ./node /app/src/carla_workflow_moc
+WORKDIR /app/src/carla_workflow_moc/src
 RUN source /opt/ros/noetic/setup.bash && \
-    python -m pytest tests && \
-    pylint local_planner --fail-under=9.5 --extension-pkg-whitelist=cv2
+    python -m pytest tests && pylint carla_workflow_moc --fail-under=9.5 --extension-pkg-whitelist=cv2
 
 # deploy the source code to ROS using catkin
 WORKDIR /app/catkin_ws/src
@@ -38,4 +37,4 @@ RUN source /opt/ros/noetic/setup.bash && catkin_make
 # register a startup procedure to launch the ROS node
 ADD ./ros_entrypoint.sh /ros_entrypoint.sh
 ENTRYPOINT ["/ros_entrypoint.sh"]
-CMD ["local_planner", "local_planner.launch", "--wait"]
+CMD ["carla_workflow_moc", "carla_workflow_moc.launch", "--wait"]

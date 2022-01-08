@@ -1,8 +1,8 @@
 """This module highlights road surface markings"""
+from typing import Tuple, List
 from cv2 import cv2
 import numpy as np
 import yaml
-import rospy
 
 
 class LaneDetection:  # pylint: disable=too-few-public-methods
@@ -10,10 +10,10 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
     # pylint: disable=chained-comparison
 
     """This module highlights road surface markings"""
-    lower_bound: [int, int, int]
-    upper_bound: [int, int, int]
-    lower_bound_car: [int, int, int]
-    upper_bound_car: [int, int, int]
+    lower_bound: Tuple[int, int, int]
+    upper_bound: Tuple[int, int, int]
+    lower_bound_car: Tuple[int, int, int]
+    upper_bound_car: Tuple[int, int, int]
     canny_lower: int
     canny_upper: int
     fov: float
@@ -23,7 +23,7 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
     hough_max_line_gap: int
     angle_lower_bound: int
     angle_upper_bound: int
-    last_middle: [int, int, int, int] = None
+    last_middle: Tuple[int, int, int, int] = None
     x_offset_left: int = 300
     x_offset_right: int = -300
     counter_angle = 18
@@ -51,19 +51,17 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
 
     def detect_lanes(self, image):
         """Detect lanes"""
-        projections, keep_lane, angle = self.highlight_lines(image)
-        highl_image = LaneDetection.augment_image_with_lines(image, projections)
-        # modify this to return recalculation of driving vector
-        return highl_image, keep_lane, angle
-
-    def highlight_lines(self, orig_image: np.ndarray):
-        """Highlight road surface markings"""
-        image = self._preprocess_image(orig_image)
+        highl_image = None
+        orig_image = image
+        image = self._preprocess_image(image)
         image = self._cut_roi_patch(image)
         lines = self._preprocess_lines(image)
-        proj, angle = self._get_lane_boundary_projections(
-            lines, image.shape[0], image.shape[1])
-        return proj, abs(angle) >= self.deviation_threshold, angle
+        proj, angle = self._get_lane_boundary_projections(lines, image.shape[0], image.shape[1])
+
+        projections, keep_lane, angle = proj, abs(angle) >= self.deviation_threshold, angle
+        #highl_image = LaneDetection.augment_image_with_lines(orig_image, projections)
+
+        return highl_image, keep_lane, angle
 
     @staticmethod
     def augment_image_with_lines(orig_img: np.ndarray, lines):
@@ -88,6 +86,7 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
         # augment the original image with the lines
         if all(map(lambda l: l is None, lines)):
             return orig_img
+        print(orig_img.shape, lines_img.shape)
         return cv2.addWeighted(orig_img, 0.5, lines_img, 1, 0.0)
 
     def _preprocess_image(self, orig_image: np.ndarray):
@@ -116,7 +115,7 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
         cv2.fillPoly(mask, [vertices], (255))
         return cv2.bitwise_and(img, mask)
 
-    def _preprocess_lines(self, image: np.ndarray):
+    def _preprocess_lines(self, image: np.ndarray) -> np.ndarray:
         lines = cv2.HoughLinesP(image, rho=self.hough_rho, theta=np.pi / 180,
                                 threshold=self.hough_threshold,
                                 lines=np.array([]), minLineLength=self.hough_min_line_length,
@@ -126,7 +125,7 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
         lines = np.squeeze(lines, axis=1)
         return self._filter_relevant_lines(lines)
 
-    def _filter_relevant_lines(self, lines):
+    def _filter_relevant_lines(self, lines: List[Tuple[float, float, float, float]]) -> np.ndarray:
         cleared_lines = []
         for line in lines:
             vector = [line[2] - line[0], line[3] - line[1]]
@@ -139,7 +138,7 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
             return np.array([])
         return np.squeeze(np.array(cleared_lines), axis=1)
 
-    def _get_lane_boundary_projections(self, lines: list, img_height: int, img_width: int):
+    def _get_lane_boundary_projections(self, lines: np.ndarray, img_height: int, img_width: int):
         lines = np.array(lines).reshape(-1, 4)
         right_half = [line for line in lines if LaneDetection.slope(line)]
         left_half = [line for line in lines if not LaneDetection.slope(line)]
@@ -147,14 +146,12 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
         if len(left_half) >= 1:
             left_half = [self._get_projection(line, img_height) for line in left_half
                          if line[0] <= img_width * 0.7]
-            rospy.loginfo(f'left: {left_half}')
             if len(left_half) >= 1:
                 left_proj = left_half[np.argmax([line[0] for line in left_half])]
 
         if len(right_half) >= 1:
             right_half = [self._get_projection(
-                line, img_height) for line in right_half if line[0] > img_width * 0.5]
-            rospy.loginfo(f'right: {right_half}')
+                line, img_height) for line in right_half if line[0] > img_width * 0.7]
             if len(right_half) >= 1:
                 right_proj = right_half[np.argmin([line[0] for line in right_half
                                                    ])]
@@ -184,7 +181,6 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
 
         else:
             angle = 0
-        rospy.loginfo(f'angle: {angle}')
         return [right_proj, left_proj, middle], angle
 
     def get_angle_to_middle(self, angle, distance):

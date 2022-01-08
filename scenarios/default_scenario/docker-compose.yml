@@ -47,13 +47,13 @@ services:
       - carla
       - ros
 
-  vehicle-controller:
-    image: vehicle_controller
-    environment:
-      ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: vehicle-controller
-    networks:
-      - ros
+  # vehicle-controller:
+  #   image: vehicle_controller
+  #   environment:
+  #     ROS_MASTER_URI: http://roscore:11311
+  #     ROS_HOSTNAME: vehicle-controller
+  #   networks:
+  #     - ros
 
   local-planner:
     image: local_planner

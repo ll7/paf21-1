@@ -1,19 +1,18 @@
 """A Module that detects traffic lights"""
-from typing import Tuple
+from typing import Tuple, List
 import cv2
 import numpy as np
 import yaml
-import rospy
 
 
 class TrafficLightDetector:
     # pylint: disable=too-many-instance-attributes
     """A Module that detects traffic lights"""
-    lower_mask = [int, int, int]
-    upper_mask = [int, int, int]
+    lower_mask: Tuple[int, int, int]
+    upper_mask: Tuple[int, int, int]
     box_offset: int = 0
     enhanced_dim: Tuple[int, int]
-    states = ['Red', 'Yellow', 'Green', 'Backside']
+    states: List[str] = ['Red', 'Yellow', 'Green', 'Green']
     crop_left_right: int
     crop_top_bottom: int
     value_backside: int
@@ -30,21 +29,21 @@ class TrafficLightDetector:
             self.crop_top_bottom = config['crop_top_bottom']
             self.crop_left_right = config['crop_left_right']
 
-    def detect_traffic_light(self, semantic_image, rgb_image, depth_image):
+    def detect_traffic_light(self, semantic_image, rgb_image, depth_image) -> Tuple[float, str, np.ndarray]:
         """main function to get traffic lights and distance"""
         rectangles = self.get_mask(semantic_image)
         marked_image = rgb_image
-        meters = None
+        meters = float('inf')
         tl_color = 'Green'
         if len(rectangles) > 0:
-            state_votes = {'Red': 0, 'Yellow': 0, 'Green': 0, 'Backside': 0}
+            state_votes = {'Red': 0, 'Yellow': 0, 'Green': 0}
             rectangles = [rect for rect in rectangles if rect[2] * rect[3] ==
                           max(rect[2] * rect[3] for rect in rectangles)]
-
+            if rectangles[0][2] * rectangles[0][3] <= 5 * 15:
+                return meters, tl_color, marked_image
             enhanced_image = self.apply_mask(rectangles, rgb_image)
-            meters, middle = TrafficLightDetector.get_distance_from_depth(rectangles,
-                                                                          depth_image)
-            if meters < 50:
+            meters, middle = TrafficLightDetector.get_distance_from_depth(rectangles, depth_image)
+            if meters < 25:
                 tl_color_bright = self.classify_traffic_light_brightness(enhanced_image)
                 #tl_color_dominance = self.get_color_dominance(enhanced_image)
                 if tl_color_bright is not None:
@@ -131,10 +130,7 @@ class TrafficLightDetector:
               self.crop_left_right: self.enhanced_dim[0] - self.crop_left_right]
         brightness = hsv[:, :, 2]
         summed_brightness = np.sum(brightness, axis=1)
-        print(summed_brightness.shape)
-        summed_brightness = [x if x > 20000 else 0 for x in summed_brightness]
         range_height = int(self.enhanced_dim[1] - self.crop_top_bottom * 2)
-        print(range_height)
         sum_red = np.sum(summed_brightness[0: int(range_height * 1 / 3)])
         sum_yellow = np.sum(summed_brightness[int(range_height * 1 / 3):
                                               int(range_height * 2 / 3)])
@@ -150,14 +146,13 @@ class TrafficLightDetector:
         choice = [sum_red, sum_yellow, sum_green, sum_back]
         choice_sum = np.sum(choice)
         choice = np.divide(choice, choice_sum)
-        rospy.loginfo(choice)
         max_index = np.argmax(choice)
-        if choice[max_index] > 0.66 and max_index != 0:
+        if choice[max_index] > 0.50 and max_index != 0:
             decision = self.states[max_index]
-        elif choice[max_index] > 0.5 and max_index == 0:
+        elif choice[max_index] > 0.50 and max_index == 0:
             decision = self.states[max_index]
         else:
-            decision = None
+            decision = 'Green'
         return decision
 
     @staticmethod

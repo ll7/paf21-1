@@ -1,0 +1,39 @@
+version: '2.3'
+
+services:
+  roscore:
+    image: ros:noetic
+    command: roscore
+    expose:
+      - 11311
+    networks:
+      - ros
+
+  local-planner:
+    image: local_planner
+    volumes:
+      - './logs:/app/logs'
+    environment:
+      ROS_MASTER_URI: http://roscore:11311
+      ROS_HOSTNAME: local-planner
+    networks:
+      - ros
+
+  global-planner:
+    image: global_planner
+    environment:
+      ROS_MASTER_URI: http://roscore:11311
+      ROS_HOSTNAME: global-planner
+    networks:
+      - ros
+
+  carla-workflow-moc:
+    image: carla_workflow_moc
+    environment:
+      ROS_MASTER_URI: http://roscore:11311
+      ROS_HOSTNAME: carla-workflow-mock
+    networks:
+      - ros
+
+networks:
+  ros:
