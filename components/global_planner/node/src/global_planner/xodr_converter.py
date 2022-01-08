@@ -26,9 +26,7 @@ class Geometry:
     """Represents the data of a geometry object."""
     start_point: Tuple[float, float]
     end_point: Tuple[float, float]
-    angle: float
     length: float
-    curvature: float
 
 
 class LinkType(IntEnum):
@@ -154,25 +152,25 @@ class Road:
             return []
 
         objects = []
-        for geometry in plan_view.findall('geometry'):
-            start_point = (float(geometry.get('x')), float(geometry.get('y')))
-            angle = float(geometry.get('hdg'))
-            length = float(geometry.get('length'))
+        geometries = plan_view.findall('geometry')
+        for i in range(len(geometries)):
+            geo_0 = geometries[i]
+            start_point = (float(geo_0.get('x')), float(geo_0.get('y')))
+            length = float(geo_0.get('length'))
+            if i < len(geometries)-1:
+                geo_1 = geometries[i+1]
+                end_point = (float(geo_1.get('x')), float(geo_1.get('y')))
+            else:
+                angle = float(geo_0.get('hdg'))
+                end_point = Road._calculate_end_point(start_point, angle, length)
 
-            curvature = float(geometry.find('arc').get('curvature')) \
-                if geometry.find('arc') is not None else 0.0
-
-            end_point = Road._calculate_end_point(start_point, angle, length, curvature)
-            objects.append(Geometry(start_point, end_point, angle, length, curvature))
+            objects.append(Geometry(start_point, end_point, length))
 
         return objects
 
     @staticmethod
     def _calculate_end_point(start_point: Tuple[float, float], angle: float,
-                             length: float, arc: float) -> Tuple[float, float]:
-        """Calculate the end point based on the start point, angle, length and arc."""
-        # TODO check implementation and add arc
-        # https://www.delftstack.com/howto/numpy/curvature-formula-numpy/
+                             length: float) -> Tuple[float, float]:
         return start_point[0] + cos(angle) * length, start_point[1] + sin(angle) * length
 
 
