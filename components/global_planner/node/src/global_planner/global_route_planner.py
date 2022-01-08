@@ -151,31 +151,9 @@ class GlobalPlanner:
     """A global route planner based on map and hmi data."""
     def __init__(self, xodr_map: XodrMap):
         """Initialize the global route planner."""
-        # base filepath to the maps
-        self.filepath = r"../../../maps"
-        # graph with
         self.xodr_map = xodr_map
         self.num_nodes = len(self.xodr_map.mapping)
-        # initialize all distances with inf.
-        self.dist = None
-        # array for the parents to store shortest path tree
-        self.parent = None
-        # path
-        self.path = []
-        # dict with lane-let ids and matrix pos
-        self.matrix = np.copy(self.xodr_map.matrix)
-        self.mapping = self.xodr_map.mapping
-        self.lane_lets = self.xodr_map.lane_lets
-        # TODO DELETE
-        self.point_dict = {}
-
-        self.map_name = ''
-        self.end_pos = None
         self.start_pos = None
-        self.orientation = 0.0
-        self.update = False
-        # TODO read from data
-        self.road_width = 4.0
 
     def set_data(self):
         """Set the graph, the mapping and the lane-lets."""
@@ -230,9 +208,6 @@ class GlobalPlanner:
                        start[1] + step_vector[1] * i)
                       for i in range(steps)]
 
-        # first = lin_points[0]
-        # lin_points = lin_points[1:]
-        # pol_points = [first] + [p for p in lin_points if not first == p]
         return lin_points
 
     @staticmethod
