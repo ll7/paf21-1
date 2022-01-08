@@ -46,7 +46,7 @@
     <arg name="vehicle_filter" value='$(arg vehicle_filter)'/>
     <arg name="sensor_definition_file" default="$(arg sensor_definition_file)"/>
     <arg name='role_name' value='$(arg role_name)'/>
-<!--     <arg name="spawn_point" value="245.85, 198.75, 1.0, 0.0, 0.0, -1.51"/> -->
+    <arg name="spawn_point" value="245.85, 198.75, 1.0, 0.0, 0.0, -1.51"/>
   </include>
 
   <!-- Provide a route and access to the CARLA waypoint API (required by carla_ad_agent) -->
