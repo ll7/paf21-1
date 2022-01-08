@@ -161,6 +161,7 @@ class Training:
     optimizer = None
 
     def __init__(self, model, dataset_path: str, batch_size: int, optimizer):
+        # TODO algo failed in this function
         self.model = model
 
         builder = tfds.ImageFolder(dataset_path)
@@ -255,8 +256,16 @@ class Training:
 
 
 if __name__ == '__main__':
+    import tarfile
+    path_dataset = './traffic_light_data'
+    path_dataset_tar = path_dataset + '.tar.xz'
+
+    if path_dataset_tar.endswith('.tar.xz'):
+        tar = tarfile.open(path_dataset_tar, 'r:xz')
+        tar.extractall()
+        tar.close()
+
     tiny_resnet = TinyResNet()
-    path_dataset = './traffic_light_data/'
     optim = tf.keras.optimizers.Adam(learning_rate=1e-3)
 
     train_class = Training(tiny_resnet, path_dataset, optim, 32)
