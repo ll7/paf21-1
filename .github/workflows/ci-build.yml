@@ -22,5 +22,6 @@ jobs:
 
       - name: Run the Integration Tests
         run: |
-          wget https://some-url-to-bagfile -O ./mock_recordings/recording.bag
+          mkdir mock_recordings
+          wget -O ./mock_recordings/recording.bag https://some-url-to-bagfile
           docker-compose -f integration-tests-compose.yml up --abort-on-container-exit
