@@ -2,17 +2,11 @@
 
 from dataclasses import dataclass, field
 from math import dist, sin, cos
-from typing import List, Tuple, Dict
-
-from cv2 import cv2
+from typing import List, Tuple
 import numpy as np
 
-import rospy
-from sensor_msgs.msg import Imu as ImuMsg
-from nav_msgs.msg import Odometry as OdometryMsg
-
 from local_planner.vehicle_control import DrivingController
-from local_planner.traffic_light_detection import TrafficLightDetector
+from local_planner.traffic_light_detection.traffic_light_detection import TrafficLightDetector
 from local_planner.lane_detection import LaneDetection
 from local_planner.preprocessing import SensorCameraPreprocessor
 from local_planner.state_machine import SpeedObservation, SpeedStateMachine, TrafficLightPhase
