@@ -3,16 +3,18 @@ from typing import Tuple, List
 import cv2
 import numpy as np
 import yaml
+from tiny_res_net import TinyResNet
 
 
 class TrafficLightDetector:
     # pylint: disable=too-many-instance-attributes
     """A Module that detects traffic lights"""
+    model: TinyResNet
     lower_mask: Tuple[int, int, int]
     upper_mask: Tuple[int, int, int]
     box_offset: int = 0
     enhanced_dim: Tuple[int, int]
-    states: List[str] = ['Red', 'Yellow', 'Green', 'Green']
+    states: List[str] = ['Red', 'Yellow', 'Green', 'Back']
     crop_left_right: int
     crop_top_bottom: int
     value_backside: int
@@ -21,6 +23,9 @@ class TrafficLightDetector:
     def __init__(self, config_path):
         with open(config_path, encoding='utf-8') as file:
             config = yaml.safe_load(file)
+            classes = config['classes']
+            self.model = TinyResNet(classes).build(config['nn_input_size'])
+            TinyResNet.load_model_weights(self.model, config['weights_path'])
             self.lower_mask = config['lower_bound']
             self.upper_mask = config['upper_bound']
             self.box_offset = config['box_offset']
@@ -29,7 +34,8 @@ class TrafficLightDetector:
             self.crop_top_bottom = config['crop_top_bottom']
             self.crop_left_right = config['crop_left_right']
 
-    def detect_traffic_light(self, semantic_image, rgb_image, depth_image) -> Tuple[float, str, np.ndarray]:
+    def detect_traffic_light(self, semantic_image, rgb_image,
+                             depth_image) -> Tuple[float, str, np.ndarray]:
         """main function to get traffic lights and distance"""
         rectangles = self.get_mask(semantic_image)
         marked_image = rgb_image
@@ -45,11 +51,11 @@ class TrafficLightDetector:
             meters, middle = TrafficLightDetector.get_distance_from_depth(rectangles, depth_image)
             if meters < 25:
                 tl_color_bright = self.classify_traffic_light_brightness(enhanced_image)
-                #tl_color_dominance = self.get_color_dominance(enhanced_image)
+                tl_color_classify = TinyResNet.prediction(self.model, enhanced_image)
                 if tl_color_bright is not None:
                     state_votes[tl_color_bright] += 1
-                #if tl_color_dominance is not None:
-                #    state_votes[tl_color_dominance] += 0.6
+                if tl_color_classify is not None:
+                    state_votes[tl_color_classify] += 1
                 tl_color = self.states[np.argmax(list(state_votes.values()))]
                 marked_image = cv2.circle(np.array(rgb_image), middle, 10,
                                           color=(0, 0, 255), thickness=1)
@@ -85,8 +91,7 @@ class TrafficLightDetector:
         lower_mask = np.array(self.lower_mask)
         upper_mask = np.array(self.upper_mask)
         masked_image = cv2.inRange(orig_image, lower_mask, upper_mask)
-        contours, _ = cv2.findContours(masked_image, cv2.RETR_LIST,
-                                       cv2.CHAIN_APPROX_SIMPLE)[-2:]
+        contours, _ = cv2.findContours(masked_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[-2:]
         idx = 0
         bounding_boxes = []
         for cnt in contours:
@@ -127,15 +132,13 @@ class TrafficLightDetector:
         hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
 
         hsv = hsv[self.crop_top_bottom: self.enhanced_dim[1] - self.crop_top_bottom,
-              self.crop_left_right: self.enhanced_dim[0] - self.crop_left_right]
+                  self.crop_left_right: self.enhanced_dim[0] - self.crop_left_right]
         brightness = hsv[:, :, 2]
         summed_brightness = np.sum(brightness, axis=1)
         range_height = int(self.enhanced_dim[1] - self.crop_top_bottom * 2)
         sum_red = np.sum(summed_brightness[0: int(range_height * 1 / 3)])
-        sum_yellow = np.sum(summed_brightness[int(range_height * 1 / 3):
-                                              int(range_height * 2 / 3)])
-        sum_green = np.sum(summed_brightness[int(range_height * 1 / 3):
-                                             int(range_height * 3 / 3)])
+        sum_yellow = np.sum(summed_brightness[int(range_height * 1 / 3): int(range_height * 2 / 3)])
+        sum_green = np.sum(summed_brightness[int(range_height * 1 / 3): int(range_height * 3 / 3)])
         sum_back = self.value_backside if np.sum(summed_brightness) <= self.value_backside \
             else 0
         # f, (b) = plt.subplots(1, 1, figsize=(10, 5))
@@ -154,6 +157,11 @@ class TrafficLightDetector:
         else:
             decision = 'Green'
         return decision
+
+    def get_classification_from_nn(self, image: np.ndarray):
+        image = TinyResNet.resize_image(image, np.zeros(0))
+        prediction = TinyResNet.prediction(self.model, image)
+        return TinyResNet.class_dict[prediction]
 
     @staticmethod
     def get_distance_from_depth(rectangles, depth_image):
@@ -192,13 +200,12 @@ class TrafficLightDetector:
         for cur_row in cropped_image:
             for pixel in cur_row:
                 if pixel[0] > threshold_min and pixel[1] < pixel[0] * threshold_rel \
-                        and pixel[2] < pixel[
-                    0] * threshold_rel:
+                        and pixel[2] < pixel[0] * threshold_rel:
                     agg_colors[0] += 1
                 if pixel[0] > threshold_min and pixel[1] > threshold_min \
                         and pixel[2] < pixel[0] * threshold_rel:
                     agg_colors[1] += 1
-                if pixel[1] > threshold_min and pixel[0] < pixel[1] * threshold_rel\
+                if pixel[1] > threshold_min and pixel[0] < pixel[1] * threshold_rel \
                         and pixel[2] < threshold_min_b:
                     agg_colors[2] += 1
 
