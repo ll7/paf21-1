@@ -47,14 +47,6 @@ services:
       - carla
       - ros
 
-  # vehicle-controller:
-  #   image: vehicle_controller
-  #   environment:
-  #     ROS_MASTER_URI: http://roscore:11311
-  #     ROS_HOSTNAME: vehicle-controller
-  #   networks:
-  #     - ros
-
   local-planner:
     image: local_planner
     volumes:
@@ -67,13 +59,25 @@ services:
 
   global-planner:
     image: global_planner
-    # volumes:
-    #   - './logs:/app/logs'
     environment:
       ROS_MASTER_URI: http://roscore:11311
       ROS_HOSTNAME: global-planner
     networks:
       - ros
+
+  # WARNING: this recorder might write several dozens of gigabites within minutes
+  #          use it carefully and only for recording
+  # rosbag-recorder:
+  #   image: ros:noetic
+  ##   command: rosbag record -O /app/recordings/recording.bag --all
+  #   command: rosbag record -O /app/recordings/recording.bag -e "/drive/(.*)" "/carla/(.*)/ackermann_cmd"
+  #   volumes:
+  #     - './recordings:/app/recordings'
+  #   environment:
+  #     ROS_MASTER_URI: http://roscore:11311
+  #     ROS_HOSTNAME: rosbag-recorder
+  #   networks:
+  #     - ros
 
 networks:
   carla:
