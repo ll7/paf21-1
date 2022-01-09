@@ -16,4 +16,11 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build the Docker images
-        run: cd components && docker-compose -f driving-components-build.yml build
+        run: |
+          cd components
+          docker-compose -f driving-components-build.yml build
+
+      - name: Run the Integration Tests
+        run: |
+          wget https://some-url-to-bagfile -O ./mock_recordings/recording.bag
+          docker-compose -f integration-tests-compose.yml up --abort-on-container-exit
