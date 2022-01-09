@@ -86,9 +86,7 @@ class ConvolutionalBlock(tf.keras.layers.Layer):
 class TinyResNet(tf.keras.Model):
     stage1: List[tf.keras.layers.Layer]
     stage2: List[tf.keras.layers.Layer]
-    # stage3: List[tf.keras.layers.Layer]
-    # stage4: List[tf.keras.layers.Layer]
-    stage5: List[tf.keras.layers.Layer]
+    stage3: List[tf.keras.layers.Layer]
     average_pool: tf.keras.layers.Layer
     flatten: tf.keras.layers.Layer
     classification_layer: tf.keras.layers.Layer
@@ -108,17 +106,7 @@ class TinyResNet(tf.keras.Model):
             IdentityBlock(f=3, filters=[16, 16, 64])
         ]
 
-        # self.stage3 = [
-        #     ConvolutionalBlock(f=3, filters=[64, 64, 256], s=2),
-        #     IdentityBlock(f=3, filters=[64, 64, 256])
-        # ]
-        #
-        # self.stage4 = [
-        #     ConvolutionalBlock(f=3, filters=[128, 128, 512], s=2),
-        #     IdentityBlock(f=3, filters=[128, 128, 512])
-        # ]
-
-        self.stage5 = [
+        self.stage3 = [
             ConvolutionalBlock(f=3, filters=[32, 32, 128], s=2),
             IdentityBlock(f=3, filters=[32, 32, 128])
         ]
@@ -134,15 +122,9 @@ class TinyResNet(tf.keras.Model):
 
         for i in range(len(self.stage2)):
             out = self.stage2[i](out, training=training)
-        #
-        # for i in range(len(self.stage3)):
-        #     out = self.stage3[i](out, training=training)
-        #
-        # for i in range(len(self.stage4)):
-        #     out = self.stage4[i](out, training=training)
 
-        for i in range(len(self.stage5)):
-            out = self.stage5[i](out, training=training)
+        for i in range(len(self.stage3)):
+            out = self.stage3[i](out, training=training)
 
         out = self.average_pool(out, training=training)
         out = self.flatten(out, training=training)
@@ -157,6 +139,8 @@ class Training:
         image = tf.math.divide(image, 255.0)
         image = tf.image.resize(image, size=(64, 64))
         image = tf.image.random_brightness(image, max_delta=0.5, seed=42)
+        # image = tf.image.random_flip_left_right
+        # image = tf.image.random
         return image, label
 
     @staticmethod
@@ -263,7 +247,7 @@ if __name__ == '__main__':
         validation_accuracy = tf.keras.metrics.Accuracy()
 
         Training.train_loop(tiny_resnet, optimizers, dataset_train, dataset_val, validation_accuracy,
-                            batch_size=32, epochs=16, steps_per_epoch=500)
+                            batch_size=32, epochs=10, steps_per_epoch=500)
 
         Training.save_weights(tiny_resnet, 'weights.h5')
     else:
