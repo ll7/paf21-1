@@ -246,21 +246,13 @@ class TinyResNet(tf.keras.Model):
 
 
 if __name__ == '__main__':
-    # import tarfile
-    # path_dataset_tar = path_dataset + '.tar.xz'
-    #
-    # if path_dataset_tar.endswith('.tar.xz'):
-    #     tar = tarfile.open(path_dataset_tar, 'r:xz')
-    #     tar.extractall()
-    #     tar.close()
-
     IS_TRAIN = True
     PATH_DATASET = './traffic_light_data'
 
     builder = ImageFolder(PATH_DATASET)
     dataset_train = builder.as_dataset(split='train', shuffle_files=True, as_supervised=True)
     dataset_val = builder.as_dataset(split='val', shuffle_files=False, as_supervised=True)
-    classes = {0: 'back', 1: 'green', 2: 'red', 3: 'yellow'}
+    classes = {0: 'backside', 1: 'green', 2: 'red', 3: 'yellow'}
 
     tiny_resnet = TinyResNet(class_dict=classes)
     tiny_resnet.build((None, 64, 64, 3))

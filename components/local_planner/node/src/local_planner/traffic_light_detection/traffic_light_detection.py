@@ -14,7 +14,7 @@ class TrafficLightDetector:
     upper_mask: Tuple[int, int, int]
     box_offset: int = 0
     enhanced_dim: Tuple[int, int]
-    states: List[str] = ['Red', 'Yellow', 'Green', 'Back']
+    states: List[str] = ['Red', 'Yellow', 'Green', 'Backside']
     crop_left_right: int
     crop_top_bottom: int
     value_backside: int
@@ -42,7 +42,7 @@ class TrafficLightDetector:
         meters = float('inf')
         tl_color = 'Green'
         if len(rectangles) > 0:
-            state_votes = {'Red': 0, 'Yellow': 0, 'Green': 0, 'Back': 0}
+            state_votes = {'Red': 0, 'Yellow': 0, 'Green': 0, 'Backside': 0}
             rectangles = [rect for rect in rectangles if rect[2] * rect[3] ==
                           max(rect[2] * rect[3] for rect in rectangles)]
             # if rectangles[0][2] * rectangles[0][3] <= 5 * 15:
