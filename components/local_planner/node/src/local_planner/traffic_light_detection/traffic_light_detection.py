@@ -47,6 +47,7 @@ class TrafficLightDetector:
                           max(rect[2] * rect[3] for rect in rectangles)]
             # if rectangles[0][2] * rectangles[0][3] <= 5 * 15:
             #    return meters, tl_color, marked_image
+            print(f'Rectangles {len(rectangles)} and Image Size {rgb_image.shape}')
             enhanced_image = self.apply_mask(rectangles, rgb_image)
             meters, middle = TrafficLightDetector.get_distance_from_depth(rectangles, depth_image)
             if meters < 100:
@@ -90,13 +91,18 @@ class TrafficLightDetector:
         """gets bounding boxes around traffic lights (analog applicable on other objects)"""
         lower_mask = np.array(self.lower_mask)
         upper_mask = np.array(self.upper_mask)
+        cv2.imwrite(f'/app/logs/test_data_orig_{self.counter}.png', orig_image)
         masked_image = cv2.inRange(orig_image, lower_mask, upper_mask)
-        contours, _ = cv2.findContours(masked_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[-2:]
+        cv2.imwrite(f'/app/logs/test_data_mask_{self.counter}.png', masked_image)
+        # contours, _ = cv2.findContours(masked_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[-2:]
+        contours, _ = cv2.findContours(masked_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         idx = 0
         bounding_boxes = []
         for cnt in contours:
             idx += 1
+            print(f'Contour {cnt}')
             x_corner, y_corner, width, height = cv2.boundingRect(cnt)
+            print(f'BoundingRect {x_corner}, {y_corner}, {width}, {height}')
             width = min(width, orig_image.shape[1] - x_corner)
             height = min(height, orig_image.shape[0] - y_corner)
             bounding_boxes.append([x_corner - self.box_offset, y_corner - self.box_offset,
@@ -111,9 +117,15 @@ class TrafficLightDetector:
         for rect in rectangles:
             # check if traffic light is even close enough to be considered
             if rect[2] * rect[3] > 0:
+                print(f'Rect {rect}')
+                print(f'Image shape: {image.shape}')
+                cv2.imwrite(f'/app/logs/test_data_image_{self.counter}.png', image)
                 traffic_light_image = image[rect[1]:rect[1] + rect[3], rect[0]:rect[0] + rect[2]]
+                print(f'Traffic Light Image shape: {traffic_light_image.shape}')
+                cv2.imwrite(f'/app/logs/test_data_tl_{self.counter}.png', traffic_light_image)
                 enhanced_image = cv2.resize(traffic_light_image, self.enhanced_dim,
                                             interpolation=cv2.INTER_AREA)
+                print(f'Enhanced Image shape: {enhanced_image.shape}')
                 # cv2.imwrite(f'test_data/test_data_{counter}.png', enhanced_image)
                 self.counter += 1
                 vertices.append(np.array([
@@ -158,11 +170,14 @@ class TrafficLightDetector:
         return decision
 
     def get_classification_nn(self, image: np.ndarray):
+        """Classifier for Traffic Lights using the TinyResNet."""
         if len(image.shape) < 4:
             image = image[np.newaxis, :]
         image, _ = TinyResNet.resize_image(image, np.zeros(0))
         prediction = TinyResNet.prediction(self.model, image)
-        return self.model.class_dict[int(prediction[0])]
+        pred_class = self.model.class_dict[int(prediction[0])]
+        print(f'Prediction {pred_class}')
+        return pred_class
 
     @staticmethod
     def get_distance_from_depth(rectangles, depth_image):
