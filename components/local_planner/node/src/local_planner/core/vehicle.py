@@ -23,9 +23,9 @@ class Vehicle:
 
     length_between_axles_m: float = 3.1
     max_steering_angle_rad: float = 0.5
-    base_accel_mps2: float = 10.0
-    base_brake_mps2: float = -10.0
-    vehicle_reaction_time_s: float = 1
+    base_accel_mps2: float = 3.0
+    base_brake_mps2: float = -8.0
+    vehicle_reaction_time_s: float = 0.1
 
     def move(self, new_pos: Tuple[float, float]):
         """Move the car towards the new position"""
@@ -43,6 +43,7 @@ class Vehicle:
         self.pos_update_rostime = new_timestamp
 
     def update_speed(self, speed):
+        """function to update the current velocity of the car"""
         self.actual_velocity_mps = speed
 
     def steer_towards(self, aim_point: Tuple[float, float]):

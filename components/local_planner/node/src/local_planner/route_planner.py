@@ -7,10 +7,6 @@ from typing import List, Tuple, Dict
 from cv2 import cv2
 import numpy as np
 
-import rospy
-from sensor_msgs.msg import Imu as ImuMsg
-from nav_msgs.msg import Odometry as OdometryMsg
-
 from local_planner.vehicle_control import DrivingController
 from local_planner.traffic_light_detection import TrafficLightDetector
 from local_planner.lane_detection import LaneDetection
