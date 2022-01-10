@@ -83,19 +83,22 @@ class LocalPlannerNode:
     def _init_vehicle_orientation_subscriber(self):
         in_topic = f"/carla/{self.vehicle.name}/imu/imu1"
         msg_to_orientation = RosDrivingMessagesAdapter.message_to_orientation
-        callback = lambda msg: self.route_planner.driving_control.update_vehicle_orientation(msg_to_orientation(msg))
+        callback = lambda msg: self.route_planner.driving_control.update_vehicle_orientation(
+            msg_to_orientation(msg))
         rospy.Subscriber(in_topic, ImuMsg, callback)
 
     def _init_vehicle_position_subscriber(self):
         in_topic = f"/carla/{self.vehicle.name}/odometry"
         msg_to_position = RosDrivingMessagesAdapter.message_to_vehicle_position
-        callback = lambda msg: self.route_planner.driving_control.update_vehicle_position(msg_to_position(msg))
+        callback = lambda msg: self.route_planner.driving_control.update_vehicle_position(
+            msg_to_position(msg))
         rospy.Subscriber(in_topic, OdometryMsg, callback)
 
     def _init_front_camera_subscribers(self):
         camera_semantic_seg = "semantic_segmentation/front/image_segmentation"
         in_semantic_topic = f"/carla/{self.vehicle.name}/camera/{camera_semantic_seg}"
-        rospy.Subscriber(in_semantic_topic, ImageMsg, self.image_preprocessor.process_semantic_image)
+        rospy.Subscriber(in_semantic_topic, ImageMsg,
+                         self.image_preprocessor.process_semantic_image)
 
         camera_depth = 'depth/front/image_depth'
         in_depth_topic = f"/carla/{self.vehicle.name}/camera/{camera_depth}"

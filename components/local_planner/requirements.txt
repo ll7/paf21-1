@@ -3,3 +3,7 @@ pytest
 pylint
 opencv-python
 numpy
+tensorflow
+tensorflow_datasets
+tqdm
+matplotlib

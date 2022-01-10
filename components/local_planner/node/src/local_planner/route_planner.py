@@ -106,8 +106,8 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         semantic_image = cv2.resize(images_list['semantic'][:, :, :3], (900, 600))
 
         # TODO: return the traffic light's position in case something was found
-        meters, tl_color, highlighted_img = self.traffic_light_detection. \
-            detect_traffic_light(semantic_image, rgb_image, depth_image)
+        meters, tl_color, highlighted_img = self.traffic_light_detection.detect_traffic_light(
+            semantic_image, rgb_image, depth_image)
 
         stop_vehicle = tl_color in ['Green', 'Backside', 'Yellow']
         tl_phase = TrafficLightPhase.Green if stop_vehicle else TrafficLightPhase.Red

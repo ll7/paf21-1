@@ -59,7 +59,7 @@ class SpeedStateMachine:
 
     def _handle_keep(self, obs: SpeedObservation):
         if self.legal_speed_limit_mps < self.vehicle.actual_velocity_mps or not obs.is_junction_free \
-                or (obs.tl_phase == TrafficLightPhase.Red and self._is_brake_required(obs)):
+                or (obs.tl_phase == TrafficLightPhase.Red and self._is_brake_required(obs, 0)):
             self.current_state = SpeedState.Brake
         elif self.legal_speed_limit_mps > self.vehicle.actual_velocity_mps \
                 and obs.is_junction_free and obs.tl_phase == TrafficLightPhase.Green:
