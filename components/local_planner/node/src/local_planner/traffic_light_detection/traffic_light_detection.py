@@ -51,7 +51,7 @@ class TrafficLightDetector:
             meters, middle = TrafficLightDetector.get_distance_from_depth(rectangles, depth_image)
             if meters < 25:
                 tl_color_bright = self.classify_traffic_light_brightness(enhanced_image)
-                tl_color_classify = self.get_classification_from_nn(enhanced_image)
+                tl_color_classify = self.get_classification_nn(enhanced_image)
                 if tl_color_bright is not None:
                     state_votes[tl_color_bright] += 1
                 if tl_color_classify is not None:
@@ -139,8 +139,7 @@ class TrafficLightDetector:
         sum_red = np.sum(summed_brightness[0: int(range_height * 1 / 3)])
         sum_yellow = np.sum(summed_brightness[int(range_height * 1 / 3): int(range_height * 2 / 3)])
         sum_green = np.sum(summed_brightness[int(range_height * 1 / 3): int(range_height * 3 / 3)])
-        sum_back = self.value_backside if np.sum(summed_brightness) <= self.value_backside \
-            else 0
+        sum_back = self.value_backside if np.sum(summed_brightness) <= self.value_backside else 0
         # f, (b) = plt.subplots(1, 1, figsize=(10, 5))
         # b.set_title("Brightness vector")
         # b.barh(range(len(summed_brightness)), summed_brightness)
@@ -158,12 +157,12 @@ class TrafficLightDetector:
             decision = 'Green'
         return decision
 
-    def get_classification_from_nn(self, image: np.ndarray):
+    def get_classification_nn(self, image: np.ndarray):
         if len(image.shape) < 4:
             image = image[np.newaxis, :]
-        image = TinyResNet.resize_image(image, np.zeros(0))
+        image, _ = TinyResNet.resize_image(image, np.zeros(0))
         prediction = TinyResNet.prediction(self.model, image)
-        return TinyResNet.class_dict[prediction]
+        return self.model.class_dict[int(prediction[0])]
 
     @staticmethod
     def get_distance_from_depth(rectangles, depth_image):
