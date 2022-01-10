@@ -24,12 +24,12 @@ class LaneDetection:  # pylint: disable=too-few-public-methods
     angle_lower_bound: int
     angle_upper_bound: int
     last_middle: Tuple[int, int, int, int] = None
-    x_offset_left: int = 300
-    x_offset_right: int = -300
+    x_offset_left: int = 100
+    x_offset_right: int = -100
     counter_angle = 18
     last_angle: float = 0.0
     discount_car_length: float = 0
-    max_deviation: int = 360
+    max_deviation: int = 180
 
     def __init__(self, config_path):
         with open(config_path, encoding='utf-8') as file:
