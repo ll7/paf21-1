@@ -43,23 +43,27 @@ class TrafficLightDetector:
         tl_color = 'Green'
         if len(rectangles) > 0:
             state_votes = {'Red': 0, 'Yellow': 0, 'Green': 0, 'Backside': 0}
-            rectangles = [rect for rect in rectangles if rect[2] * rect[3] ==
-                          max(rect[2] * rect[3] for rect in rectangles)]
-            # if rectangles[0][2] * rectangles[0][3] <= 5 * 15:
-            #    return meters, tl_color, marked_image
-            print(f'Rectangles {len(rectangles)} and Image Size {rgb_image.shape}')
-            enhanced_image = self.apply_mask(rectangles, rgb_image)
-            meters, middle = TrafficLightDetector.get_distance_from_depth(rectangles, depth_image)
+            distances, middles = TrafficLightDetector.get_distance_from_depth(rectangles,
+                                                                              depth_image)
+            nearest_index = np.argmin(distances)
+            meters = distances[nearest_index]
+            nearest_rect = rectangles[nearest_index]
+            enhanced_image = self.apply_mask([nearest_rect], rgb_image)
             if meters < 100:
                 tl_color_bright = self.classify_traffic_light_brightness(enhanced_image)
                 tl_color_classify = self.get_classification_nn(enhanced_image)
                 if tl_color_bright is not None:
-                    state_votes[tl_color_bright] += 1
+                    state_votes[tl_color_bright] += 0
                 if tl_color_classify is not None:
                     state_votes[tl_color_classify] += 1
                 tl_color = self.states[np.argmax(list(state_votes.values()))]
-                marked_image = cv2.circle(np.array(rgb_image), middle, 10,
-                                          color=(0, 0, 255), thickness=1)
+                # marked_image = cv2.circle(np.array(rgb_image), nearest_middle, 10,
+                #                           color=(0, 0, 255), thickness=1)
+                marked_image = cv2.rectangle(np.array(rgb_image),
+                                             (nearest_rect[0], nearest_rect[1]),
+                                             (nearest_rect[0]+nearest_rect[2],
+                                              nearest_rect[1]+nearest_rect[3]),
+                                             color=(0, 0, 255), thickness=1)
 
         marked_image = TrafficLightDetector.add_text_into_image(meters, tl_color, marked_image)
         return meters, tl_color, marked_image
@@ -91,18 +95,14 @@ class TrafficLightDetector:
         """gets bounding boxes around traffic lights (analog applicable on other objects)"""
         lower_mask = np.array(self.lower_mask)
         upper_mask = np.array(self.upper_mask)
-        cv2.imwrite(f'/app/logs/test_data_orig_{self.counter}.png', orig_image)
         masked_image = cv2.inRange(orig_image, lower_mask, upper_mask)
-        cv2.imwrite(f'/app/logs/test_data_mask_{self.counter}.png', masked_image)
         # contours, _ = cv2.findContours(masked_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[-2:]
         contours, _ = cv2.findContours(masked_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         idx = 0
         bounding_boxes = []
         for cnt in contours:
             idx += 1
-            print(f'Contour {cnt}')
             x_corner, y_corner, width, height = cv2.boundingRect(cnt)
-            print(f'BoundingRect {x_corner}, {y_corner}, {width}, {height}')
             width = min(width, orig_image.shape[1] - x_corner)
             height = min(height, orig_image.shape[0] - y_corner)
             bounding_boxes.append([x_corner - self.box_offset, y_corner - self.box_offset,
@@ -117,9 +117,6 @@ class TrafficLightDetector:
         for rect in rectangles:
             # check if traffic light is even close enough to be considered
             if rect[2] * rect[3] > 0:
-                print(f'Rect {rect}')
-                print(f'Image shape: {image.shape}')
-                cv2.imwrite(f'/app/logs/test_data_image_{self.counter}.png', image)
                 traffic_light_image = image[rect[1]:rect[1] + rect[3], rect[0]:rect[0] + rect[2]]
                 print(f'Traffic Light Image shape: {traffic_light_image.shape}')
                 cv2.imwrite(f'/app/logs/test_data_tl_{self.counter}.png', traffic_light_image)
@@ -182,16 +179,19 @@ class TrafficLightDetector:
     @staticmethod
     def get_distance_from_depth(rectangles, depth_image):
         """retrieves distance from depth image"""
-        rect = rectangles[0]
-        x_middle = int(rect[0] + rect[2] / 2)
-        y_middle = int(rect[1] + rect[3] / 2)
-        img_width = depth_image.shape[1] - 1
-        img_height = depth_image.shape[0] - 1
-        middle_point = [x_middle if x_middle < img_width
-                        else img_width,
-                        y_middle if y_middle < img_height else img_height]
-        pixel = depth_image[middle_point[1]][middle_point[0]]
-        return pixel, middle_point
+        pixels = []
+        middle_points = []
+        for rect in rectangles:
+            x_middle = int(rect[0] + rect[2] / 2)
+            y_middle = int(rect[1] + rect[3] / 2)
+            img_width = depth_image.shape[1] - 1
+            img_height = depth_image.shape[0] - 1
+            middle_point = [x_middle if x_middle < img_width
+                            else img_width,
+                            y_middle if y_middle < img_height else img_height]
+            pixels.append(depth_image[middle_point[1]][middle_point[0]])
+            middle_points.append(middle_point)
+        return pixels, middle_points
 
     def get_color_dominance(self, loc_image):
         """This function searches for a very dominant red,
