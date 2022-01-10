@@ -4,9 +4,10 @@ from dataclasses import dataclass, field
 from math import dist, sin, cos
 from typing import List, Tuple
 import numpy as np
+import cv2
 
 from local_planner.vehicle_control import DrivingController
-from local_planner.traffic_light_detection.traffic_light_detection import TrafficLightDetector
+from local_planner.traffic_light_detection import TrafficLightDetector
 from local_planner.lane_detection import LaneDetection
 from local_planner.preprocessing import SensorCameraPreprocessor
 from local_planner.state_machine import SpeedObservation, SpeedStateMachine, TrafficLightPhase
@@ -103,15 +104,15 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         semantic_image = images_list['semantic'][:, :, :3]
 
         # TODO: return the traffic light's position in case something was found
-        meters, tl_color, highlighted_img = self.traffic_light_detection. \
-            detect_traffic_light(semantic_image, rgb_image, depth_image)
+        meters, tl_color, highlighted_img = self.traffic_light_detection.detect_traffic_light(
+            semantic_image, rgb_image, depth_image)
 
-        stop_vehicle = tl_color in ['Green', 'Backside']
+        stop_vehicle = tl_color in ['Green', 'Back']
         tl_phase = TrafficLightPhase.Green if stop_vehicle else TrafficLightPhase.Red
 
-        # if self.step_semantic % 10 == 0 and self.step_semantic < 10000:
-        #     img_log_path = f"/app/logs/img_{self.step_semantic}_traffic_light.png"
-        #     cv2.imwrite(img_log_path, highlighted_img)
+        if self.step_semantic % 100 == 0 and self.step_semantic < 10000:
+            img_log_path = f"/app/logs/img_{self.step_semantic}_traffic_light.png"
+            cv2.imwrite(img_log_path, highlighted_img)
 
         return tl_phase, meters
 
