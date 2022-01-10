@@ -1,4 +1,5 @@
 """A xodr converter based on xodr files."""
+from math import sin, cos
 from enum import IntEnum
 from xml.etree import ElementTree as eTree
 from xml.etree.ElementTree import Element
@@ -23,11 +24,9 @@ class TrafficSign:
 @dataclass
 class Geometry:
     """Represents the data of a geometry object."""
-    start_point: np.ndarray
-    end_point: np.ndarray
-    angle: float
+    start_point: Tuple[float, float]
+    end_point: Tuple[float, float]
     length: float
-    curvature: float
 
 
 class LinkType(IntEnum):
@@ -55,7 +54,6 @@ class RoadLink:
         self.__post_init__()
 
     def __post_init__(self):
-        print('Post_Init_RoadLink')
         if self.contact_point == 'start':
             self.contact_link = 0
             self.sign = -1 if self.link_type == LinkType.PRE else 1
@@ -75,7 +73,8 @@ class Road:
     right_ids: List[int]
     line_type: str
     traffic_signs: List[TrafficSign]
-    geometry: List[Geometry]
+    geometries: List[Geometry]
+    road_width: float
     suc: RoadLink = None
     pre: RoadLink = None
 
@@ -92,7 +91,8 @@ class Road:
         self.left_ids, self.right_ids = Road._get_lane_id(road_xml)
         self.line_type = Road._get_line_type(road_xml)
         self.traffic_signs = Road._get_traffic_signs(road_xml)
-        self.geometry = Road._get_geometry(road_xml)
+        self.geometries = Road._get_geometry(road_xml)
+        self.road_width = Road._get_road_width(road_xml)
 
     @staticmethod
     def _get_line_type(road: Element) -> str:
@@ -101,7 +101,7 @@ class Road:
         return lane_sec.find('center').find('lane').find('roadMark').get('type')
 
     @staticmethod
-    def _get_lane_id(road: Element) -> list:
+    def _get_lane_id(road: Element) -> List[List[int]]:
         """Get the lane id."""
         directions = ['left', 'right']
         return_ids = [[], []]
@@ -116,6 +116,22 @@ class Road:
 
                 return_ids[i].append(int(lane.get('id')))
         return return_ids
+
+    @staticmethod
+    def _get_road_width(road: Element) -> float:
+        """Get the lane id."""
+        default_road_width = 4.0
+        directions = ['left', 'right']
+
+        lane_sec = road.find('lanes').find('laneSection')
+        for direction in directions:
+            if lane_sec.find(direction) is None:
+                continue
+            for lane in lane_sec.find(direction).findall('lane'):
+                if lane.get('type') != 'driving':
+                    continue
+                return float(lane.find('width').get('a'))
+        return default_road_width
 
     @staticmethod
     def _get_traffic_signs(road: Element) -> list:
@@ -136,28 +152,26 @@ class Road:
             return []
 
         objects = []
-        for geometry in plan_view.findall('geometry'):
-            start_point = np.array([geometry.get('x'), geometry.get('y')], dtype=np.float32)
-            angle = float(geometry.get('hdg'))
-            length = float(geometry.get('length'))
+        geometries = plan_view.findall('geometry')
+        for i in range(len(geometries)):
+            geo_0 = geometries[i]
+            start_point = (float(geo_0.get('x')), float(geo_0.get('y')))
+            length = float(geo_0.get('length'))
+            if i < len(geometries)-1:
+                geo_1 = geometries[i+1]
+                end_point = (float(geo_1.get('x')), float(geo_1.get('y')))
+            else:
+                angle = float(geo_0.get('hdg'))
+                end_point = Road._calculate_end_point(start_point, angle, length)
 
-            curvature = float(geometry.find('arc').get('curvature')) \
-                if geometry.find('arc') is not None else 0.0
-
-            end_point = Road._calculate_end_point(start_point, angle, length, curvature)
-            objects.append(Geometry(start_point, end_point, angle, length, curvature))
+            objects.append(Geometry(start_point, end_point, length))
 
         return objects
 
     @staticmethod
-    def _calculate_end_point(start_point: np.ndarray, angle: float,
-                             length: float, arc: float) -> np.ndarray:
-        """Calculate the end point based on the start point, angle, length and arc."""
-        # TODO check implementation and add arc
-        # https://www.delftstack.com/howto/numpy/curvature-formula-numpy/
-        rotation = np.array([np.cos(angle), np.sin(angle)], dtype=np.float32)
-        end_point = start_point + rotation * length
-        return end_point
+    def _calculate_end_point(start_point: Tuple[float, float], angle: float,
+                             length: float) -> Tuple[float, float]:
+        return start_point[0] + cos(angle) * length, start_point[1] + sin(angle) * length
 
 
 @dataclass
@@ -219,7 +233,6 @@ class XodrMap:
     matrix: np.ndarray = None
 
     def __post_init__(self):
-        print('Post Init XodrMap')
         if self.matrix is None:
             self.matrix = self._create_links()
 
@@ -237,7 +250,7 @@ class XodrMap:
         for road in self.lane_lets:
             # TODO Cost function
             length = 0
-            for geometry in road.geometry:
+            for geometry in road.geometries:
                 length += geometry.length
 
             for link in road.left_ids:
@@ -289,7 +302,6 @@ class XodrMap:
                 matrix[index_link][index_road] = 1e-6
 
     def _get_connected_lane_ids(self, lane_link: int, link: RoadLink, road_id: int):
-        print(link)
         key = create_key(link.road_link_id, link.contact_link, link.sign * lane_link)
         index_link = self.mapping[key]
         key = create_key(road_id, link.contact_road, lane_link)
@@ -346,15 +358,6 @@ class XODRConverter:
                 counter += 2
 
         return mapping
-
-    # @staticmethod
-    # def _get_root(filepath: Path) -> Element:
-    #     # check if file exist
-    #     if not exists(filepath) or not isfile(filepath):
-    #         raise FileNotFoundError
-    #
-    #     # get the root of the xml file
-    #     return eTree.parse(filepath).getroot()
 
     # @staticmethod
     # def _road_id2index(road_id: int, mapping: dict) -> Tuple[int, int]:
