@@ -3,6 +3,7 @@
 import json
 from typing import Tuple, List
 from math import atan2
+import rospy
 
 from ackermann_msgs.msg import AckermannDrive
 from std_msgs.msg import String as StringMsg, Float32 as FloatMsg
@@ -28,6 +29,12 @@ class RosDrivingMessagesAdapter:
         """Convert a ROS message into waypoints"""
         waypoints = [(p.pose.position.x, p.pose.position.y) for p in msg.poses]
         return waypoints
+
+    @staticmethod
+    def vehicle_status_to_velocity(msg: ImuMsg):
+        print(msg)
+        print(f'{msg.speed} speed ')
+        return msg.speed
 
     @staticmethod
     def message_to_target_velocity(msg: FloatMsg) -> float:

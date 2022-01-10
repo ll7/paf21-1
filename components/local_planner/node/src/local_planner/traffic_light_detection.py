@@ -39,16 +39,16 @@ class TrafficLightDetector:
             state_votes = {'Red': 0, 'Yellow': 0, 'Green': 0}
             rectangles = [rect for rect in rectangles if rect[2] * rect[3] ==
                           max(rect[2] * rect[3] for rect in rectangles)]
-            if rectangles[0][2] * rectangles[0][3] <= 5 * 15:
-                return meters, tl_color, marked_image
+            # if rectangles[0][2] * rectangles[0][3] <= 5 * 15:
+            #    return meters, tl_color, marked_image
             enhanced_image = self.apply_mask(rectangles, rgb_image)
             meters, middle = TrafficLightDetector.get_distance_from_depth(rectangles, depth_image)
-            if meters < 25:
+            if meters < 100:
                 tl_color_bright = self.classify_traffic_light_brightness(enhanced_image)
-                #tl_color_dominance = self.get_color_dominance(enhanced_image)
+                # tl_color_dominance = self.get_color_dominance(enhanced_image)
                 if tl_color_bright is not None:
                     state_votes[tl_color_bright] += 1
-                #if tl_color_dominance is not None:
+                # if tl_color_dominance is not None:
                 #    state_votes[tl_color_dominance] += 0.6
                 tl_color = self.states[np.argmax(list(state_votes.values()))]
                 marked_image = cv2.circle(np.array(rgb_image), middle, 10,
@@ -161,13 +161,12 @@ class TrafficLightDetector:
         rect = rectangles[0]
         x_middle = int(rect[0] + rect[2] / 2)
         y_middle = int(rect[1] + rect[3] / 2)
-        img_width = depth_image.shape[1]
-        img_height = depth_image.shape[0]
+        img_width = depth_image.shape[1] - 1
+        img_height = depth_image.shape[0] - 1
         middle_point = [x_middle if x_middle < img_width
                         else img_width,
                         y_middle if y_middle < img_height else img_height]
-        depth_image = depth_image.reshape([img_width, img_height])
-        pixel = depth_image[middle_point[0]][middle_point[1]]
+        pixel = depth_image[middle_point[1]][middle_point[0]]
         return pixel, middle_point
 
     def get_color_dominance(self, loc_image):
@@ -192,13 +191,12 @@ class TrafficLightDetector:
         for cur_row in cropped_image:
             for pixel in cur_row:
                 if pixel[0] > threshold_min and pixel[1] < pixel[0] * threshold_rel \
-                        and pixel[2] < pixel[
-                    0] * threshold_rel:
+                        and pixel[2] < pixel[0] * threshold_rel:
                     agg_colors[0] += 1
                 if pixel[0] > threshold_min and pixel[1] > threshold_min \
                         and pixel[2] < pixel[0] * threshold_rel:
                     agg_colors[1] += 1
-                if pixel[1] > threshold_min and pixel[0] < pixel[1] * threshold_rel\
+                if pixel[1] > threshold_min and pixel[0] < pixel[1] * threshold_rel \
                         and pixel[2] < threshold_min_b:
                     agg_colors[2] += 1
 

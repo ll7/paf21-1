@@ -23,11 +23,9 @@ class Vehicle:
 
     length_between_axles_m: float = 3.1
     max_steering_angle_rad: float = 0.5
-    base_accel_mps2: float = 8.0
-    base_brake_mps2: float = -8.0
-    vehicle_reaction_time_s: float = 3.5
-
-
+    base_accel_mps2: float = 10.0
+    base_brake_mps2: float = -10.0
+    vehicle_reaction_time_s: float = 1
 
     def move(self, new_pos: Tuple[float, float]):
         """Move the car towards the new position"""
@@ -38,10 +36,14 @@ class Vehicle:
         if old_pos is not None and new_timestamp - old_timestamp > 0:
             dist = euclid_dist(old_pos, new_pos)
             time = new_timestamp - old_timestamp
-            self.actual_velocity_mps = dist / time
-
+            self.actual_velocity_mps = (dist / time) * 2
+            print(f'timestamp:{rospy.get_rostime()}')
+        print(self.actual_velocity_mps)
         self.pos = new_pos
         self.pos_update_rostime = new_timestamp
+
+    def update_speed(self, speed):
+        self.actual_velocity_mps = speed
 
     def steer_towards(self, aim_point: Tuple[float, float]):
         """Adjust the steering angle for driving towards the given point"""
