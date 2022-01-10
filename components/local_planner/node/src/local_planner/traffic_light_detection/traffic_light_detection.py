@@ -3,7 +3,7 @@ from typing import Tuple, List
 import cv2
 import numpy as np
 import yaml
-from tiny_res_net import TinyResNet
+from local_planner.traffic_light_detection.tiny_res_net import TinyResNet
 
 
 class TrafficLightDetector:
@@ -23,8 +23,8 @@ class TrafficLightDetector:
     def __init__(self, config_path):
         with open(config_path, encoding='utf-8') as file:
             config = yaml.safe_load(file)
-            classes = config['classes']
-            self.model = TinyResNet(classes).build(config['nn_input_size'])
+            self.model = TinyResNet(config['classes'])
+            self.model.build(config['nn_input_size'])
             TinyResNet.load_model_weights(self.model, config['weights_path'])
             self.lower_mask = config['lower_bound']
             self.upper_mask = config['upper_bound']
@@ -42,7 +42,7 @@ class TrafficLightDetector:
         meters = float('inf')
         tl_color = 'Green'
         if len(rectangles) > 0:
-            state_votes = {'Red': 0, 'Yellow': 0, 'Green': 0}
+            state_votes = {'Red': 0, 'Yellow': 0, 'Green': 0, 'Back': 0}
             rectangles = [rect for rect in rectangles if rect[2] * rect[3] ==
                           max(rect[2] * rect[3] for rect in rectangles)]
             if rectangles[0][2] * rectangles[0][3] <= 5 * 15:
@@ -51,7 +51,7 @@ class TrafficLightDetector:
             meters, middle = TrafficLightDetector.get_distance_from_depth(rectangles, depth_image)
             if meters < 25:
                 tl_color_bright = self.classify_traffic_light_brightness(enhanced_image)
-                tl_color_classify = TinyResNet.prediction(self.model, enhanced_image)
+                tl_color_classify = self.get_classification_from_nn(enhanced_image)
                 if tl_color_bright is not None:
                     state_votes[tl_color_bright] += 1
                 if tl_color_classify is not None:
@@ -159,6 +159,8 @@ class TrafficLightDetector:
         return decision
 
     def get_classification_from_nn(self, image: np.ndarray):
+        if len(image.shape) < 4:
+            image = image[np.newaxis, :]
         image = TinyResNet.resize_image(image, np.zeros(0))
         prediction = TinyResNet.prediction(self.model, image)
         return TinyResNet.class_dict[prediction]
@@ -191,7 +193,7 @@ class TrafficLightDetector:
         agg_colors = [0, 0, 0]
 
         cropped_image = loc_image[self.crop_top_bottom: self.enhanced_dim[1] - self.crop_top_bottom,
-                        self.crop_left_right: self.enhanced_dim[0] - self.crop_left_right]
+                                  self.crop_left_right: self.enhanced_dim[0] - self.crop_left_right]
         threshold_min = 140
         threshold_min_b = 120
         threshold_rel = 0.75
