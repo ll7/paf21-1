@@ -34,7 +34,7 @@ class SpeedStateMachine:
     vehicle: Vehicle
     current_state: SpeedState = SpeedState.Stop
     target_speed_mps: float = 0
-    legal_speed_limit_mps: float = 50 / 3.6
+    legal_speed_limit_mps: float = 30 / 3.6
 
     def update_state(self, obs: SpeedObservation):
         """Update the machine's state given a speed observation."""
@@ -66,8 +66,8 @@ class SpeedStateMachine:
             self.current_state = SpeedState.Accel
 
     def _handle_accel(self, obs: SpeedObservation):
-        if self.legal_speed_limit_mps < self.vehicle.actual_velocity_mps or not obs.is_junction_free \
-                or (obs.tl_phase == TrafficLightPhase.Red and self._is_brake_required(obs)):
+        if self.legal_speed_limit_mps < self.vehicle.actual_velocity_mps and self._is_brake_required(obs, self.legal_speed_limit_mps) or not obs.is_junction_free \
+                or (obs.tl_phase == TrafficLightPhase.Red and self._is_brake_required(obs, 0)):
             self.current_state = SpeedState.Brake
         elif self.legal_speed_limit_mps == self.vehicle.actual_velocity_mps:
             self.current_state = SpeedState.Keep
@@ -81,13 +81,17 @@ class SpeedStateMachine:
         elif self.vehicle.actual_velocity_mps == 0:
             self.current_state = SpeedState.Stop
 
-    def _is_brake_required(self, obs: SpeedObservation):
+    def _is_brake_required_distance(self, obs: SpeedObservation):
         velocity_kmh = self.vehicle.actual_velocity_mps * 3.6
         stopping_distance = (velocity_kmh / 10)**2
         reaction_distance = self.vehicle.vehicle_reaction_time_s * self.vehicle.actual_velocity_mps
         halting_distance = stopping_distance + reaction_distance
         print(halting_distance, obs.dist_next_obstacle_m)
         return halting_distance >= obs.dist_next_obstacle_m
+
+    def _is_brake_required(self, obs: SpeedObservation, speed):
+        wait_time_s = self._time_until_brake(obs.dist_next_obstacle_m, speed)
+        return wait_time_s <= self.vehicle.vehicle_reaction_time_s
 
     def _time_until_brake(self, distance_m: float, target_velocity: float = 0) -> float:
         """Compute the braking distance and based on that the time until brake.
@@ -106,15 +110,17 @@ class SpeedStateMachine:
         maneuver_time_s = (target_velocity - self.vehicle.actual_velocity_mps) / accel_mps2
         braking_dist = self.vehicle.actual_velocity_mps * maneuver_time_s + \
                        accel_mps2 * maneuver_time_s ** 2 / 2
-        time_until_brake = (distance_m - braking_dist) / self.vehicle.actual_velocity_mps \
+        print('braking distance', braking_dist)
+        object_offset = 10
+        time_until_brake = (distance_m - object_offset - braking_dist) / self.vehicle.actual_velocity_mps \
             if self.vehicle.actual_velocity_mps > 0 else 0
+        print('time until brake', time_until_brake)
         return time_until_brake
 
     def get_target_speed(self) -> float:
         action = self.current_state
         if action == SpeedState.Accel:
-            self.target_speed_mps = 80
-            self.target_acceleration = 10
+            self.target_speed_mps = self.legal_speed_limit_mps
         elif action == SpeedState.Brake:
             self.target_speed_mps = 0
         else:
