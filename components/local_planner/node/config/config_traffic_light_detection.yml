@@ -6,5 +6,5 @@ value_backside: 1000000
 crop_left_right: 25
 crop_top_bottom: 50
 classes: {0: 'Backside', 1: 'Green', 2: 'Red', 3: 'Yellow'}
-nn_input_size: [null, 64, 64, 3]
+nn_input_size: [64, 64, 3]
 weights_path: '/app/src/local_planner/src/local_planner/traffic_light_detection/weights.h5'
