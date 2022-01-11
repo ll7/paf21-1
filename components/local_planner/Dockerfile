@@ -27,7 +27,7 @@ ADD ./node /app/src/local_planner
 WORKDIR /app/src/local_planner/src
 RUN source /opt/ros/noetic/setup.bash && \
     python -m pytest tests && \
-    pylint local_planner --fail-under=9.3 --extension-pkg-whitelist=cv2
+    pylint local_planner --fail-under=9.5 --extension-pkg-whitelist=cv2
 
 # deploy the source code to ROS using catkin
 WORKDIR /app/catkin_ws/src
