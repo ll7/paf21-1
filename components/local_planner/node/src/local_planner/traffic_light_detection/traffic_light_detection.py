@@ -102,6 +102,14 @@ class TrafficLightDetector:
                                    width + self.box_offset * 2, height + self.box_offset * 2])
         return bounding_boxes
 
+    @staticmethod
+    def _get_corners(rect: List[int], img_shape: Tuple[int, int]) -> List[int]:
+        x1_cord = max(0, rect[0])
+        y1_cord = max(0, rect[1])
+        x2_cord = min(max(x1_cord + rect[2], x1_cord + 1), img_shape[1])
+        y2_cord = min(max(y1_cord + rect[3], y1_cord + 1), img_shape[0])
+        return [x1_cord, y1_cord, x2_cord, y2_cord]
+
     def apply_mask(self, rectangles: List[List[int]], image: np.ndarray):
         """gets bounding boxes around traffic lights (analog applicable on other objects)
         and returns zoomed in image of the traffic light"""
@@ -109,21 +117,20 @@ class TrafficLightDetector:
         enhanced_image = np.zeros_like(image)
         for rect in rectangles:
             # check if traffic light is even close enough to be considered
-            if rect[2] * rect[3] > 0:
-                height = rect[1] + rect[3]
-                width = rect[0] + rect[2]
-                traffic_light_image = image[rect[1]:height, rect[0]:width, :]
-                print(f'Traffic Light Image shape: {traffic_light_image.shape}, Image shape: '
-                      f'{image.shape}')
-                cv2.imwrite(f'/app/logs/test_data_tl_{self.counter}.png', traffic_light_image)
-                enhanced_image = cv2.resize(traffic_light_image, self.enhanced_dim,
-                                            interpolation=cv2.INTER_AREA)
-                print(f'Enhanced Image shape: {enhanced_image.shape}')
-                # cv2.imwrite(f'test_data/test_data_{counter}.png', enhanced_image)
-                self.counter += 1
-                vertices.append(np.array(
-                    [[rect[0], rect[1]], [rect[0], height], [width, height], [width, rect[1]]],
-                    dtype=np.int32))
+            x_1, y_1, x_2, y_2 = TrafficLightDetector._get_corners(rect, image.shape)
+
+            print(f'Rect: {rect}, corners: {x_1, y_1, x_2, y_2}')
+            traffic_light_image = image[y_1:y_2, x_1:x_2, :]
+            print(f'Traffic Light Image shape: {traffic_light_image.shape}, Image shape: '
+                  f'{image.shape}')
+            cv2.imwrite(f'/app/logs/test_data_tl_{self.counter}.png', traffic_light_image)
+            enhanced_image = cv2.resize(traffic_light_image, self.enhanced_dim,
+                                        interpolation=cv2.INTER_AREA)
+            print(f'Enhanced Image shape: {enhanced_image.shape}')
+            # cv2.imwrite(f'test_data/test_data_{counter}.png', enhanced_image)
+            self.counter += 1
+            vertices.append(np.array([[x_1, y_1], [x_1, y_2], [x_2, y_2], [x_2, y_1]],
+                                     dtype=np.int32))
         mask = np.zeros_like(image)
         cv2.fillPoly(mask, vertices, (255, 255, 255))
         # image_new = cv2.bitwise_and(image, mask)
