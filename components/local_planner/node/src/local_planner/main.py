@@ -64,7 +64,6 @@ class LocalPlannerNode:
         self._init_vehicle_orientation_subscriber()
         self._init_global_route_subscriber()
         self._init_front_camera_subscribers()
-        #self._init_velocity_subscriber()
 
     def _init_global_route_subscriber(self):
         in_topic = f"/drive/{self.vehicle.name}/global_route"
@@ -73,32 +72,22 @@ class LocalPlannerNode:
         callback = lambda msg: process_route(msg_to_route(msg))
         rospy.Subscriber(in_topic, StringMsg, callback)
 
-    def _init_velocity_subscriber(self):
-        in_topic = f"/carla/{self.vehicle.name}/ackermann_control/control_info"
-        vehicle_status_to_velocity = RosDrivingMessagesAdapter.vehicle_status_to_velocity
-        update_velocity = self.vehicle.update_speed
-        callback = lambda msg: update_velocity(vehicle_status_to_velocity(msg))
-        rospy.Subscriber(in_topic, ImuMsg, callback)
-
     def _init_vehicle_orientation_subscriber(self):
         in_topic = f"/carla/{self.vehicle.name}/imu/imu1"
         msg_to_orientation = RosDrivingMessagesAdapter.message_to_orientation
-        callback = lambda msg: self.route_planner.driving_control.update_vehicle_orientation(
-            msg_to_orientation(msg))
+        callback = lambda msg: self.route_planner.driving_control.update_vehicle_orientation(msg_to_orientation(msg))
         rospy.Subscriber(in_topic, ImuMsg, callback)
 
     def _init_vehicle_position_subscriber(self):
         in_topic = f"/carla/{self.vehicle.name}/odometry"
         msg_to_position = RosDrivingMessagesAdapter.message_to_vehicle_position
-        callback = lambda msg: self.route_planner.driving_control.update_vehicle_position(
-            msg_to_position(msg))
+        callback = lambda msg: self.route_planner.driving_control.update_vehicle_position(msg_to_position(msg))
         rospy.Subscriber(in_topic, OdometryMsg, callback)
 
     def _init_front_camera_subscribers(self):
         camera_semantic_seg = "semantic_segmentation/front/image_segmentation"
         in_semantic_topic = f"/carla/{self.vehicle.name}/camera/{camera_semantic_seg}"
-        rospy.Subscriber(in_semantic_topic, ImageMsg,
-                         self.image_preprocessor.process_semantic_image)
+        rospy.Subscriber(in_semantic_topic, ImageMsg, self.image_preprocessor.process_semantic_image)
 
         camera_depth = 'depth/front/image_depth'
         in_depth_topic = f"/carla/{self.vehicle.name}/camera/{camera_depth}"
