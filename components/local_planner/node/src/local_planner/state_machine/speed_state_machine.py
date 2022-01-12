@@ -7,21 +7,21 @@ from local_planner.core import Vehicle
 
 class SpeedState(IntEnum):
     """Representing all possible states of the speed state machine."""
-    Keep = 0
-    Accel = 1
-    Brake = 2
+    KEEP = 0
+    ACCEL = 1
+    BRAKE = 2
 
 
 class TrafficLightPhase(IntEnum):
     """Representing the phases of a traffic light."""
-    Red = 0
-    Green = 1
+    RED = 0
+    GREEN = 1
 
 
 @dataclass
 class SpeedObservation:
     """Representing context information used for speed state transitioning."""
-    tl_phase: TrafficLightPhase = TrafficLightPhase.Green
+    tl_phase: TrafficLightPhase = TrafficLightPhase.GREEN
     is_trajectory_free: bool = True
     dist_next_obstacle_m: float = 1000
     detected_speed_limit: int = None
@@ -32,7 +32,7 @@ class SpeedObservation:
 class SpeedStateMachine:
     """Representing a state machine for speed control decision-making."""
     vehicle: Vehicle
-    current_state: SpeedState = SpeedState.Keep
+    current_state: SpeedState = SpeedState.KEEP
     target_speed_mps: float = 0
     legal_speed_limit_mps: float = 30 / 3.6
     speed_offset_up_ms: float = 5.0 / 3.6
@@ -44,17 +44,20 @@ class SpeedStateMachine:
             self.legal_speed_limit_mps = obs.detected_speed_limit/3.6
 
         """Update the machine's state given a speed observation."""
-        if self.current_state == SpeedState.Accel:
+        if self.current_state == SpeedState.ACCEL:
             self._handle_accel(obs)
-        elif self.current_state == SpeedState.Keep:
+        elif self.current_state == SpeedState.KEEP:
             self._handle_keep(obs)
-        elif self.current_state == SpeedState.Brake:
+        elif self.current_state == SpeedState.BRAKE:
             self._handle_brake(obs)
         else:
             raise ValueError(f'Unsupported speed state {self.current_state}!')
 
-        print("target_speed_mps:", self.target_speed_mps, " is_trajectory_free:",obs.is_trajectory_free, " tl_phase:",obs.tl_phase)
-        print("actual_velocity_mps:", self.vehicle.actual_velocity_mps, " legal_speed_limit_mps:", self.legal_speed_limit_mps)
+        print("target_speed_mps:", self.target_speed_mps,
+              " is_trajectory_free:",obs.is_trajectory_free,
+              " tl_phase:",obs.tl_phase)
+        print("actual_velocity_mps:", self.vehicle.actual_velocity_mps,
+              " legal_speed_limit_mps:", self.legal_speed_limit_mps)
         print(self.current_state)
 
     def _is_in_speed_tolerance(self):
@@ -68,32 +71,32 @@ class SpeedStateMachine:
     def _handle_keep(self, obs: SpeedObservation):
         if (self.legal_speed_limit_mps + self.speed_offset_up_ms < self.vehicle.actual_velocity_mps) or \
                 (not obs.is_trajectory_free and self._is_brake_required(obs)) \
-                or (obs.tl_phase == TrafficLightPhase.Red and self._is_brake_required(obs)):
-            self.current_state = SpeedState.Brake
+                or (obs.tl_phase == TrafficLightPhase.RED and self._is_brake_required(obs)):
+            self.current_state = SpeedState.BRAKE
         elif self.legal_speed_limit_mps > self.vehicle.actual_velocity_mps \
                 and obs.is_trajectory_free and\
-                (obs.tl_phase == TrafficLightPhase.Green or not self._is_brake_required(obs)):
-            self.current_state = SpeedState.Accel
+                (obs.tl_phase == TrafficLightPhase.GREEN or not self._is_brake_required(obs)):
+            self.current_state = SpeedState.ACCEL
 
     def _handle_accel(self, obs: SpeedObservation):
         if self.legal_speed_limit_mps < self.vehicle.actual_velocity_mps or \
                 (self._is_brake_required(obs) and not obs.is_trajectory_free) \
-                or (obs.tl_phase == TrafficLightPhase.Red and self._is_brake_required(obs)):
-            self.current_state = SpeedState.Brake
+                or (obs.tl_phase == TrafficLightPhase.RED and self._is_brake_required(obs)):
+            self.current_state = SpeedState.BRAKE
         elif self._is_in_speed_tolerance() or \
                 (self._is_speed_follow(obs.object_speed_ms) and not self._is_brake_required(obs) and not obs.is_trajectory_free):
-            self.current_state = SpeedState.Keep
+            self.current_state = SpeedState.KEEP
 
     def _handle_brake(self, obs: SpeedObservation):
         if self.legal_speed_limit_mps > self.vehicle.actual_velocity_mps \
-                and obs.is_trajectory_free and obs.tl_phase == TrafficLightPhase.Green:
-            self.current_state = SpeedState.Accel
-        elif (self._is_brake_required(obs) and obs.tl_phase == TrafficLightPhase.Red) or \
+                and obs.is_trajectory_free and obs.tl_phase == TrafficLightPhase.GREEN:
+            self.current_state = SpeedState.ACCEL
+        elif (self._is_brake_required(obs) and obs.tl_phase == TrafficLightPhase.RED) or \
                 self.legal_speed_limit_mps < self.vehicle.actual_velocity_mps or \
                 (self._is_brake_required(obs) and not obs.is_trajectory_free):
-            self.current_state = SpeedState.Brake
+            self.current_state = SpeedState.BRAKE
         else:
-            self.current_state = SpeedState.Keep
+            self.current_state = SpeedState.KEEP
 
     def _is_brake_required_distance(self, obs: SpeedObservation):
         velocity_kmh = self.vehicle.actual_velocity_mps * 3.6
@@ -134,9 +137,9 @@ class SpeedStateMachine:
 
     def get_target_speed(self) -> float:
         action = self.current_state
-        if action == SpeedState.Accel:
+        if action == SpeedState.ACCEL:
             self.target_speed_mps = self.legal_speed_limit_mps
-        elif action == SpeedState.Brake:
+        elif action == SpeedState.BRAKE:
             self.target_speed_mps = 0
         else:
             self.target_speed_mps = self.vehicle.actual_velocity_mps

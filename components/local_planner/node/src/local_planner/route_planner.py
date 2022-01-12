@@ -77,7 +77,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
 
     def _calculate_vehicle_speed(self):
         turned_on_traffic_light_detection = True
-        tl_state, dist_m = TrafficLightPhase.Green, 300
+        tl_state, dist_m = TrafficLightPhase.GREEN, 300
         if turned_on_traffic_light_detection:
             tl_state, dist_m = self._detect_traffic_lights()
         speed_obs = SpeedObservation(tl_state, dist_next_obstacle_m=dist_m)
@@ -109,7 +109,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
             semantic_image, rgb_image, depth_image)
 
         stop_vehicle = tl_color in ['Green', 'Backside', 'Yellow']
-        tl_phase = TrafficLightPhase.Green if stop_vehicle else TrafficLightPhase.Red
+        tl_phase = TrafficLightPhase.GREEN if stop_vehicle else TrafficLightPhase.RED
 
         if self.step_semantic % 1 == 0 and self.step_semantic < 1000:
             img_log_path = f"/app/logs/img_{self.step_semantic}_traffic_light.png"

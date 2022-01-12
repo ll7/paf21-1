@@ -33,7 +33,7 @@ class ManeuverObservation():
 class ManeuverStateMachine:
     """Represents a state machine used for maneuver state transitioning."""
     vehicle: Vehicle
-    states: List[ManeuverState] = field(default_factory=lambda: [e for e in ManeuverState]) 
+    states: List[ManeuverState] = field(default_factory=lambda: list(ManeuverState))
     current_state: ManeuverState = ManeuverState.KEEP_LANE
 
 
