@@ -99,20 +99,22 @@ class TinyResNet(tf.keras.Model):
         super().__init__()
         self.class_dict = class_dict
         self.stage1 = [
-            Conv2D(filters=32, kernel_size=(7, 7), strides=(2, 2), padding='same'),
+            Conv2D(filters=8, kernel_size=(3, 3), strides=(1, 1), padding='same'),
             BatchNormalization(axis=3),
             ReLU(),
-            MaxPool2D(pool_size=(3, 3), strides=(2, 2), padding='same')
+            # MaxPool2D(pool_size=(3, 3), strides=(2, 2), padding='same')
         ]
         self.stage2 = [
-            ConvolutionalBlock(filters=(16, 16, 64), f_kernel=3, stride=1),
-            IdentityBlock(filters=(16, 16, 64), f_kernel=3)
+            ConvolutionalBlock(filters=(4, 4, 16), f_kernel=3, stride=1),
+            IdentityBlock(filters=(4, 4, 16), f_kernel=3)
         ]
+        """
         self.stage3 = [
             ConvolutionalBlock(filters=(32, 32, 128), f_kernel=3, stride=2),
             IdentityBlock(filters=(32, 32, 128), f_kernel=3)
         ]
-        self.average_pool = AveragePooling2D(pool_size=(2, 2), padding='valid')
+        """
+        # self.average_pool = AveragePooling2D(pool_size=(2, 2), padding='valid')
         self.flatten = Flatten()
         self.classification_layer = Dense(len(self.class_dict))
         input_shape = (None,) + tuple(input_shape)
@@ -128,11 +130,12 @@ class TinyResNet(tf.keras.Model):
 
         for layer in self.stage2:
             out = layer(out, training=training)
-
+        """
         for layer in self.stage3:
-            out = layer(out, training=training)
+            out = layer(out, training=training) 
+        """
 
-        out = self.average_pool(out, training=training)
+        # out = self.average_pool(out, training=training)
         out = self.flatten(out, training=training)
         out = self.classification_layer(out, training=training)
         return out
@@ -146,7 +149,7 @@ class TinyResNet(tf.keras.Model):
         """Resize the image to the input shape of the TinyResNet."""
         image = tf.cast(image, tf.float32)
         image = tf.math.divide(image, 255.0)
-        image = tf.image.resize(image, size=(64, 64))
+        image = tf.image.resize(image, size=(16, 16))
         return image, label
 
     @staticmethod
@@ -243,7 +246,7 @@ if __name__ == '__main__':
     dataset_val = builder.as_dataset(split='val', shuffle_files=False, as_supervised=True)
     classes = {0: 'backside', 1: 'green', 2: 'red', 3: 'yellow'}
 
-    tiny_resnet = TinyResNet(input_shape=(64, 64, 3), class_dict=classes)
+    tiny_resnet = TinyResNet(input_shape=(16, 16, 3), class_dict=classes)
     print(tiny_resnet.summary())
     if IS_TRAIN:
         optimizers = Adam(learning_rate=1e-3)
