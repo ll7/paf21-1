@@ -154,12 +154,7 @@ class GlobalPlanner:
         self.xodr_map = xodr_map
         self.num_nodes = len(self.xodr_map.mapping)
         self.start_pos = None
-
-    def set_data(self):
-        """Set the graph, the mapping and the lane-lets."""
-        self.matrix = np.copy(self.xodr_map.matrix)
-        self.mapping = self.xodr_map.mapping
-        self.lane_lets = self.xodr_map.lane_lets
+        self.orientation = None
 
     def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
         """Update the vehicle's current position"""
@@ -219,6 +214,26 @@ class GlobalPlanner:
         return cleaned_route
 
     @staticmethod
+    def _interpolated_route(route: List[Tuple[float, float]], interval_m=2.0):
+        interpolated_route = []
+        for index in range(len(route) - 1):
+            waypoints = GlobalPlanner._linear_interpolation(route[index], route[index + 1],
+                                                            interval_m=interval_m)
+            interpolated_route.extend(waypoints)
+        interpolated_route = GlobalPlanner._clean_route_duplicates(interpolated_route)
+        return interpolated_route
+
+    @staticmethod
+    def _displacement_points(road: Road, sec: str, is_final: bool):
+        moving_towards_end = int(sec.split('_')[1])
+        road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
+        points = bounding_box(road_end_point.start_point, road_end_point.end_point,
+                              road.road_width / 2)
+        if is_final:
+            return points[2] if moving_towards_end else points[0]
+        return points[3] if moving_towards_end else points[1]
+
+    @staticmethod
     def get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
                           xodr_map: XodrMap) -> List[str]:
         """Compute the route."""
@@ -246,9 +261,9 @@ class GlobalPlanner:
 
         path = [(path[i], path[i+1]) for i in range(len(path)-1)]
 
-        for p_1, p_2 in path:
-            road_id1 = int(p_1.split('_')[0])
-            road_id2 = int(p_2.split('_')[0])
+        for sec_1, sec_2 in path:
+            road_id1 = int(sec_1.split('_')[0])
+            road_id2 = int(sec_2.split('_')[0])
 
             drive_road_from_start_to_end = road_id1 == road_id2
             is_initial_section = road_id1 == -1
@@ -257,10 +272,9 @@ class GlobalPlanner:
             if drive_road_from_start_to_end:
                 print(f'compute intermediate road section {road_id1}')
                 road = id2road[road_id1]
-                moving_towards_end = int(p_1.split('_')[1])
-                lane_link = int(p_1.split('_')[2])
+                moving_towards_end = int(sec_1.split('_')[1])
+                lane_link = int(sec_1.split('_')[2])
                 road_geometries = list(reversed(road.geometries)) if moving_towards_end else road.geometries
-                # road_waypoints = [geo.start_point for geo in road_geometries]
                 road_waypoints = []
                 for geo in road_geometries:
                     points = bounding_box(geo.start_point, geo.end_point, road.road_width/2)
@@ -272,41 +286,21 @@ class GlobalPlanner:
                 print('compute initial section')
                 route_waypoints.append(start_pos)
                 road = id2road[road_id2]
-                moving_towards_end = int(p_2.split('_')[1])
-
-                road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
-                points = bounding_box(road_end_point.start_point, road_end_point.end_point,
-                                      road.road_width / 2)
-                route_waypoints.append(points[3] if moving_towards_end else points[1])
+                displaced_points = GlobalPlanner._displacement_points(road, sec_2, is_final=False)
+                route_waypoints.append(displaced_points)
 
             elif is_final_section:
                 print('compute final section')
                 road = id2road[road_id1]
-                moving_towards_end = int(p_1.split('_')[1])
-                road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
-                print(f'Road width {road.road_width}')
-                points = bounding_box(road_end_point.start_point, road_end_point.end_point,
-                                      road.road_width / 2)
-                print(f'Bounding Box {points}')
-                route_waypoints.append(points[2] if moving_towards_end else points[0])
+                displaced_points = GlobalPlanner._displacement_points(road, sec_1, is_final=True)
+                route_waypoints.append(displaced_points)
                 route_waypoints.append(end_pos)
-
-        # TODO: refactor function, points displacement, check all edges (especially roads with one lane)
 
         # TODO: add traffic signs and interpolation
         #       prob. need to create a class representing a route
         print(f'Raw route waypoints: {route_waypoints}')
-
-        interpolated_route = []
-        for index in range(len(route_waypoints) - 1):
-            waypoints = GlobalPlanner._linear_interpolation(route_waypoints[index],
-                                                            route_waypoints[index+1], interval_m=2.0)
-            interpolated_route.extend(waypoints)
-
-        interpolated_route = GlobalPlanner._clean_route_duplicates(interpolated_route)
-
+        interpolated_route = GlobalPlanner._interpolated_route(route_waypoints, interval_m=2.0)
         print(f'Interpolated route waypoints: {interpolated_route}')
-
         return interpolated_route
 
 
@@ -319,12 +313,6 @@ if __name__ == '__main__':
 
     start_position = (245.85, -198.75)
     end_position = (144.99, -57.5)
-
-    # start_position = (3.3689340432558032e+2, -0.9789686312079139e+1)
-    # end_position = (320.00, -56.5)
-
-    # start_position = (396.6376037597656, -208.82986450195312)
-    # end_position = (144.99, -55.5)
 
     global_route = GlobalPlanner.generate_waypoints(start_position, end_position, xodr_map2)
 

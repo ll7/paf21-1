@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from math import dist, sin, cos
-from typing import List, Tuple, Dict
+from typing import List, Tuple
 
 from cv2 import cv2
 import numpy as np
@@ -60,7 +60,6 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         point_counts_as_done = 5
         enumerator = 0
         for point in self.cached_local_route:
-            print('distance', dist(point, self.vehicle.pos))
             if dist(point, self.vehicle.pos) > point_counts_as_done:
                 break
             enumerator += 1
@@ -112,9 +111,9 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         stop_vehicle = tl_color in ['Green', 'Backside', 'Yellow']
         tl_phase = TrafficLightPhase.Green if stop_vehicle else TrafficLightPhase.Red
 
-        if self.step_semantic % 10 == 0 and self.step_semantic < 0:
+        if self.step_semantic % 1 == 0 and self.step_semantic < 1000:
             img_log_path = f"/app/logs/img_{self.step_semantic}_traffic_light.png"
-            cv2.imwrite(img_log_path, highlighted_img)
+            # cv2.imwrite(img_log_path, highlighted_img)
 
         return tl_phase, meters
 

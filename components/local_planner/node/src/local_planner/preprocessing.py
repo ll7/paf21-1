@@ -19,20 +19,15 @@ class SensorCameraPreprocessor:  # pylint: disable=too-few-public-methods
     step_depth: int = 0
 
     def get_image_lists(self) -> Dict[str, np.ndarray]:
+        """Return the different images as dictionary"""
         return {'semantic': self.semantic_image,
                 'rgb': self.rgb_image,
                 'depth': self.depth_image}
 
     def process_semantic_image(self, msg: ImageMsg):
         """Preprocess the semantic image"""
-        #config = {}
-        #path = "/app/src/local_planner/config/config_lane_detection.yml"
-
-        #lane_detecter = LaneDetection(config)
-
         self.step_semantic += 1
         orig_image = SensorCameraPreprocessor.load_image(msg)
-        # figure out which squeeze causes the callback to crash
         if self.step_semantic % 10 == 0 and self.write_images:
             cv2.imwrite(f"/app/logs/img_{self.step_semantic}_semantic.png", orig_image)
 
@@ -40,10 +35,8 @@ class SensorCameraPreprocessor:  # pylint: disable=too-few-public-methods
 
     def process_depth_image(self, msg: ImageMsg):
         """Preprocess the depth image"""
-
         self.step_depth += 1
         orig_image = SensorCameraPreprocessor.load_image(msg)
-        # figure out which squeeze causes the callback to crash
         if self.step_depth % 10 == 0 and self.write_images:
             cv2.imwrite(f"/app/logs/img_{self.step_depth}_depth.png", orig_image)
 
@@ -54,16 +47,9 @@ class SensorCameraPreprocessor:  # pylint: disable=too-few-public-methods
 
         self.step_rgb += 1
         orig_image = SensorCameraPreprocessor.load_image(msg)
-        # figure out which squeeze causes the callback to crash
         if self.step_rgb % 10 == 0 and self.write_images:
             cv2.imwrite(f"/app/logs/img_{self.step_rgb}_rgb.png", orig_image)
 
-        self.rgb_image = orig_image
-
-    def process_rgb_image(self, msg: ImageMsg):
-        """Preprocess the RGB image"""
-        self.step_rgb += 1
-        orig_image = SensorCameraPreprocessor.load_image(msg)
         self.rgb_image = orig_image
 
     @staticmethod
