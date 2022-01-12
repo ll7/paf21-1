@@ -95,7 +95,7 @@
         {
             "type": "sensor.camera.rgb",
             "id": "top_view",
-            "x": 0, "y": 0.0, "z": 20, "roll": 0.0, "pitch": -90.0, "yaw": 0.0,
+            "x": 0, "y": 0.0, "z": 30, "roll": 0.0, "pitch": -90.0, "yaw": 0.0,
             "image_size_x": 900,
             "image_size_y": 600,
             "fov": 90.0,

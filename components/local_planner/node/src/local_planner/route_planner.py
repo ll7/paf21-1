@@ -37,6 +37,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
     global_route: List[Tuple[float, float]] = field(default_factory=list)
     cached_local_route: List[Tuple[float, float]] = field(default_factory=list)
     step_semantic: int = 0
+    highlighted_image: np.ndarray = None
 
     def __post_init__(self):
         self.speed_state_machine = SpeedStateMachine(vehicle=self.vehicle)
@@ -107,7 +108,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         # TODO: return the traffic light's position in case something was found
         meters, tl_color, highlighted_img = self.traffic_light_detection.detect_traffic_light(
             semantic_image, rgb_image, depth_image)
-
+        self.highlighted_image = highlighted_img
         stop_vehicle = tl_color in ['Green', 'Backside', 'Yellow']
         tl_phase = TrafficLightPhase.GREEN if stop_vehicle else TrafficLightPhase.RED
 

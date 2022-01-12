@@ -15,6 +15,7 @@ from local_planner.ros_msg_adapter import RosDrivingMessagesAdapter
 from local_planner.core import Vehicle
 
 
+
 @dataclass
 class RosMsgMultiplexer:
     """A proxy for forwarding ROS messages to multiple consumers."""
@@ -33,6 +34,7 @@ class LocalPlannerNode:
     vehicle: Vehicle
     publish_rate_in_hz: int
     driving_signal_publisher: rospy.Publisher = None
+    highlighted_image_publisher: rospy.Publisher = None
     image_preprocessor: SensorCameraPreprocessor = SensorCameraPreprocessor()
     route_planner: TrajectoryPlanner = None
 
@@ -51,6 +53,9 @@ class LocalPlannerNode:
             self.route_planner.driving_control.update_route(local_route)
             self.route_planner.driving_control.update_target_velocity(velocity)
             driving_signal = self.route_planner.driving_control.next_signal()
+            if self.route_planner.highlighted_image is not None:
+                img_msg = SensorCameraPreprocessor.msg_from_image(self.route_planner.highlighted_image)
+                self.highlighted_image_publisher.publish(img_msg)
             msg = RosDrivingMessagesAdapter.signal_to_message(driving_signal)
             self.driving_signal_publisher.publish(msg)
             rate.sleep()
@@ -60,6 +65,7 @@ class LocalPlannerNode:
 
         rospy.init_node(f'local_planner_{self.vehicle.name}', anonymous=True)
         self.driving_signal_publisher = self._init_driving_signal_publisher()
+        self.highlighted_image_publisher = self._init_image_publisher('rgb/augmented')
         self._init_vehicle_position_subscriber()
         self._init_vehicle_orientation_subscriber()
         self._init_global_route_subscriber()
@@ -101,6 +107,9 @@ class LocalPlannerNode:
         out_topic = f"/carla/{self.vehicle.name}/ackermann_cmd"
         return rospy.Publisher(out_topic, AckermannDrive, queue_size=1)
 
+    def _init_image_publisher(self, name):
+        out_topic = f"/carla/{self.vehicle.name}/camera/{name}"
+        return rospy.Publisher(out_topic, ImageMsg, queue_size=100)
 
 def main():
     """The main entrypoint launching the ROS node

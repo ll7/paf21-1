@@ -59,3 +59,10 @@ class SensorCameraPreprocessor:  # pylint: disable=too-few-public-methods
         orig_image = bridge.imgmsg_to_cv2(
             msg, desired_encoding='passthrough')
         return orig_image
+
+    @staticmethod
+    def msg_from_image(image):
+        """Loads image from ROS message"""
+        bridge = CvBridge()
+        img_msg = bridge.cv2_to_imgmsg(image, encoding="passthrough")
+        return img_msg

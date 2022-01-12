@@ -67,7 +67,7 @@ ENV CARLA_SIM_HOST=localhost
 ENV CARLA_SIM_WAIT_SECS=15
 ENV SCENARIO_RUNNER_PATH=/opt/scenario_runner
 
-COPY ./rviz_carla_config.rviz /config/rviz_carla_config.rviz
+COPY ./augmented_rviz.rviz /config/rviz_carla_config.rviz
 ENV CARLA_RVIZ_CONFIG=/config/rviz_carla_config.rviz
 COPY ./sensors.json /config/sensors.json
 ENV EGO_VEHICLE_SENSORS=/config/sensors.json
