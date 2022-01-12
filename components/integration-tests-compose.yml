@@ -14,7 +14,7 @@ services:
     command: /integration-tests-startup.sh
     volumes:
       - ./integration-tests-startup.sh:/integration-tests-startup.sh
-      - ./mock_recordings:/app/recordings
+      - ./recording:/app/recordings
     environment:
       ROS_MASTER_URI: http://roscore:11311
       ROS_HOSTNAME: carla-sim-mock

@@ -70,7 +70,7 @@ services:
   rosbag-recorder:
     image: ros:noetic
     # command: rosbag record -O /app/recordings/recording.bag --all
-    command: rosbag record -O /app/recordings/recording.bag -e "/carla/ego_vehicle/(.*)" --split --size=2048 /chatter
+    command: rosbag record -O /app/recordings/recording.bag -e "/carla/ego_vehicle/(.*)" -x "(.*)ackermann_cmd(.*)" --split --size=1024 /chatter
     volumes:
       - './recordings:/app/recordings'
     environment:
