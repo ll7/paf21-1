@@ -60,7 +60,6 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         point_counts_as_done = 5
         enumerator = 0
         for point in self.cached_local_route:
-            print('distance', dist(point, self.vehicle.pos))
             if dist(point, self.vehicle.pos) > point_counts_as_done:
                 break
             enumerator += 1

@@ -25,6 +25,7 @@ class SpeedObservation:
     is_trajectory_free: bool = True
     dist_next_obstacle_m: float = 1000
     detected_speed_limit: int = None
+    object_speed_ms: float = 0.0
 
 
 @dataclass
@@ -43,9 +44,7 @@ class SpeedStateMachine:
             self.legal_speed_limit_mps = obs.detected_speed_limit/3.6
 
         """Update the machine's state given a speed observation."""
-        if self.current_state == SpeedState.Stop:
-            self._handle_stop(obs)
-        elif self.current_state == SpeedState.Accel:
+        if self.current_state == SpeedState.Accel:
             self._handle_accel(obs)
         elif self.current_state == SpeedState.Keep:
             self._handle_keep(obs)
@@ -67,8 +66,9 @@ class SpeedStateMachine:
         return False
 
     def _handle_keep(self, obs: SpeedObservation):
-        if self.legal_speed_limit_mps < self.vehicle.actual_velocity_mps or not obs.is_junction_free \
-                or (obs.tl_phase == TrafficLightPhase.Red and self._is_brake_required(obs, 0)):
+        if (self.legal_speed_limit_mps + self.speed_offset_up_ms < self.vehicle.actual_velocity_mps) or \
+                (not obs.is_trajectory_free and self._is_brake_required(obs)) \
+                or (obs.tl_phase == TrafficLightPhase.Red and self._is_brake_required(obs)):
             self.current_state = SpeedState.Brake
         elif self.legal_speed_limit_mps > self.vehicle.actual_velocity_mps \
                 and obs.is_trajectory_free and\
