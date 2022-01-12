@@ -115,7 +115,7 @@ class TrafficLightDetector:
                 traffic_light_image = image[rect[1]:height, rect[0]:width, :]
                 print(f'Traffic Light Image shape: {traffic_light_image.shape}, Image shape: '
                       f'{image.shape}')
-                cv2.imwrite(f'/app/logs/test_data_tl_{self.counter}.png', traffic_light_image)
+                # cv2.imwrite(f'/app/logs/test_data_tl_{self.counter}.png', traffic_light_image)
                 enhanced_image = cv2.resize(traffic_light_image, self.enhanced_dim,
                                             interpolation=cv2.INTER_AREA)
                 print(f'Enhanced Image shape: {enhanced_image.shape}')

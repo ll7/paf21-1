@@ -114,7 +114,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
 
         if self.step_semantic % 1 == 0 and self.step_semantic < 1000:
             img_log_path = f"/app/logs/img_{self.step_semantic}_traffic_light.png"
-            cv2.imwrite(img_log_path, highlighted_img)
+            # cv2.imwrite(img_log_path, highlighted_img)
 
         return tl_phase, meters
 

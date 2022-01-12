@@ -110,7 +110,7 @@ class LocalPlannerNode:
 
     def _init_driving_signal_publisher(self):
         out_topic = f"/carla/{self.vehicle.name}/ackermann_cmd"
-        return rospy.Publisher(out_topic, AckermannDrive, queue_size=100)
+        return rospy.Publisher(out_topic, AckermannDrive, queue_size=1)
 
 
 def main():
