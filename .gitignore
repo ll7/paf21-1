@@ -5,3 +5,5 @@ build.gradle
 .vscode
 .idea
 /scenarios/default_scenario/logs/
+/recordings
+/scenarios/ros_check_scenario/recordings
