@@ -11,9 +11,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout source code
+    steps: 
+      - name: checkout source code
         uses: actions/checkout@v2
+        with:
+          lfs: 'true'
+      - name: checkoutLFS
+        uses: actions/checkout@v2
+      - run: git lfs pull  
 
       - name: Build the Docker images
         run: |
@@ -31,3 +36,4 @@ jobs:
           wget -O ./recording/recording_5.bag https://megastore.rz.uni-augsburg.de/get/PvlkhB_lqn/
           
           docker-compose -f integration-tests-compose.yml up --abort-on-container-exit
+

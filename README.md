@@ -38,6 +38,7 @@ Running steps 2-4 could look something like this (see the README files for furth
 # clone the GitHub repo
 git clone https://github.com/ll7/paf21-1
 cd paf21-1
+git lfs pull
 
 # build the components
 cd components

@@ -12,7 +12,7 @@
   <!-- scenario runner parameter -->
   <arg name='scenario_runner_path' default='$(env SCENARIO_RUNNER_PATH)'/><!-- path to scenario runner -->
   <arg name='scenario_file' default='$(env CARLA_OPENSCENARIO_FILE)'/><!-- scenario file to run -->
-  <arg name='rviz_config_file' default='$(find carla_ad_demo)/config/carla_ad_demo.rviz'/><!-- RVIZ file showing scenario demo -->
+  <arg name='rviz_config_file' default='$(env CARLA_RVIZ_CONFIG)'/><!-- RVIZ file showing scenario demo -->
 
   <!-- ego vehicle parameter -->
   <arg name="role_name" default="ego_vehicle"/> <!-- role name of the ego vehicle (used for identification in many nodes) -->
@@ -46,7 +46,7 @@
     <arg name="vehicle_filter" value='$(arg vehicle_filter)'/>
     <arg name="sensor_definition_file" default="$(arg sensor_definition_file)"/>
     <arg name='role_name' value='$(arg role_name)'/>
-    <arg name="spawn_point" value="245.85, 198.75, 1.0, 0.0, 0.0, -1.51"/>
+    <!-- <arg name="spawn_point" value="245.85, 198.75, 1.0, 0.0, 0.0, -1.51"/> -->
   </include>
 
   <!-- Provide a route and access to the CARLA waypoint API (required by carla_ad_agent) -->
