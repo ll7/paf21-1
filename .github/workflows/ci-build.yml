@@ -22,7 +22,7 @@ jobs:
 
       - name: Run the Integration Tests
         run: |
-          mkdir recordings
+          mkdir recording
           wget -O ./recording/recording_0.bag https://megastore.rz.uni-augsburg.de/get/2FkMSiLkR1/
           wget -O ./recording/recording_1.bag https://megastore.rz.uni-augsburg.de/get/Vzfjj9atqL/
           wget -O ./recording/recording_2.bag https://megastore.rz.uni-augsburg.de/get/jl73avCFAM/
