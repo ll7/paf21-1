@@ -105,11 +105,11 @@ class LocalPlannerNode:
 
     def _init_driving_signal_publisher(self):
         out_topic = f"/carla/{self.vehicle.name}/ackermann_cmd"
-        return rospy.Publisher(out_topic, AckermannDrive, queue_size=1)
+        return rospy.Publisher(out_topic, AckermannDrive, queue_size=10)
 
     def _init_image_publisher(self, name):
         out_topic = f"/carla/{self.vehicle.name}/camera/{name}"
-        return rospy.Publisher(out_topic, ImageMsg, queue_size=100)
+        return rospy.Publisher(out_topic, ImageMsg, queue_size=10)
 
 def main():
     """The main entrypoint launching the ROS node

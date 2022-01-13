@@ -2,6 +2,26 @@ from local_planner.state_machine import SpeedObservation, SpeedStateMachine, Tra
 from local_planner.core.vehicle import Vehicle
 
 """ Keep States """
+
+def test_keep_green():
+    vehicle = Vehicle('test_vehicle')
+    vehicle.actual_velocity_mps = 0/3.6
+    speed_s = SpeedStateMachine(vehicle)
+    speed_s.current_state = SpeedState.KEEP
+
+    speed_o = SpeedObservation()
+    speed_o.tl_phase = TrafficLightPhase.GREEN
+    speed_o.is_trajectory_free = True
+    speed_o.dist_next_obstacle_m: float = 5.0
+    speed_o.detected_speed_limit: int = 50
+
+    speed_s.update_state(speed_o)
+    target_speed = speed_s.get_target_speed()
+
+    assert(speed_s.current_state == SpeedState.ACCEL)
+    assert (target_speed == 50/3.6)
+
+
 def test_accel_from_stop():
     vehicle = Vehicle('test_vehicle')
     vehicle.actual_velocity_mps = 0
@@ -115,6 +135,25 @@ def test_keep_static_obstacle_out_range():
 
 
 """Accel Cases"""
+
+def test_accel_green():
+    vehicle = Vehicle('test_vehicle')
+    vehicle.actual_velocity_mps = 30/3.6
+    speed_s = SpeedStateMachine(vehicle)
+    speed_s.current_state = SpeedState.ACCEL
+
+    speed_o = SpeedObservation()
+    speed_o.tl_phase = TrafficLightPhase.GREEN
+    speed_o.is_trajectory_free = True
+    speed_o.dist_next_obstacle_m: float = 5.0
+    speed_o.detected_speed_limit: int = 50
+
+    speed_s.update_state(speed_o)
+    target_speed = speed_s.get_target_speed()
+
+    assert(speed_s.current_state == SpeedState.ACCEL)
+    assert (target_speed == 50/3.6)
+
 
 
 def test_accel_static_start():
@@ -233,6 +272,24 @@ def test_accel_static_obstacle_out_range():
     assert (target_speed == 50/3.6)
 
 """Brake Cases"""
+
+def test_brake_green():
+    vehicle = Vehicle('test_vehicle')
+    vehicle.actual_velocity_mps = 30/3.6
+    speed_s = SpeedStateMachine(vehicle)
+    speed_s.current_state = SpeedState.BRAKE
+
+    speed_o = SpeedObservation()
+    speed_o.tl_phase = TrafficLightPhase.GREEN
+    speed_o.is_trajectory_free = True
+    speed_o.dist_next_obstacle_m: float = 5.0
+    speed_o.detected_speed_limit: int = 50
+
+    speed_s.update_state(speed_o)
+    target_speed = speed_s.get_target_speed()
+
+    assert(speed_s.current_state == SpeedState.ACCEL)
+    assert (target_speed == 50/3.6)
 
 
 def test_brake_red_in_range():
