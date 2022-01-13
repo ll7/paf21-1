@@ -22,6 +22,7 @@ jobs:
 
       - name: Run the Integration Tests
         run: |
+          cd components
           mkdir recording
           wget -O ./recording/recording_0.bag https://megastore.rz.uni-augsburg.de/get/2FkMSiLkR1/
           wget -O ./recording/recording_1.bag https://megastore.rz.uni-augsburg.de/get/Vzfjj9atqL/
@@ -29,5 +30,4 @@ jobs:
           wget -O ./recording/recording_3.bag https://megastore.rz.uni-augsburg.de/get/DWQcmFd7Jh/
           wget -O ./recording/recording_4.bag https://megastore.rz.uni-augsburg.de/get/b02fO4jaLY/
           wget -O ./recording/recording_5.bag https://megastore.rz.uni-augsburg.de/get/PvlkhB_lqn/
-          
           docker-compose -f integration-tests-compose.yml up --abort-on-container-exit
