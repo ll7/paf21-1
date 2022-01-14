@@ -62,12 +62,11 @@ class TldTrainingSession:
             Conv2D(filters=4, kernel_size=[5, 5], padding='same', activation='relu'),
             MaxPooling2D(),
             Conv2D(filters=4, kernel_size=[3, 3], padding='same', activation='relu'),
-            Conv2D(filters=4, kernel_size=[3, 3], padding='same', activation='relu'),
             MaxPooling2D(),
             Conv2D(filters=4, kernel_size=[3, 3], padding='same', activation='relu'),
-            Conv2D(filters=4, kernel_size=[3, 3], padding='same', activation='relu'),
-            Dropout(rate=0.3),
+            MaxPooling2D(),
             Flatten(),
+            Dropout(rate=0.3),
             Dense(num_classes, activation='softmax')
         ])
 
