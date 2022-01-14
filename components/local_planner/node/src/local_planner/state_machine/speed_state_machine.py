@@ -13,9 +13,18 @@ class SpeedState(IntEnum):
 
 
 class TrafficLightPhase(IntEnum):
-    """Representing the phases of a traffic light."""
-    RED = 0
+    """Representing traffic light phases"""
+    BACKSIDE = 0
     GREEN = 1
+    RED = 2
+    YELLOW = 3
+
+
+@dataclass
+class TrafficLightInfo:
+    """Representing information on a recently detected traffic light"""
+    phase: TrafficLightPhase
+    distance: float
 
 
 @dataclass
@@ -38,8 +47,9 @@ class SpeedStateMachine:
     speed_offset_up_ms: float = 5.0 / 3.6
     speed_offset_down_ms: float = 3.0 / 3.6
 
-
     def update_state(self, obs: SpeedObservation):
+        print(obs)
+
         if obs.detected_speed_limit is not None:
             self.legal_speed_limit_mps = obs.detected_speed_limit/3.6
 
@@ -87,7 +97,6 @@ class SpeedStateMachine:
                 (self._is_brake_required(obs) and not obs.is_trajectory_free) \
                 or (obs.tl_phase == TrafficLightPhase.RED and self._is_brake_required(obs)):
             self.current_state = SpeedState.BRAKE
-
 
     def _handle_brake(self, obs: SpeedObservation):
         if self.legal_speed_limit_mps > self.vehicle.actual_velocity_mps \

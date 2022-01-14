@@ -24,8 +24,8 @@ class ImagesBuffer:
 
 @dataclass
 class TrafficLightDetectionNode:
-    """A class representing a ROS node that's processing route and
-    local sensor data to handle the interaction with other vehicles, etc."""
+    """A class representing a ROS node that's processing
+    camera data to detect traffic lights."""
     vehicle_name: str
     publish_rate_in_hz: int
     tld_publisher: rospy.Publisher = None

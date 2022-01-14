@@ -3,19 +3,25 @@
 import json
 from typing import Tuple, List
 from math import atan2
-import rospy
 
+import rospy
 from ackermann_msgs.msg import AckermannDrive
 from std_msgs.msg import String as StringMsg, Float32 as FloatMsg
 from nav_msgs.msg import Path as WaypointsMsg
 from nav_msgs.msg import Odometry as OdometryMsg
 from sensor_msgs.msg import Imu as ImuMsg
 
+from local_planner.state_machine import TrafficLightInfo, TrafficLightPhase
 from local_planner.vehicle_control import DrivingSignal
 
 
 class RosDrivingMessagesAdapter:
     """Convert between ROS messages and driving data"""
+
+    @staticmethod
+    def json_message_to_tld_info(msg: StringMsg) -> TrafficLightInfo:
+        obj = json.loads(msg.data)
+        return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
 
     @staticmethod
     def json_message_to_waypoints(msg: StringMsg) -> List[Tuple[float, float]]:
