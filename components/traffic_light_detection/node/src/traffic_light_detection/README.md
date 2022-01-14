@@ -4,7 +4,7 @@
 First of all, you need to install TensorFlow and NumPy.
 
 ```sh
-pip install tensorflow==2.7.0 numpy
+pip install tensorflow==2.7.0 numpy==1.21.4 tensorflow_datasets==4.4.0
 ```
 
 ## Prepare Dataset
