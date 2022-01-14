@@ -10,3 +10,8 @@ services:
     image: global_planner
     build:
       context: ./global_planner
+
+  traffic-light-detection:
+    image: traffic_light_detection
+    build:
+      context: ./traffic_light_detection

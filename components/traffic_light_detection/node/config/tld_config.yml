@@ -1,0 +1,10 @@
+lower_bound: [30, 0, 0]
+upper_bound: [30, 255, 255]
+box_offset: 2
+enhanced_dim: [200, 400]
+value_backside: 1000000
+crop_left_right: 25
+crop_top_bottom: 50
+classes: {0: 'Backside', 1: 'Green', 2: 'Red', 3: 'Yellow'}
+nn_input_size: [32, 32, 3]
+weights_path: '/app/src/traffic_light_detection/src/traffic_light_detection/model_and_weights.h5'

@@ -1,0 +1,6 @@
+<!-- -->
+<launch>
+  <node pkg="traffic_light_detection" name="traffic_light_detection"
+        type="main.py" output="screen" required="true">
+  </node>
+</launch>

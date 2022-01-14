@@ -65,6 +65,14 @@ services:
     networks:
       - ros
 
+  traffic-light-detection:
+    image: traffic_light_detection
+    environment:
+      ROS_MASTER_URI: http://roscore:11311
+      ROS_HOSTNAME: traffic-light-detection
+    networks:
+      - ros
+
 
 networks:
   carla:
