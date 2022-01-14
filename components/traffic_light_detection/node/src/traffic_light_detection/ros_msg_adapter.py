@@ -10,13 +10,11 @@ from traffic_light_detection.tld_info import TrafficLightInfo
 
 class RosMessagesAdapter:
     """Convert between ROS messages and driving data"""
+    bridge: CvBridge = CvBridge()
 
-    @staticmethod
-    def image_message_to_numpy(msg: ImageMsg) -> np.ndarray:
+    def image_message_to_numpy(self, msg: ImageMsg) -> np.ndarray:
         """Loads image from ROS message"""
-        bridge = CvBridge()
-        orig_image = bridge.imgmsg_to_cv2(
-            msg, desired_encoding='passthrough')
+        orig_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
         # cut alpha channel for colored images (ignore for grayscale)
         orig_image = orig_image[:, :, :3] if len(orig_image.shape) > 2 else orig_image
         return orig_image

@@ -65,7 +65,8 @@ class TrafficLightDetectionNode:
         self._init_front_camera_subscribers()
 
     def _init_front_camera_subscribers(self):
-        preproc_img = RosMessagesAdapter.image_message_to_numpy
+        img_preprocessor = RosMessagesAdapter()
+        preproc_img = img_preprocessor.image_message_to_numpy
 
         camera_semantic_seg = "semantic_segmentation/front/image_segmentation"
         in_semantic_topic = f"/carla/{self.vehicle_name}/camera/{camera_semantic_seg}"
