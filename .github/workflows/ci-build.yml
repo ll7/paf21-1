@@ -24,10 +24,10 @@ jobs:
         run: |
           cd components
           mkdir recording
-          wget -O ./recording/recording_0.bag https://megastore.rz.uni-augsburg.de/get/2FkMSiLkR1/
-          wget -O ./recording/recording_1.bag https://megastore.rz.uni-augsburg.de/get/Vzfjj9atqL/
-          wget -O ./recording/recording_2.bag https://megastore.rz.uni-augsburg.de/get/jl73avCFAM/
-          wget -O ./recording/recording_3.bag https://megastore.rz.uni-augsburg.de/get/DWQcmFd7Jh/
-          wget -O ./recording/recording_4.bag https://megastore.rz.uni-augsburg.de/get/b02fO4jaLY/
-          wget -O ./recording/recording_5.bag https://megastore.rz.uni-augsburg.de/get/PvlkhB_lqn/
+          wget -q -O ./recording/recording_0.bag https://megastore.rz.uni-augsburg.de/get/2FkMSiLkR1/
+          wget -q -O ./recording/recording_1.bag https://megastore.rz.uni-augsburg.de/get/Vzfjj9atqL/
+          wget -q -O ./recording/recording_2.bag https://megastore.rz.uni-augsburg.de/get/jl73avCFAM/
+          wget -q -O ./recording/recording_3.bag https://megastore.rz.uni-augsburg.de/get/DWQcmFd7Jh/
+          wget -q -O ./recording/recording_4.bag https://megastore.rz.uni-augsburg.de/get/b02fO4jaLY/
+          wget -q -O ./recording/recording_5.bag https://megastore.rz.uni-augsburg.de/get/PvlkhB_lqn/
           docker-compose -f integration-tests-compose.yml up --abort-on-container-exit
