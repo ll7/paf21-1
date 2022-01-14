@@ -67,6 +67,8 @@ services:
 
   traffic-light-detection:
     image: traffic_light_detection
+    volumes:
+      - './logs:/app/logs'
     environment:
       ROS_MASTER_URI: http://roscore:11311
       ROS_HOSTNAME: traffic-light-detection
