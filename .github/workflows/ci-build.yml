@@ -1,4 +1,4 @@
-name: Build Driving Components
+name: Build + Test Driving Components
 
 on:
   push:
@@ -20,14 +20,13 @@ jobs:
           cd components
           docker-compose -f driving-components-build.yml build
 
+      - name: Prepare the Integration Test Assets
+        run: |
+          cd components
+          ./prepare-integration-test-assets.sh -q
+
       - name: Run the Integration Tests
         run: |
           cd components
-          mkdir recording
-          wget -q -O ./recording/recording_0.bag https://megastore.rz.uni-augsburg.de/get/2FkMSiLkR1/
-          wget -q -O ./recording/recording_1.bag https://megastore.rz.uni-augsburg.de/get/Vzfjj9atqL/
-          wget -q -O ./recording/recording_2.bag https://megastore.rz.uni-augsburg.de/get/jl73avCFAM/
-          wget -q -O ./recording/recording_3.bag https://megastore.rz.uni-augsburg.de/get/DWQcmFd7Jh/
-          wget -q -O ./recording/recording_4.bag https://megastore.rz.uni-augsburg.de/get/b02fO4jaLY/
-          wget -q -O ./recording/recording_5.bag https://megastore.rz.uni-augsburg.de/get/PvlkhB_lqn/
-          docker-compose -f integration-tests-compose.yml up --abort-on-container-exit
+          docker-compose -f integration-tests-compose.yml up \
+                         --abort-on-container-exit >> /dev/null

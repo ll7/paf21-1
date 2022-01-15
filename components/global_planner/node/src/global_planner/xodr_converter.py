@@ -1,11 +1,12 @@
 """A xodr converter based on xodr files."""
 from math import sin, cos
 from enum import IntEnum
-from xml.etree import ElementTree as eTree
-from xml.etree.ElementTree import Element
-from pathlib import Path
 from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
+from pathlib import Path
+
+from xml.etree import ElementTree as eTree
+from xml.etree.ElementTree import Element
 import numpy as np
 
 
@@ -42,26 +43,31 @@ class RoadLink:
     type: str
     contact_point: str
     link_type: LinkType
-    contact_link: int = 0
-    sign: int = 0
-    contact_road: int = 0
+
+    @property
+    def contact_link(self) -> int:
+        """Representing the contact point, depending on whether the
+        road link goes from start-to-end or end-to-start"""
+        return 0 if self.contact_point == 'start' else 1
+
+    @property
+    def sign(self) -> int:
+        """Representing the side of road"""
+        is_start = self.contact_point == 'start'
+        is_pre_linkage = self.link_type == LinkType.PRE
+        return 1 if is_start ^ is_pre_linkage else -1
+
+    @property
+    def contact_road(self) -> int:
+        """Representing the contact point of the connecting road, depending on
+        whether the other road link goes from start-to-end or end-to-start"""
+        return 0 if self.link_type == LinkType.PRE else 1
 
     def __init__(self, road_link_xml: Element, link_type: LinkType):
         self.road_link_id = int(road_link_xml.get('elementId'))
         self.type = road_link_xml.get('elementType')
         self.contact_point = road_link_xml.get('contactPoint')
         self.link_type = link_type
-        self.__post_init__()
-
-    def __post_init__(self):
-        if self.contact_point == 'start':
-            self.contact_link = 0
-            self.sign = -1 if self.link_type == LinkType.PRE else 1
-        else:
-            self.contact_link = 1
-            self.sign = 1 if self.link_type == LinkType.PRE else -1
-
-        self.contact_road = 0 if self.link_type == LinkType.PRE else 1
 
 
 @dataclass
@@ -83,10 +89,10 @@ class Road:
         self.junction = int(road_xml.get('junction'))
 
         link = road_xml.find('link')
-        self.suc = None if link.find('successor') is None else RoadLink(link.find('successor'),
-                                                                        LinkType.SUC)
-        self.pre = None if link.find('predecessor') is None else RoadLink(link.find('predecessor'),
-                                                                          LinkType.PRE)
+        self.suc = None if link.find('successor') is None \
+            else RoadLink(link.find('successor'), LinkType.SUC)
+        self.pre = None if link.find('predecessor') is None \
+            else RoadLink(link.find('predecessor'), LinkType.PRE)
 
         self.left_ids, self.right_ids = Road._get_lane_id(road_xml)
         self.line_type = Road._get_line_type(road_xml)
@@ -153,16 +159,18 @@ class Road:
 
         objects = []
         geometries = plan_view.findall('geometry')
-        for i in range(len(geometries)):
-            geo_0 = geometries[i]
+
+        for i, geo_0 in enumerate(geometries):
             start_point = (float(geo_0.get('x')), float(geo_0.get('y')))
             length = float(geo_0.get('length'))
-            if i < len(geometries)-1:
-                geo_1 = geometries[i+1]
-                end_point = (float(geo_1.get('x')), float(geo_1.get('y')))
-            else:
+            is_last_geometry = i == len(geometries)-1
+
+            if is_last_geometry:
                 angle = float(geo_0.get('hdg'))
                 end_point = Road._calculate_end_point(start_point, angle, length)
+            else:
+                geo_1 = geometries[i+1]
+                end_point = (float(geo_1.get('x')), float(geo_1.get('y')))
 
             objects.append(Geometry(start_point, end_point, length))
 
@@ -323,6 +331,7 @@ class XodrMap:
 
 
 class XODRConverter:
+    # pylint: disable=too-few-public-methods
     """A xodr converter based on xodr files."""
 
     @staticmethod
@@ -351,18 +360,10 @@ class XODRConverter:
 
         # iterate over all entries in the lane-lets list
         for road in lane_lets:
-            # iterate over all links
-            for link in road.left_ids + road.right_ids:
+            all_links = road.left_ids + road.right_ids
+            for link in all_links:
                 mapping[create_key(road.road_id, 0, link)] = counter
                 mapping[create_key(road.road_id, 1, link)] = counter + 1
                 counter += 2
 
         return mapping
-
-    # @staticmethod
-    # def _road_id2index(road_id: int, mapping: dict) -> Tuple[int, int]:
-    #     """Get the index to the corresponding road id."""
-    #     founded_keys = [v for k, v in mapping.items() if k.startswith(f"{road_id}_")]
-    #
-    #     # return the first index and the last index
-    #     return founded_keys[0], founded_keys[-1]

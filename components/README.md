@@ -15,29 +15,34 @@ to speed up the server-side GitHub workflows because building the Docker images
 from scratch on each commit would imply downloading ~15 GB of pre-built Docker images
 which is not feasible*
 
-For running the automated integration tests, execute following command:
+## Run the Integration Tests
+Testing the driving components against the CARLA simulator might sometimes be a bit tricky.
+Therefore, the integration tests are mocking CARLA with pre-recorded ROS bag files.
+This might be especially useful for developing / testing on machines without NVIDIA GPU.
+
+For preparing the integration test assets, run following command:
 
 ```sh
-# simulate ROS messages and test whether containers fail to handle the messages
-docker-compose -f integration-tests-compose.yml up --abort-on-container-exit
+./prepare-integration-test-assets.sh
+```
 
-# evaluate the error code of docker-compose
-if [ $? -eg 0 ]; then
-    echo 'success!'
-else
-    echo 'failure!'
-fi
+Run following command to execute the integration tests:
+
+```sh
+docker-compose -f integration-tests-compose.yml up --abort-on-container-exit
 ```
 
 ## CARLA Simulation Components
 The CARLA simulation involves following components:
 - **CARLA simulator**: runs the basic CARLA simulation environment including world rendering, etc.
 - **CARLA ROS bridge**: interfaces for information exchange between CARLA and ROS
-- **Scenario Runner**: launches and processes scenarios defined as Open Scenario files
-- **CARLA RVIZ**: spectates the remote-controlled car and its sensors / actuators
+  - **Scenario Runner**: launches and monitors well-defined scenarios
+  - **CARLA RVIZ**: spectates the remote-controlled car and its sensors / actuators
 
 ## Driving Components (ROS)
 The components for driving are the following:
 - **Global Planner**: serves navigation tasks based on map data
+- **Perception**: preprocesses sensor data into high-level driving information
+  - **Traffic Light Detection**: evaluates traffic lights captured by cameras
 - **Local Planner**: serves local decision-making tasks and amplifies the route based on sensor data
-- **Vehicle Controller**: transforms the route waypoints etc. into actionable remote-control signals
+  - **Vehicle Controller**: transforms the planned trajectory into actionable remote-control signals

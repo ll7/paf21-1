@@ -1,3 +1,5 @@
+"""A module providing bounding box functionality"""
+
 from typing import Tuple, List
 from math import sin, cos, pi, sqrt
 
