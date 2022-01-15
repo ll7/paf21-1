@@ -20,8 +20,8 @@ kill $(jobs -p)
 nodes_after=$(rosnode list)
 
 # assert that all nodes are still available after the test
-# this is required because roslaunch always exits with a 0 code although
-# nodes were crashing, so a crash can detected by comparing the lists
+# info: this is required because roslaunch always exits with 0 code although
+#       nodes were crashing, so a crash can only be detected by comparing the lists
 if [ $nodes_before -ne $nodes_after ]; then
     echo 'test faules! some nodes crashed during test!'
     exit 1
