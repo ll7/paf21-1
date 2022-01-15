@@ -3,6 +3,7 @@
 import json
 from typing import Tuple, List
 from math import atan2
+import numpy as np
 
 import rospy
 from ackermann_msgs.msg import AckermannDrive
@@ -37,10 +38,11 @@ class RosDrivingMessagesAdapter:
         return waypoints
 
     @staticmethod
-    def vehicle_status_to_velocity(msg: ImuMsg):
-        print(msg)
-        print(f'{msg.speed} speed ')
-        return msg.speed
+    def message_to_vehicle_velocity(msg: OdometryMsg):
+        """converts the odometry message to velocity"""
+        array = [msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z]
+        print(np.linalg.norm(array))
+        return np.linalg.norm(array)
 
     @staticmethod
     def message_to_target_velocity(msg: FloatMsg) -> float:

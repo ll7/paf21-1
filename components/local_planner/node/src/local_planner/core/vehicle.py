@@ -30,21 +30,7 @@ class Vehicle:
 
     def move(self, new_pos: Tuple[float, float]):
         """Move the car towards the new position"""
-
-        # TODO: don't compute the speed, just capture it via a sensor (e.g. odometry)
-
-        old_pos = self.pos
-        old_timestamp = self.pos_update_rostime
-        new_timestamp = rospy.get_time()
-
-        if old_pos is not None and new_timestamp - old_timestamp > 0:
-            dist = euclid_dist(old_pos, new_pos)
-            time = new_timestamp - old_timestamp
-            self.actual_velocity_mps = (dist / time) * 2
-            print(f'timestamp:{rospy.get_rostime()}')
-        print(self.actual_velocity_mps)
         self.pos = new_pos
-        self.pos_update_rostime = new_timestamp
 
     def update_speed(self, speed):
         """function to update the current velocity of the car"""

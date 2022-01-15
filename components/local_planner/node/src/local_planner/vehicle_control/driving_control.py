@@ -34,6 +34,11 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
         """Update the vehicle's current position"""
         self.vehicle.move(vehicle_pos)
 
+    def update_vehicle_state(self, orientation: float, velocity: float):
+        """Update the vehicle's positional and velocity values"""
+        self.vehicle.actual_velocity_mps = velocity
+        self.vehicle.orientation_rad = orientation
+
     def update_vehicle_orientation(self, orientation: float):
         """Update the vehicle's current orientation"""
         self.vehicle.orientation_rad = orientation
@@ -41,7 +46,6 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
     def next_signal(self) -> DrivingSignal:
         """Compute the next driving signal to make the
         vehicle follow the suggested ideal route"""
-
         steering_angle = self._compute_steering_angle()
         velocity = self._compute_velocity()
         signal = DrivingSignal(steering_angle, velocity)

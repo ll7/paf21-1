@@ -82,10 +82,11 @@ class LocalPlannerNode:
         rospy.Subscriber(in_topic, ImuMsg, callback)
 
     def _init_vehicle_position_subscriber(self):
-        # TODO: read the velocity from this topic
         in_topic = f"/carla/{self.vehicle.name}/odometry"
         msg_to_position = RosDrivingMessagesAdapter.message_to_vehicle_position
-        callback = lambda msg: self.driving_control.update_vehicle_position(msg_to_position(msg))
+        msg_to_velocity = RosDrivingMessagesAdapter.message_to_vehicle_velocity
+        callback = lambda msg: self.driving_control.update_vehicle_state(msg_to_position(msg),
+                                                                         msg_to_velocity(msg))
         rospy.Subscriber(in_topic, OdometryMsg, callback)
 
     def _init_driving_signal_publisher(self):
