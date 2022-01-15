@@ -28,6 +28,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
     def calculate_trajectory(self) -> List[Tuple[float, float]]:
         """combines trajectory and respective velocity to one data struct"""
         vehicle_not_ready = self.vehicle.pos is None or len(self.cached_local_route) == 0
+        # print("vehicle_not_ready: ", vehicle_not_ready, " pos: ", self.vehicle.pos, " route: ", self.cached_local_route)
         return [] if vehicle_not_ready else self._compute_local_route()
 
     def _compute_local_route(self) -> List[Tuple[float, float]]:
@@ -45,5 +46,4 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         short_term_route = self.cached_local_route[:bound]
 
         # TODO: include maneuvers here ...
-
         return short_term_route

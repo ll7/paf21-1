@@ -48,7 +48,7 @@ class SpeedStateMachine:
     speed_offset_down_ms: float = 3.0 / 3.6
 
     def update_state(self, obs: SpeedObservation):
-        print(obs)
+        # print(obs)
 
         if obs.detected_speed_limit is not None:
             self.legal_speed_limit_mps = obs.detected_speed_limit/3.6
