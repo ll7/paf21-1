@@ -1,17 +1,19 @@
+# pylint: disable=all
+
 from typing import List, Tuple
 from matplotlib import pyplot as plt
 
 
 def plot_waypoints(points: List[Tuple[float, float]]):
-    xs = [-p[1] for p in points]
-    ys = [p[0] for p in points]
-    n = range(0, len(xs))
+    x_s = [-p[1] for p in points]
+    y_s = [p[0] for p in points]
+    labels = range(0, len(x_s))
 
     _, ax = plt.subplots()
-    ax.scatter(xs, ys)
+    ax.scatter(x_s, y_s)
 
-    for i, txt in enumerate(n):
-        ax.annotate(txt, (xs[i], ys[i]))
+    for i, txt in enumerate(labels):
+        ax.annotate(txt, (x_s[i], y_s[i]))
 
     plt.show()
 

@@ -46,16 +46,21 @@ class RoadLink:
 
     @property
     def contact_link(self) -> int:
+        """Representing the contact point, depending on whether the
+        road link goes from start-to-end or end-to-start"""
         return 0 if self.contact_point == 'start' else 1
 
     @property
     def sign(self) -> int:
+        """Representing the side of road"""
         is_start = self.contact_point == 'start'
         is_pre_linkage = self.link_type == LinkType.PRE
         return 1 if is_start ^ is_pre_linkage else -1
 
     @property
     def contact_road(self) -> int:
+        """Representing the contact point of the connecting road, depending on
+        whether the other road link goes from start-to-end or end-to-start"""
         return 0 if self.link_type == LinkType.PRE else 1
 
     def __init__(self, road_link_xml: Element, link_type: LinkType):
@@ -84,10 +89,10 @@ class Road:
         self.junction = int(road_xml.get('junction'))
 
         link = road_xml.find('link')
-        self.suc = None if link.find('successor') is None else RoadLink(link.find('successor'),
-                                                                        LinkType.SUC)
-        self.pre = None if link.find('predecessor') is None else RoadLink(link.find('predecessor'),
-                                                                          LinkType.PRE)
+        self.suc = None if link.find('successor') is None \
+            else RoadLink(link.find('successor'), LinkType.SUC)
+        self.pre = None if link.find('predecessor') is None \
+            else RoadLink(link.find('predecessor'), LinkType.PRE)
 
         self.left_ids, self.right_ids = Road._get_lane_id(road_xml)
         self.line_type = Road._get_line_type(road_xml)
@@ -154,16 +159,18 @@ class Road:
 
         objects = []
         geometries = plan_view.findall('geometry')
-        for i in range(len(geometries)):
-            geo_0 = geometries[i]
+
+        for i, geo_0 in enumerate(geometries):
             start_point = (float(geo_0.get('x')), float(geo_0.get('y')))
             length = float(geo_0.get('length'))
-            if i < len(geometries)-1:
-                geo_1 = geometries[i+1]
-                end_point = (float(geo_1.get('x')), float(geo_1.get('y')))
-            else:
+            is_last_geometry = i == len(geometries)-1
+
+            if is_last_geometry:
                 angle = float(geo_0.get('hdg'))
                 end_point = Road._calculate_end_point(start_point, angle, length)
+            else:
+                geo_1 = geometries[i+1]
+                end_point = (float(geo_1.get('x')), float(geo_1.get('y')))
 
             objects.append(Geometry(start_point, end_point, length))
 
@@ -324,6 +331,7 @@ class XodrMap:
 
 
 class XODRConverter:
+    # pylint: disable=too-few-public-methods
     """A xodr converter based on xodr files."""
 
     @staticmethod

@@ -1,4 +1,7 @@
 """Script to draw points in the Carla UI"""
+
+# pylint: disable=all
+
 import carla
 
 client = carla.Client('localhost', 2000)
