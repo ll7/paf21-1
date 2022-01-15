@@ -3,19 +3,11 @@ FROM ros:noetic
 # set up the default shell used by RUN tags
 SHELL ["/bin/bash", "-c"]
 
-# install pip
-RUN apt-get update && apt-get install -y python3-pip \
-    && rm -rf /var/lib/apt/lists/*
-
-# alias python3 as python
-RUN apt-get update && apt-get install -y python-is-python3 \
-    && rm -rf /var/lib/apt/lists/*
-
-# install ros-related dependencies (mainly for messaging)
+# install pip and some ROS dependencies
 RUN apt-get update && apt-get install -y \
-        ros-noetic-cv-bridge ros-noetic-vision-opencv \
-        ros-noetic-ackermann-msgs \
-    && rm -rf /var/lib/apt/lists/*
+        python3-pip python-is-python3 \
+        ros-noetic-ackermann-msgs && \
+    rm -rf /var/lib/apt/lists/*
 
 # install pip dependencies
 RUN python -m pip install pip --upgrade
