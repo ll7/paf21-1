@@ -41,7 +41,7 @@ class SpeedObservation:
 class SpeedStateMachine:
     """Representing a state machine for speed control decision-making."""
     vehicle: Vehicle
-    current_state: SpeedState = SpeedState.KEEP #ACCEL
+    current_state: SpeedState = SpeedState.ACCEL
     target_speed_mps: float = 0
     legal_speed_limit_mps: float = 30 / 3.6
     speed_offset_up_ms: float = 5.0 / 3.6
@@ -49,7 +49,8 @@ class SpeedStateMachine:
 
     def update_state(self, obs: SpeedObservation):
         """Update the speed state machine with a new observation"""
-
+        # WARNING: only uncomment when intending to ignore traffic lights
+        # obs.tl_phase = TrafficLightPhase.GREEN
         if obs.detected_speed_limit is not None:
             self.legal_speed_limit_mps = obs.detected_speed_limit/3.6
 
@@ -159,5 +160,5 @@ class SpeedStateMachine:
         elif action == SpeedState.BRAKE:
             self.target_speed_mps = 0
         else:
-            self.target_speed_mps = 5 #self.vehicle.actual_velocity_mps
+            self.target_speed_mps = self.vehicle.actual_velocity_mps
         return self.target_speed_mps
