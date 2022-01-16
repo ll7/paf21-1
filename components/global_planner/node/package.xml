@@ -27,10 +27,6 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roslaunch</build_depend>
   <exec_depend>rospy</exec_depend>
-  <!-- <exec_depend condition="$ROS_VERSION == 1">tf</exec_depend>
-  <exec_depend condition="$ROS_VERSION == 1">tf2</exec_depend>
-  <exec_depend condition="$ROS_VERSION == 1">rosbag_storage</exec_depend>
-  <exec_depend condition="$ROS_VERSION == 1">rviz</exec_depend> -->
 
   <export>
     <build_type>catkin</build_type>

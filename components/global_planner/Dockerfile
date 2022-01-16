@@ -24,17 +24,17 @@ RUN python -m pip install -r /app/requirements.txt
 # test + lint the source code
 ADD ./node /app/src/global_planner
 ADD ./xodr /app/res/xodr
-WORKDIR /app/src/global_planner/src
-
-# TODO add linter
-RUN source /opt/ros/noetic/setup.bash && \
-    python -m pytest tests && pylint global_planner --fail-under=9.5 --extension-pkg-whitelist=cv2
 
 # deploy the source code to ROS using catkin
 WORKDIR /app/catkin_ws/src
 RUN source /opt/ros/noetic/setup.bash && catkin_init_workspace && ln -s /app/src .
 WORKDIR /app/catkin_ws
 RUN source /opt/ros/noetic/setup.bash && catkin_make
+
+# run unit tests and linter
+WORKDIR /app/src/global_planner/src
+RUN source /opt/ros/noetic/setup.bash && source /app/catkin_ws/devel/setup.bash && \
+    python -m pytest tests && pylint global_planner --fail-under=9.5
 
 # register a startup procedure to launch the ROS node
 ADD ./ros_entrypoint.sh /ros_entrypoint.sh
