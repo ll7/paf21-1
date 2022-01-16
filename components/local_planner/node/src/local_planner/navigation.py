@@ -24,7 +24,7 @@ class InfiniteDrivingService():
     def __post_init__(self):
         if self.destinations is None:
             # TODO: load this from a config file
-            self.destinations = [(144.99, -55.5), (245.85, 198.75)] #, (335.49, 273.74)]
+            self.destinations = [( 170.82284545898438 , -195.2700958251953 ), (335.49, -273.74)]#[(144.99, -55.5), (245.85, 198.75)] #, (335.49, 273.74)]
 
     def run_infinite_driving(self):
         """Launch the infinite driving mode. This will always request new routes
