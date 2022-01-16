@@ -263,12 +263,9 @@ class GlobalPlanner:
                 route_waypoints.append(end_pos)
 
         print(f'Raw route waypoints: {route_waypoints}')
-        return route_waypoints
-
-        # TODO: fix the interpolation logic
-        # interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
-        # print(f'Interpolated route waypoints: {interpol_route}')
-        # return interpol_route
+        interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
+        print(f'Interpolated route waypoints: {interpol_route}')
+        return interpol_route
 
     @staticmethod
     def _get_intermed_section_waypoints(sec_1: str, road: Road):

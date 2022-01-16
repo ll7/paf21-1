@@ -17,11 +17,6 @@ class GlobalPlannerNode:
     """A class representing a ROS node that's planning a global route."""
     vehicle_name: str
     path = Path("/app/res/xodr/Town01.xodr")
-    xodr_map: XodrMap = None
-
-    def __post_init__(self):
-        if not self.xodr_map:
-            self.xodr_map = XODRConverter.read_xodr(self.path)
 
     def run_node(self):
         """Launch the ROS node to receive the map, the start and
@@ -31,11 +26,6 @@ class GlobalPlannerNode:
         rospy.spin()
 
     def _handle_navigation_request(self, nav_request):
-
-        # rospy.loginfo(f'start_pos: {(nav_request.start_x, nav_request.start_y)}, \
-        #     end_pos: {(nav_request.end_x, nav_request.end_y)}, \
-        #     orientation: {nav_request.orientation_rad}')
-
         xodr_map = XODRConverter.read_xodr(self.path)
         global_route = GlobalPlanner.generate_waypoints(
             (nav_request.start_x, nav_request.start_y),
@@ -49,18 +39,6 @@ class GlobalPlannerNode:
             waypoints_json = json.dumps(route_as_json),
             success = True
         )
-
-        for _ in range(1000):
-            print('foobar')
-
-        # global_route = [(nav_request.start_x, nav_request.start_y),
-        #             (nav_request.end_x, nav_request.end_y)]
-        # route_as_json = [{'x': pos[0], 'y': pos[1]} for pos in global_route]
-
-        # response = NavigationRequestResponse(
-        #     waypoints_json = json.dumps(route_as_json),
-        #     success = True
-        # )
 
         return response
 
