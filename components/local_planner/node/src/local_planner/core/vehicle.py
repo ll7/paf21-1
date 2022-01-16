@@ -2,11 +2,9 @@
 
 from dataclasses import dataclass
 from typing import Tuple
-from math import dist as euclid_dist
 
-import rospy
-
-from local_planner.core.geometry import norm_angle, points_to_vector, vector_to_dir
+from local_planner.core.geometry import \
+    norm_angle, points_to_vector, vector_to_dir
 
 
 @dataclass
@@ -27,6 +25,11 @@ class Vehicle:
     base_accel_mps2: float = 3.0
     base_brake_mps2: float = -8.0
     vehicle_reaction_time_s: float = 0.1
+
+    @property
+    def is_ready(self) -> bool:
+        """A boolean indicating whether the vehicle is ready for use"""
+        return self.pos is not None
 
     def move(self, new_pos: Tuple[float, float]):
         """Move the car towards the new position"""

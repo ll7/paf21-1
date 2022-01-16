@@ -41,19 +41,19 @@ class SpeedObservation:
 class SpeedStateMachine:
     """Representing a state machine for speed control decision-making."""
     vehicle: Vehicle
-    current_state: SpeedState = SpeedState.KEEP
+    current_state: SpeedState = SpeedState.KEEP #ACCEL
     target_speed_mps: float = 0
     legal_speed_limit_mps: float = 30 / 3.6
     speed_offset_up_ms: float = 5.0 / 3.6
     speed_offset_down_ms: float = 3.0 / 3.6
 
     def update_state(self, obs: SpeedObservation):
-        # print(obs)
+        """Update the speed state machine with a new observation"""
 
         if obs.detected_speed_limit is not None:
             self.legal_speed_limit_mps = obs.detected_speed_limit/3.6
 
-        """Update the machine's state given a speed observation."""
+        # """Update the machine's state given a speed observation."""
         if self.current_state == SpeedState.ACCEL:
             self._handle_accel(obs)
         elif self.current_state == SpeedState.KEEP:
@@ -152,11 +152,12 @@ class SpeedStateMachine:
         return time_until_brake
 
     def get_target_speed(self) -> float:
+        """Retrieve the currently suggested target speed."""
         action = self.current_state
         if action == SpeedState.ACCEL:
             self.target_speed_mps = self.legal_speed_limit_mps
         elif action == SpeedState.BRAKE:
             self.target_speed_mps = 0
         else:
-            self.target_speed_mps = self.vehicle.actual_velocity_mps
+            self.target_speed_mps = 5 #self.vehicle.actual_velocity_mps
         return self.target_speed_mps

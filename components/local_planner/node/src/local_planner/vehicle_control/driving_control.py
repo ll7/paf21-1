@@ -34,7 +34,7 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
         """Update the vehicle's current position"""
         self.vehicle.move(vehicle_pos)
 
-    def update_vehicle_state(self, position: float, velocity: float):
+    def update_vehicle_state(self, position: Tuple[float, float], velocity: float):
         """Update the vehicle's positional and velocity values"""
         self.vehicle.actual_velocity_mps = velocity
         self.vehicle.pos = position

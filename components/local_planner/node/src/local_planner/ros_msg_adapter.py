@@ -11,12 +11,13 @@ from std_msgs.msg import String as StringMsg, Float32 as FloatMsg
 from nav_msgs.msg import Path as WaypointsMsg
 from nav_msgs.msg import Odometry as OdometryMsg
 from sensor_msgs.msg import Imu as ImuMsg
+from std_srvs.srv import Trigger
 
 from local_planner.state_machine import TrafficLightInfo, TrafficLightPhase
 from local_planner.vehicle_control import DrivingSignal
 
 
-class RosDrivingMessagesAdapter:
+class RosMessagesAdapter:
     """Convert between ROS messages and driving data"""
 
     @staticmethod
@@ -24,13 +25,6 @@ class RosDrivingMessagesAdapter:
         obj = json.loads(msg.data)
         print("obj: ", obj)
         return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
-
-    @staticmethod
-    def json_message_to_waypoints(msg: StringMsg) -> List[Tuple[float, float]]:
-        """Convert a ROS message into waypoints"""
-        json_list = json.loads(msg.data)
-        waypoints = [(wp['x'], wp['y']) for wp in json_list]
-        return waypoints
 
     @staticmethod
     def nav_message_to_waypoints(msg: WaypointsMsg) -> List[Tuple[float, float]]:
