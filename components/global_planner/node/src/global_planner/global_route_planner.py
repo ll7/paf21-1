@@ -226,25 +226,10 @@ class RouteInterpolation:
 
 class GlobalPlanner:
     """A global route planner based on map and hmi data."""
-    def __init__(self, xodr_map: XodrMap):
-        """Initialize the global route planner."""
-        self.xodr_map = xodr_map
-        self.num_nodes = len(self.xodr_map.mapping)
-        self.start_pos = None
-        self.orientation = None
-
-    def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
-        """Update the vehicle's current position"""
-        print(f'new vehicle position: {vehicle_pos}')
-        self.start_pos = vehicle_pos
-
-    def update_vehicle_orientation(self, orientation: float):
-        """Update the vehicle's current orientation"""
-        self.orientation = orientation
 
     @staticmethod
     def generate_waypoints(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
-                           xodr_map: XodrMap) -> List[Tuple[float, float]]:
+                           orientation_rad: float, xodr_map: XodrMap) -> List[Tuple[float, float]]:
         """Generate route waypoints for the given start / end positions using the map"""
 
         print(f'generating path from {start_pos} to {end_pos} ...')
@@ -277,12 +262,13 @@ class GlobalPlanner:
                 route_waypoints.append(displaced_points)
                 route_waypoints.append(end_pos)
 
-        # TODO: add traffic signs and interpolation
-        #       prob. need to create a class representing a route
         print(f'Raw route waypoints: {route_waypoints}')
-        interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
-        print(f'Interpolated route waypoints: {interpol_route}')
-        return interpol_route
+        return route_waypoints
+
+        # TODO: fix the interpolation logic
+        # interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
+        # print(f'Interpolated route waypoints: {interpol_route}')
+        # return interpol_route
 
     @staticmethod
     def _get_intermed_section_waypoints(sec_1: str, road: Road):
