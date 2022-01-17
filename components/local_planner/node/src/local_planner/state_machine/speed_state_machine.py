@@ -43,7 +43,7 @@ class SpeedStateMachine:
     vehicle: Vehicle
     current_state: SpeedState = SpeedState.ACCEL
     target_speed_mps: float = 0
-    legal_speed_limit_mps: float = 30 / 3.6
+    legal_speed_limit_mps: float = 50 / 3.6
     speed_offset_up_ms: float = 5.0 / 3.6
     speed_offset_down_ms: float = 3.0 / 3.6
 
