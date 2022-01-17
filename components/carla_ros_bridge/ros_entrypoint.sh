@@ -8,4 +8,6 @@ source "/opt/carla-ros-bridge/install/setup.bash"
 sleep $CARLA_SIM_WAIT_SECS
 
 # launch the given ROS nodes from Docker CMD args
-roslaunch $@
+roslaunch $@ &
+sleep 5 && python /opt/carla/PythonAPI/examples/spawn_npc.py --host carla-simulator -n 80 -w 50 &
+wait
