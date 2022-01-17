@@ -5,7 +5,7 @@ from sensor_msgs.msg import Image as ImageMsg
 from std_msgs.msg import String as StringMsg
 from cv_bridge import CvBridge
 
-from traffic_light_detection.tld_info import TrafficLightInfo
+from perception.traffic_light_detection import TrafficLightInfo
 
 
 class RosMessagesAdapter:

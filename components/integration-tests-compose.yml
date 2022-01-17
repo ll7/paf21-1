@@ -37,11 +37,11 @@ services:
     networks:
       - ros
 
-  traffic-light-detection:
-    image: traffic_light_detection
+  perception:
+    image: perception
     environment:
       ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: traffic-light-detection
+      ROS_HOSTNAME: perception
     networks:
       - ros
 

@@ -11,7 +11,7 @@ services:
     build:
       context: ./global_planner
 
-  traffic-light-detection:
-    image: traffic_light_detection
+  perception:
+    image: perception
     build:
-      context: ./traffic_light_detection
+      context: perception
