@@ -52,3 +52,14 @@ class Vehicle:
         aim_angle_rad = vector_to_dir(aim_vector)
         steer_angle = aim_angle_rad - self.orientation_rad
         self.steering_angle = norm_angle(steer_angle)
+
+    def set_steering_angle(self, steering_angle):
+        """"Set the Steering Angles within it's limits"""
+        if steering_angle > self.max_steering_angle_rad:
+            self.steering_angle = self.max_steering_angle_rad
+            return self.steering_angle
+        if steering_angle < (- self.max_steering_angle_rad):
+            self.steering_angle = (-self.max_steering_angle_rad)
+            return self.steering_angle
+        self.steering_angle = steering_angle
+        return self.steering_angle

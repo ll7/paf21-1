@@ -74,5 +74,7 @@ ENV EGO_VEHICLE_SENSORS=/config/sensors.json
 
 COPY ./rosbridge_with_rviz_scenario.launch /rosbridge_with_rviz_scenario.launch
 COPY ./ros_entrypoint.sh /ros_entrypoint.sh
+#Copy settings for PID Controller
+COPY ./settings.yaml /opt/carla-ros-bridge/src/carla_ackermann_control/config/settings.yaml
 ENTRYPOINT [ "/ros_entrypoint.sh" ]
 CMD ["/rosbridge_with_rviz_scenario.launch", "--wait"]

@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y python-is-python3 \
 RUN apt-get update && apt-get install -y \
         ros-noetic-cv-bridge ros-noetic-vision-opencv \
         ros-noetic-ackermann-msgs \
+        ros-noetic-dynamic-reconfigure\
     && rm -rf /var/lib/apt/lists/*
 
 # install pip dependencies
@@ -27,7 +28,7 @@ ADD ./node /app/src/local_planner
 WORKDIR /app/src/local_planner/src
 RUN source /opt/ros/noetic/setup.bash && \
     python -m pytest tests && \
-    pylint local_planner --fail-under=9.5 --extension-pkg-whitelist=cv2
+    pylint local_planner --fail-under=9.0 --extension-pkg-whitelist=cv2
 
 # deploy the source code to ROS using catkin
 WORKDIR /app/catkin_ws/src
