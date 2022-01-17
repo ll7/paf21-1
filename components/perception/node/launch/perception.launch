@@ -1,6 +1,6 @@
 <!-- -->
 <launch>
-  <node pkg="traffic_light_detection" name="traffic_light_detection"
+  <node pkg="perception" name="perception"
         type="main.py" output="screen" required="true">
   </node>
 </launch>

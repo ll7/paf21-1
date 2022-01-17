@@ -23,8 +23,8 @@ ADD ./requirements.txt /app/requirements.txt
 RUN python -m pip install -r /app/requirements.txt
 
 # test + lint the source code
-ADD ./node /app/src/traffic_light_detection
-WORKDIR /app/src/traffic_light_detection/src
+ADD ./node /app/src/perception
+WORKDIR /app/src/perception/src
 RUN source /opt/ros/noetic/setup.bash && \
     python -m pytest tests && \
     pylint traffic_light_detection --fail-under=9.5 --extension-pkg-whitelist=cv2
