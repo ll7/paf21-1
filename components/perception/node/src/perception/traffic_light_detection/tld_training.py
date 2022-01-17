@@ -14,7 +14,7 @@ from tensorflow.keras.losses import Loss, SparseCategoricalCrossentropy
 from tensorflow.keras.callbacks import TensorBoard
 from tensorflow_datasets import ImageFolder
 
-from preprocessing import augment_image, resize_image
+from perception.traffic_light_detection.preprocessing import augment_image, resize_image
 
 
 @dataclass
@@ -25,8 +25,8 @@ class TldTrainingSession:
     loss_func: Loss = SparseCategoricalCrossentropy()
     input_shape: List[Any] = field(default_factory=lambda: [None, 32, 32, 3])
     batch_size: int = 32
-    class_dict: Dict[int, str] = field(default_factory=lambda: \
-        {0: 'backside', 1: 'green', 2: 'red', 3: 'yellow'})
+    class_dict: Dict[int, str] = field(default_factory=lambda: {0: 'backside', 1: 'green',
+                                                                2: 'red', 3: 'yellow'})
     weights_path: str = ''
     images_path: str = './traffic_light_data'
     log_dir: str = './logs'
