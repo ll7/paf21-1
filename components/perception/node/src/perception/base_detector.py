@@ -7,16 +7,14 @@ from cv2 import cv2
 class BaseDetector:
     """A module that is the base detector"""
     def __init__(self):
-        self.lower_mask: Tuple[int, int, int] = (0, 0, 0)
-        self.upper_mask: Tuple[int, int, int] = (0, 0, 0)
+        self.mask: Tuple[int, int, int] = (0, 0, 0)
         self.box_offset: int = 0
         self.counter: int = 0
 
     def find_object_patches(self, semantic_image: np.ndarray) -> List[List[int]]:
         """Find the object patches from the semantic image"""
-        lower_mask = np.array(self.lower_mask)
-        upper_mask = np.array(self.upper_mask)
-        masked_image = cv2.inRange(semantic_image, lower_mask, upper_mask)
+        mask = np.array(self.mask)
+        masked_image = cv2.inRange(semantic_image, mask, mask)
         contours, _ = cv2.findContours(masked_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         idx = 0
         bounding_boxes = []

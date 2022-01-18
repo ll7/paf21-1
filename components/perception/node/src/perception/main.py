@@ -32,11 +32,17 @@ class TrafficLightDetectionNode:
     publish_rate_in_hz: int
     config_path: str = '/app/src/perception/config/detection_config.yml'
     tld_publisher: rospy.Publisher = None
-    tl_detector: TrafficLightDetector = TrafficLightDetector(
-        '/app/src/perception/config/tld_config.yml')
+    tl_detector: TrafficLightDetector = None
+    vehicle_detector: ObjectDetector = None
+    pedestrian_detector: ObjectDetector = None
     rbg_buffer: ImagesBuffer = ImagesBuffer()
     depth_buffer: ImagesBuffer = ImagesBuffer()
     semantic_buffer: ImagesBuffer = ImagesBuffer()
+
+    def __post_init__(self):
+        self.tl_detector = TrafficLightDetector(self.config_path)
+        self.vehicle_detector = ObjectDetector(self.config_path, 'vehicle')
+        # self.pedestrian_detector = ObjectDetector(self.config_path, 'pedestrian')
 
     def run_node(self):
         """Launch the ROS node to receive front camera images
@@ -58,7 +64,14 @@ class TrafficLightDetectionNode:
                 obs = {'tl_phase': None, 'dist_next_obstacle_m': 1000}
                 if tld_info:
                     print(f'Traffic light detected: {tld_info}')
-                    msg = RosMessagesAdapter.tld_info_to_json_message(tld_info)
+                    obs['tl_phase'] = tld_info.phase
+                    obs['dist_next_obstacle_m'] = tld_info.distance
+                    # msg = RosMessagesAdapter.tld_info_to_json_message(tld_info)
+                    # self.tld_publisher.publish(msg)
+                obs['is_trajectory_free'] = vehicle_in_trajectory
+                obs['dist_next_obstacle_m'] = min(obs['dist_next_obstacle_m'], vehicle_distance)
+                if len(obs):
+                    msg = RosMessagesAdapter.obs_to_json_message(obs)
                     self.tld_publisher.publish(msg)
 
             rate.sleep()
@@ -89,7 +102,7 @@ class TrafficLightDetectionNode:
         rospy.Subscriber(in_rgb_topic, ImageMsg, callback)
 
     def _init_tld_info_publisher(self):
-        out_topic = f"/drive/{self.vehicle_name}/tld_info"
+        out_topic = f"/drive/{self.vehicle_name}/speed_info"
         return rospy.Publisher(out_topic, StringMsg, queue_size=10)
 
 
