@@ -39,7 +39,7 @@ SHELL ["/bin/bash", "-c"]
 WORKDIR /opt/carla-ros-bridge/src
 ARG ROS_BRIDGE_GITHUB_URL=https://github.com/carla-simulator/ros-bridge
 RUN git clone --recurse-submodules $ROS_BRIDGE_GITHUB_URL . && git checkout 0.9.10.1
-COPY ./settings.yaml /opt/carla-ros-bridge/src/carla_ackermann_control/config/settings.yaml
+COPY ./pid_settings.yaml /opt/carla-ros-bridge/src/carla_ackermann_control/config/settings.yaml
 RUN source /opt/ros/noetic/setup.bash && \
     catkin_init_workspace && cd .. && catkin_make install
 WORKDIR /
