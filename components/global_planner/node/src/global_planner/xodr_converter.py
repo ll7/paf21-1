@@ -19,7 +19,7 @@ def create_key(road: int, pos: int, link: int) -> str:
 class TrafficSign:
     """Represents the data of a traffic sign object."""
     name: str
-    relative_pos: Tuple[float, float]
+    s_value: float
 
 
 @dataclass
@@ -133,15 +133,6 @@ class Road:
         return return_ids
 
     @staticmethod
-    def _get_possible_lanes(road: Element) -> List[int]:
-        lane_id = Road._get_lane_id(road)
-        lane_type = Road._get_line_type(road)
-        if lane_type == "broken":
-            return lane_id
-        # Just Return the right lanes
-        return []
-
-    @staticmethod
     def _get_road_width(road: Element) -> float:
         """Get the lane id."""
         default_road_width = 4.0
@@ -164,12 +155,12 @@ class Road:
         if traffic_signs_xml is None:
             return []
 
-        return [TrafficSign(obj.get('name'), (float(obj.get('s')), float(obj.get('t'))))
+        return [TrafficSign(obj.get('name'), (float(obj.get('s'))))
                 for obj in traffic_signs_xml.findall('object')]
 
     @staticmethod
     def _get_traffic_lights(road: Element) -> List[TrafficLight]:
-        xml_signals = road.find('signal')
+        xml_signals = road.find('signals')
 
         signals = []
         if xml_signals is None:
@@ -179,7 +170,6 @@ class Road:
             signal_type = obj.get('name')
             if signal_type == "Signal_3Light_Post01":
                 signals.append(TrafficLight(signal_type, float(obj.get('s'))))
-
         return signals
 
     @staticmethod
