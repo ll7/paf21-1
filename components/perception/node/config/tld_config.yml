@@ -1,0 +1,6 @@
+lower_bound: [30, 0, 0]
+upper_bound: [30, 255, 255]
+box_offset: 0
+classes: {0: 'Backside', 1: 'Green', 2: 'Red', 3: 'Yellow'}
+nn_input_size: [32, 32, 3]
+weights_path: '/app/src/perception/src/perception/traffic_light_detection/model_and_weights.h5'

@@ -3,26 +3,28 @@
 import json
 from typing import Tuple, List
 from math import atan2
-import rospy
+import numpy as np
 
+import rospy
 from ackermann_msgs.msg import AckermannDrive
 from std_msgs.msg import String as StringMsg, Float32 as FloatMsg
 from nav_msgs.msg import Path as WaypointsMsg
 from nav_msgs.msg import Odometry as OdometryMsg
 from sensor_msgs.msg import Imu as ImuMsg
+from std_srvs.srv import Trigger
 
+from local_planner.state_machine import TrafficLightInfo, TrafficLightPhase
 from local_planner.vehicle_control import DrivingSignal
 
 
-class RosDrivingMessagesAdapter:
+class RosMessagesAdapter:
     """Convert between ROS messages and driving data"""
 
     @staticmethod
-    def json_message_to_waypoints(msg: StringMsg) -> List[Tuple[float, float]]:
-        """Convert a ROS message into waypoints"""
-        json_list = json.loads(msg.data)
-        waypoints = [(wp['x'], wp['y']) for wp in json_list]
-        return waypoints
+    def json_message_to_tld_info(msg: StringMsg) -> TrafficLightInfo:
+        obj = json.loads(msg.data)
+        print("obj: ", obj)
+        return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
 
     @staticmethod
     def nav_message_to_waypoints(msg: WaypointsMsg) -> List[Tuple[float, float]]:
@@ -31,10 +33,11 @@ class RosDrivingMessagesAdapter:
         return waypoints
 
     @staticmethod
-    def vehicle_status_to_velocity(msg: ImuMsg):
-        print(msg)
-        print(f'{msg.speed} speed ')
-        return msg.speed
+    def message_to_vehicle_velocity(msg: OdometryMsg):
+        """converts the odometry message to velocity"""
+        array = [msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z]
+        print("Speed ", np.linalg.norm(array))
+        return np.linalg.norm(array)
 
     @staticmethod
     def message_to_target_velocity(msg: FloatMsg) -> float:

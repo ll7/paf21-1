@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>nav_srvs</name>
+  <version>0.0.1</version>
+  <description>A package for route planning based on global map routing information fused with local sensor data</description>
+  <maintainer email="info@informatik.uni-augsburg.de">University of Augsburg - Chair of Mechatronics</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+</package>

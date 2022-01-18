@@ -2,15 +2,14 @@
 
 from dataclasses import dataclass
 from typing import Tuple
-from math import dist as euclid_dist
 
-import rospy
-
-from local_planner.core.geometry import norm_angle, points_to_vector, vector_to_dir
+from local_planner.core.geometry import \
+    norm_angle, points_to_vector, vector_to_dir
 
 
 @dataclass
 class Vehicle:
+    # pylint: disable=too-many-instance-attributes
     """Representing a vehicle"""
     name: str
     actual_velocity_mps: float = 0.0
@@ -27,20 +26,14 @@ class Vehicle:
     base_brake_mps2: float = -8.0
     vehicle_reaction_time_s: float = 0.1
 
+    @property
+    def is_ready(self) -> bool:
+        """A boolean indicating whether the vehicle is ready for use"""
+        return self.pos is not None
+
     def move(self, new_pos: Tuple[float, float]):
         """Move the car towards the new position"""
-        old_pos = self.pos
-        old_timestamp = self.pos_update_rostime
-        new_timestamp = rospy.get_time()
-
-        if old_pos is not None and new_timestamp - old_timestamp > 0:
-            dist = euclid_dist(old_pos, new_pos)
-            time = new_timestamp - old_timestamp
-            self.actual_velocity_mps = (dist / time) * 2
-            print(f'timestamp:{rospy.get_rostime()}')
-        print(self.actual_velocity_mps)
         self.pos = new_pos
-        self.pos_update_rostime = new_timestamp
 
     def update_speed(self, speed):
         """function to update the current velocity of the car"""

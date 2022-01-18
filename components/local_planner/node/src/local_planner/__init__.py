@@ -3,8 +3,6 @@ from local_planner.core import Vehicle
 from local_planner.state_machine import SpeedStateMachine, SpeedObservation, TrafficLightPhase
 from local_planner.state_machine import ManeuverStateMachine, ManeuverObservation, ManeuverState
 from local_planner.vehicle_control import DrivingController, DrivingSignal
-from local_planner.lane_detection import LaneDetection
-from local_planner.preprocessing import SensorCameraPreprocessor
-from local_planner.ros_msg_adapter import RosDrivingMessagesAdapter
+from local_planner.ros_msg_adapter import RosMessagesAdapter
 from local_planner.route_planner import TrajectoryPlanner
-from local_planner.traffic_light_detection import TrafficLightDetector
+from local_planner.navigation import InfiniteDrivingService

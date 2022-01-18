@@ -1,3 +1,0 @@
-"""Initializing traffic_light_detection module imports"""
-from local_planner.traffic_light_detection.tiny_res_net import TinyResNet
-from local_planner.traffic_light_detection.traffic_light_detection import TrafficLightDetector

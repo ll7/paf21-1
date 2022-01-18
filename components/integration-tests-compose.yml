@@ -9,10 +9,20 @@ services:
     networks:
       - ros
 
+  carla-sim-mock:
+    image: ros:noetic
+    command: /integration-tests-startup.sh
+    volumes:
+      - ./integration-tests-startup.sh:/integration-tests-startup.sh
+      - ./recordings:/app/recordings
+    environment:
+      ROS_MASTER_URI: http://roscore:11311
+      ROS_HOSTNAME: carla-sim-mock
+    networks:
+      - ros
+
   local-planner:
     image: local_planner
-    volumes:
-      - './logs:/app/logs'
     environment:
       ROS_MASTER_URI: http://roscore:11311
       ROS_HOSTNAME: local-planner
@@ -27,11 +37,11 @@ services:
     networks:
       - ros
 
-  carla-workflow-moc:
-    image: carla_workflow_moc
+  perception:
+    image: perception
     environment:
       ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: carla-workflow-mock
+      ROS_HOSTNAME: perception
     networks:
       - ros
 

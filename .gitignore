@@ -1,7 +1,6 @@
-*.pyc
-build.gradle
-/CMakeLists.txt
-.catkin_workspace
+__pycache__
+logs
+recordings
+
 .vscode
 .idea
-/scenarios/default_scenario/logs/

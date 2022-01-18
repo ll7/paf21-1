@@ -47,14 +47,6 @@ services:
       - carla
       - ros
 
-  # vehicle-controller:
-  #   image: vehicle_controller
-  #   environment:
-  #     ROS_MASTER_URI: http://roscore:11311
-  #     ROS_HOSTNAME: vehicle-controller
-  #   networks:
-  #     - ros
-
   local-planner:
     image: local_planner
     volumes:
@@ -67,13 +59,22 @@ services:
 
   global-planner:
     image: global_planner
-    # volumes:
-    #   - './logs:/app/logs'
     environment:
       ROS_MASTER_URI: http://roscore:11311
       ROS_HOSTNAME: global-planner
     networks:
       - ros
+
+  perception:
+    image: perception
+    volumes:
+      - './logs:/app/logs'
+    environment:
+      ROS_MASTER_URI: http://roscore:11311
+      ROS_HOSTNAME: perception
+    networks:
+      - ros
+
 
 networks:
   carla:

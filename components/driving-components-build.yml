@@ -10,3 +10,8 @@ services:
     image: global_planner
     build:
       context: ./global_planner
+
+  perception:
+    image: perception
+    build:
+      context: perception
