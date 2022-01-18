@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>traffic_light_detection</name>
+  <name>perception</name>
   <version>0.0.1</version>
-  <description>A package for image perception tasks to detect traffic lights</description>
+  <description>A package for image perception tasks to perception.</description>
   <maintainer email="info@informatik.uni-augsburg.de">University of Augsburg - Chair of Mechatronics</maintainer>
   <license>MIT</license>
 

@@ -8,8 +8,8 @@ import rospy
 from sensor_msgs.msg import Image as ImageMsg
 from std_msgs.msg import String as StringMsg
 
-from traffic_light_detection.detection import TrafficLightDetector
-from traffic_light_detection.ros_msg_adapter import RosMessagesAdapter
+from perception.traffic_light_detection import TrafficLightDetector
+from perception.ros_msg_adapter import RosMessagesAdapter
 
 
 class ImagesBuffer:
@@ -17,6 +17,7 @@ class ImagesBuffer:
     """Representing a very straightforward implementation
     of an image buffer for storing the latest image"""
     last_img: np.ndarray = None
+
     def apply_image(self, image: np.ndarray):
         """Add the next image to the buffer."""
         self.last_img = image
@@ -30,7 +31,7 @@ class TrafficLightDetectionNode:
     publish_rate_in_hz: int
     tld_publisher: rospy.Publisher = None
     tl_detector: TrafficLightDetector = TrafficLightDetector(
-        '/app/src/traffic_light_detection/config/tld_config.yml')
+        '/app/src/perception/config/tld_config.yml')
     rbg_buffer: ImagesBuffer = ImagesBuffer()
     depth_buffer: ImagesBuffer = ImagesBuffer()
     semantic_buffer: ImagesBuffer = ImagesBuffer()
@@ -86,6 +87,7 @@ class TrafficLightDetectionNode:
     def _init_tld_info_publisher(self):
         out_topic = f"/drive/{self.vehicle_name}/tld_info"
         return rospy.Publisher(out_topic, StringMsg, queue_size=10)
+
 
 def main():
     """The main entrypoint launching the ROS node

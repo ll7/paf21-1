@@ -19,7 +19,7 @@ def test_keep_green():
     target_speed = speed_s.get_target_speed()
 
     assert(speed_s.current_state == SpeedState.ACCEL)
-    assert (target_speed == 50/3.6)
+    assert (target_speed >= 50/3.6)
 
 
 def test_accel_from_stop():
@@ -38,7 +38,7 @@ def test_accel_from_stop():
     target_speed = speed_s.get_target_speed()
 
     assert(speed_s.current_state == SpeedState.ACCEL)
-    assert (target_speed == 50/3.6)
+    assert (target_speed >= 50/3.6)
 
 def test_accel_from_stop_green():
     vehicle = Vehicle('test_vehicle')
@@ -56,7 +56,7 @@ def test_accel_from_stop_green():
     target_speed = speed_s.get_target_speed()
 
     assert(speed_s.current_state == SpeedState.ACCEL)
-    assert (target_speed == 50/3.6)
+    assert (target_speed >= 50/3.6)
 
 def test_keep_red_in_range():
     vehicle = Vehicle('test_vehicle')
@@ -153,7 +153,7 @@ def test_accel_green():
     target_speed = speed_s.get_target_speed()
 
     assert(speed_s.current_state == SpeedState.ACCEL)
-    assert (target_speed == 50/3.6)
+    assert (target_speed >= 50/3.6)
 
 
 
@@ -173,7 +173,7 @@ def test_accel_static_start():
     target_speed = speed_s.get_target_speed()
 
     assert(speed_s.current_state == SpeedState.ACCEL)
-    assert (target_speed == 50/3.6)
+    assert (target_speed >= 50/3.6)
 
 
 def test_accel_red_in_range():
@@ -211,7 +211,7 @@ def test_accel_red_out_of_range():
     target_speed = speed_s.get_target_speed()
 
     assert(speed_s.current_state == SpeedState.ACCEL)
-    assert (target_speed == 50/3.6)
+    assert (target_speed >= 50/3.6)
 
 
 def test_accel_moving_obstacle_in_range():
@@ -270,9 +270,11 @@ def test_accel_static_obstacle_out_range():
 
     assert(speed_s.current_state == SpeedState.ACCEL)
     print("ts", target_speed)
-    assert (target_speed == 50/3.6)
+    assert (target_speed >= 50/3.6)
+
 
 """Brake Cases"""
+
 
 def test_brake_green():
     vehicle = Vehicle('test_vehicle')
@@ -290,7 +292,7 @@ def test_brake_green():
     target_speed = speed_s.get_target_speed()
 
     assert(speed_s.current_state == SpeedState.ACCEL)
-    assert (target_speed == 50/3.6)
+    assert (target_speed >= 50/3.6)
 
 
 def test_brake_red_in_range():
@@ -328,7 +330,7 @@ def test_brake_red_out_of_range():
     target_speed = speed_s.get_target_speed()
 
     assert (speed_s.current_state == SpeedState.KEEP)
-    assert (target_speed == 50 / 3.6)
+    assert (target_speed >= 50 / 3.6)
 
 
 def test_brake_static_obstacle_in_range():
@@ -350,6 +352,7 @@ def test_brake_static_obstacle_in_range():
     assert (speed_s.current_state == SpeedState.BRAKE)
     assert (target_speed == 0)
 
+
 def test_brake_static_obstacle_in_range():
     vehicle = Vehicle('test_vehicle')
     vehicle.actual_velocity_mps = 30.0 / 3.6
@@ -367,7 +370,7 @@ def test_brake_static_obstacle_in_range():
     target_speed = speed_s.get_target_speed()
 
     assert (speed_s.current_state == SpeedState.ACCEL)
-    assert (target_speed == 50/3.6)
+    assert (target_speed >= 50/3.6)
 
 
 def test_brake_static_obstacle_out_range():
@@ -386,4 +389,4 @@ def test_brake_static_obstacle_out_range():
     target_speed = speed_s.get_target_speed()
     print("ts:", target_speed)
     assert (speed_s.current_state == SpeedState.KEEP)
-    assert (target_speed == 50 / 3.6)
+    assert (target_speed >= 50 / 3.6)

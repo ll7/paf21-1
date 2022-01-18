@@ -23,11 +23,11 @@ ADD ./requirements.txt /app/requirements.txt
 RUN python -m pip install -r /app/requirements.txt
 
 # test + lint the source code
-ADD ./node /app/src/traffic_light_detection
-WORKDIR /app/src/traffic_light_detection/src
+ADD ./node /app/src/perception
+WORKDIR /app/src/perception/src
 RUN source /opt/ros/noetic/setup.bash && \
     python -m pytest tests && \
-    pylint traffic_light_detection --fail-under=9.5 --extension-pkg-whitelist=cv2
+    pylint perception --fail-under=9.5 --extension-pkg-whitelist=cv2
 
 # deploy the source code to ROS using catkin
 WORKDIR /app/catkin_ws/src
@@ -38,4 +38,4 @@ RUN source /opt/ros/noetic/setup.bash && catkin_make
 # register a startup procedure to launch the ROS node
 ADD ./ros_entrypoint.sh /ros_entrypoint.sh
 ENTRYPOINT ["/ros_entrypoint.sh"]
-CMD ["traffic_light_detection", "traffic_light_detection.launch", "--wait"]
+CMD ["perception", "perception.launch", "--wait"]
