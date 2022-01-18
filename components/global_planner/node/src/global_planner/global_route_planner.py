@@ -1,6 +1,6 @@
 """A global route planner based on map and hmi data."""
 
-from math import floor, dist as euclid_dist
+from math import floor, sin, cos, dist as euclid_dist
 from typing import Tuple, List
 
 import numpy as np
@@ -227,6 +227,8 @@ class RouteInterpolation:
 class GlobalPlanner:
     """A global route planner based on map and hmi data."""
 
+
+
     @staticmethod
     def generate_waypoints(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
                            orientation_rad: float, xodr_map: XodrMap) -> List[Tuple[float, float]]:
@@ -235,6 +237,10 @@ class GlobalPlanner:
         print(f'generating path from {start_pos} to {end_pos} ...')
         path = GlobalPlanner._get_shortest_path(start_pos, end_pos, xodr_map)
         route_waypoints = []
+        possible_lanes = []
+        traffic_lights = []
+        # Road ID, Speed, s_value
+        traffic_signs_route = [[-1, 50, 0.0]]
         id2road = { road.road_id:road for road in xodr_map.lane_lets }
         path = [(path[i], path[i+1]) for i in range(len(path)-1)]
 
@@ -246,9 +252,22 @@ class GlobalPlanner:
             is_initial_section = road_id1 == -1
             is_final_section = road_id2 == -2
 
+
             if drive_road_from_start_to_end:
                 interm_wps = GlobalPlanner._get_intermed_section_waypoints(sec_1, id2road[road_id1])
                 route_waypoints += interm_wps
+                for road in xodr_map.lane_lets:
+                    if road.road_id == road_id1:
+                        traffic_lights.append(GlobalPlanner._handle_traffic_lights(road))
+                        traffic_signs_route.append([GlobalPlanner._speed_sign_eval(road, traffic_signs_route)])
+                        actual_lane = int(sec_1.split('_')[2])
+                        if (road.line_type == "broken"):
+                            possible_lanes.append([road_id1, actual_lane, road.left_ids + road.right_ids])
+                        elif (actual_lane < 0):
+                            possible_lanes.append([road_id1, actual_lane, road.right_ids])
+                        else:
+                            possible_lanes.append([road_id1, actual_lane, road.left_ids])
+
 
             elif is_initial_section:
                 route_waypoints.append(start_pos)
@@ -261,12 +280,40 @@ class GlobalPlanner:
                 displaced_points = GlobalPlanner._displacement_points(road, sec_1, is_final=True)
                 route_waypoints.append(displaced_points)
                 route_waypoints.append(end_pos)
-
+        print("possible_lanes", possible_lanes)
+        print("traffic_lights", traffic_lights)
+        print("traffic_signs", traffic_signs_route)
         print(f'Raw route waypoints: {route_waypoints}')
         interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
         print(f'Interpolated route waypoints: {interpol_route}')
-        return interpol_route
+        for _ in range (0, 1000):
+            print("...")
 
+        return interpol_route
+    @staticmethod
+    def _handle_traffic_lights(road):
+        tf = [(tf.type, GlobalPlanner._calc_position_sign_light(0, 0, 0, tf.s_value))for tf in road.traffic_lights]
+        return tf
+    @staticmethod
+    def _speed_sign_eval(road, traffic_signs_route):
+        if (road.traffic_signs == []):
+            return [(road.road_id, 50, 0.0)]
+        return [(road.road_id, GlobalPlanner._speed_sign_name_eval(ts.name),
+                 GlobalPlanner._calc_position_sign_light(0, 0, 0, ts.s_value)) for ts in road.traffic_signs]
+    @staticmethod
+    def _calc_position_sign_light(x, y, orientation, distance):
+        newx = distance * cos(orientation) + x
+        newy = distance * sin(orientation) + y
+        return [newx, newy]
+    @staticmethod
+    def _speed_sign_name_eval(name):
+        if name == "Speed_30":
+            return 30
+        if name == "Speed_60":
+            return 60
+        if name == "Speed_90":
+            return 90
+        return name
     @staticmethod
     def _get_intermed_section_waypoints(sec_1: str, road: Road):
         moving_towards_end = int(sec_1.split('_')[1])
