@@ -65,15 +65,12 @@ class LocalPlannerNode:
         self.driving_signal_publisher = self._init_driving_signal_publisher()
         self._init_vehicle_position_subscriber()
         self._init_vehicle_orientation_subscriber()
-        self._init_tld_info_subscriber()
+        self._init_speed_info_subscriber()
 
-    def _init_tld_info_subscriber(self):
-        in_topic = f"/drive/{self.vehicle.name}/tld_info"
-        msg_to_tld_info = RosMessagesAdapter.json_message_to_tld_info
-        tld_info_to_speed_obs = lambda x: SpeedObservation(
-            tl_phase=x.phase, dist_next_obstacle_m=x.distance)
-        callback = lambda msg: self.speed_state_machine.update_state(
-            tld_info_to_speed_obs(msg_to_tld_info(msg)))
+    def _init_speed_info_subscriber(self):
+        in_topic = f"/drive/{self.vehicle.name}/speed_info"
+        msg_to_speed_info = RosMessagesAdapter.json_message_to_speed_info
+        callback = lambda msg: self.speed_state_machine.update_state(msg_to_speed_info(msg))
         rospy.Subscriber(in_topic, StringMsg, callback)
 
     def _init_vehicle_orientation_subscriber(self):

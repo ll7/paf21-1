@@ -30,7 +30,7 @@ class BaseDetector:
         return bounding_boxes
 
     @staticmethod
-    def print_text_to_image(meters: int, tl_color: str, image: np.ndarray, patch: List[int]):
+    def print_text_to_image(message: str, image: np.ndarray, patch: List[int]):
         """Annotate a picture with information."""
         font = cv2.FONT_HERSHEY_SIMPLEX
         text_pos = (10, 500)
@@ -43,8 +43,6 @@ class BaseDetector:
         top_right = (patch[0] + patch[2], patch[1] + patch[3])
         image = cv2.rectangle(np.array(image), bottom_left, top_right,
                               color=(0, 0, 255), thickness=1)
-
-        message = f'Distance: {meters} m, Color:{tl_color}'
         return cv2.putText(np.array(image), message, text_pos, font,
                            font_scale, font_color, thickness, line_type)
 
@@ -72,3 +70,22 @@ class BaseDetector:
                         y_middle if y_middle < img_height else img_height]
         depth = depth_image[middle_point[1]][middle_point[0]]
         return depth
+
+    @staticmethod
+    def print_text_to_image_in_patches(message: List[str], image: np.ndarray, patches: List[List[int]]):
+        """Annotate patches with information."""
+        assert(len(message) == len(patches))
+        font = cv2.FONT_HERSHEY_PLAIN
+        image_width = image.shape[1] / 10
+        font_color = (0, 0, 0)
+        thickness = 1
+        image = cv2.resize(image, (900, 600))
+        for i, patch in enumerate(patches):
+            bottom_left = (patch[0]*3, patch[1]*3)
+            top_right = (patch[0]*3 + patch[2]*3, patch[1]*3 + patch[3]*3)
+            text_pos = (patch[0]*3, patch[1]*3)
+            image = cv2.rectangle(np.array(image), bottom_left, top_right,
+                                  color=(0, 255, 0), thickness=1)
+            image = cv2.putText(image, message[i], text_pos, font, patch[2]/image_width,
+                                font_color, thickness)
+        return image

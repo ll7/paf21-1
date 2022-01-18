@@ -3,6 +3,7 @@
 from typing import Tuple
 import yaml
 
+from cv2 import cv2
 import numpy as np
 from perception.base_detector import BaseDetector
 # from perception.object_detection.obj_info import Point, ObjectStatus, ObjectInfo

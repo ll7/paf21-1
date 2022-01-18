@@ -5,7 +5,6 @@ from typing import Tuple, List
 from math import atan2
 import numpy as np
 
-import rospy
 from ackermann_msgs.msg import AckermannDrive
 from std_msgs.msg import String as StringMsg, Float32 as FloatMsg
 from nav_msgs.msg import Path as WaypointsMsg
@@ -15,16 +14,27 @@ from std_srvs.srv import Trigger
 
 from local_planner.state_machine import TrafficLightInfo, TrafficLightPhase
 from local_planner.vehicle_control import DrivingSignal
+from local_planner.state_machine import SpeedObservation
+
 
 
 class RosMessagesAdapter:
     """Convert between ROS messages and driving data"""
 
     @staticmethod
-    def json_message_to_tld_info(msg: StringMsg) -> TrafficLightInfo:
+    def json_message_to_speed_info(msg: StringMsg) -> TrafficLightInfo:
+        """converts message from perception to a Speed Observation"""
         obj = json.loads(msg.data)
         print("obj: ", obj)
-        return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
+        observation = SpeedObservation()
+        if obj.trajectory_free is not None:
+            observation.is_trajectory_free = obj.trajectory_free
+        if obj.phase is not None:
+            observation.tl_phase = obj.phase
+        if obj.distance is not None:
+            observation.dist_next_obstacle_m = obj.distance
+
+        return observation
 
     @staticmethod
     def nav_message_to_waypoints(msg: WaypointsMsg) -> List[Tuple[float, float]]:
