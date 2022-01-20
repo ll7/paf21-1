@@ -9,6 +9,8 @@ from perception.base_detector import BaseDetector
 # from components.perception.node.src.perception.base_detector import BaseDetector
 # from perception.object_detection.obj_info import Point, ObjectStatus, ObjectInfo
 
+# # pylint: disable=all
+
 
 class ObjectDetector(BaseDetector):
     """A module that detects traffic lights"""
