@@ -9,6 +9,11 @@ def points_to_vector(p_1: Tuple[float, float], p_2: Tuple[float, float]) -> Tupl
     return p_2[0] - p_1[0], p_2[1] - p_1[1]
 
 
+def vector_len(vec: Tuple[float, float]) -> float:
+    """Compute the given vector's length"""
+    return sqrt(vec[0]**2 + vec[1]**2)
+
+
 def add_vector(v_1: Tuple[float, float], v_2: Tuple[float, float]) -> Tuple[float, float]:
     """Add the given vectors"""
     return v_1[0] + v_2[0], v_1[1] + v_2[1]
@@ -27,7 +32,7 @@ def rotate_vector(vector: Tuple[float, float], angle_rad: float) -> Tuple[float,
 
 def scale_vector(vector: Tuple[float, float], new_len: float) -> Tuple[float, float]:
     """Amplify the length of the given vector"""
-    old_len = sqrt(vector[0]**2 + vector[1]**2)
+    old_len = vector_len(vector)
     scaled_vector = (vector[0] * new_len / old_len,
                      vector[1] * new_len / old_len)
     return scaled_vector
