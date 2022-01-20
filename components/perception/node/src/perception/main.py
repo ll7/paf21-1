@@ -10,7 +10,8 @@ from std_msgs.msg import String as StringMsg
 
 from perception.traffic_light_detection import TrafficLightDetector
 from perception.ros_msg_adapter import RosMessagesAdapter
-from perception.object_detection import ObjectDetector
+from perception.object_detection.object_detection_coordinates \
+    import ObjectDetectorNew as ObjectDetector
 
 
 class ImagesBuffer:
@@ -59,7 +60,7 @@ class TrafficLightDetectionNode:
             buffers_contain_img = not (sem_img is None or rgb_img is None or depth_img is None)
             if buffers_contain_img:
                 tld_info = self.tl_detector.detect_traffic_light(sem_img, rgb_img, depth_img)
-                vehicle_in_trajectory, vehicle_distance = self.vehicle_detector.detect_object(sem_img, depth_img)
+                self.vehicle_detector.detect_object(sem_img, depth_img)
                 # pedestrian_info = self.pedestrian_detector.detect_object(sem_img, depth_img)
                 obs = {'tl_phase': None, 'dist_next_obstacle_m': 1000}
                 if tld_info:
@@ -68,8 +69,8 @@ class TrafficLightDetectionNode:
                     obs['dist_next_obstacle_m'] = tld_info.distance
                     # msg = RosMessagesAdapter.tld_info_to_json_message(tld_info)
                     # self.tld_publisher.publish(msg)
-                obs['is_trajectory_free'] = vehicle_in_trajectory
-                obs['dist_next_obstacle_m'] = min(obs['dist_next_obstacle_m'], vehicle_distance)
+                obs['is_trajectory_free'] = False
+                obs['dist_next_obstacle_m'] = min(obs['dist_next_obstacle_m'], 1000)
                 if len(obs):
                     msg = RosMessagesAdapter.obs_to_json_message(obs)
                     self.tld_publisher.publish(msg)

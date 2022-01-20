@@ -14,7 +14,7 @@ class ObjectDetector(BaseDetector):
     """A module that detects traffic lights"""
     # pylint: disable=too-few-public-methods
 
-    def __init__(self, config_path: str, object_type: str):
+    def __init__(self, object_type: str):
         super().__init__()
         with open(config_path, encoding='utf-8') as file:
             config = yaml.safe_load(file)
@@ -26,6 +26,7 @@ class ObjectDetector(BaseDetector):
         self.counter: int = 1
 
     def filter_contours(self, semantic_image: np.ndarray, patches):
+        """gets contours of the map"""
         all_contours = []
         for mask in self.filter_masks:
             mask = np.array(mask)
@@ -51,11 +52,13 @@ class ObjectDetector(BaseDetector):
                 continue
             empty_image = cv2.drawContours(empty_image, contours, -1, 255, 1)
 
-        linesP = cv2.HoughLinesP(np.array(empty_image), rho=1, theta=np.pi / 360, threshold=15,
+        lines_p = cv2.HoughLinesP(np.array(empty_image), rho=1, theta=np.pi / 360, threshold=15,
                                  lines=np.array([]), minLineLength=1, maxLineGap=350)
-        lines = np.squeeze(linesP, axis=1)
+        lines = np.squeeze(lines_p, axis=1)
         filtered_lines = ObjectDetector._filter_relevant_lines(lines)
-        right_proj, left_proj = ObjectDetector._get_projections(filtered_lines, semantic_image.shape[0], semantic_image.shape[1])
+        right_proj, left_proj = \
+            ObjectDetector._get_projections(filtered_lines,
+                                            semantic_image.shape[0], semantic_image.shape[1])
         # filtered_image = ObjectDetector.augment_image_with_lines(semantic_image, lines)
         new_patches = []
         for patch in patches:
@@ -66,7 +69,8 @@ class ObjectDetector(BaseDetector):
                                                            right_proj[2], right_proj[3], y)
             left_proj_x = ObjectDetector._cross_line_at_y(left_proj[0], left_proj[1],
                                                           left_proj[2], left_proj[3], y)
-            if left_proj_x < bottom_right < right_proj_x or left_proj_x < bottom_left < right_proj_x:
+            if left_proj_x < bottom_right < right_proj_x or\
+                    left_proj_x < bottom_left < right_proj_x:
                 new_patches.append(patch)
         return new_patches
 
@@ -84,14 +88,14 @@ class ObjectDetector(BaseDetector):
         if len(patches) > 0:
             distances = ObjectDetector.object_distances(patches, depth_image)
 
-            if self.counter % 10 == 0 and self.counter < 0:
+            # if self.counter % 10 == 0 and self.counter < 0:
                 # messages = [f'{self.object_type[0]} in {int(d)}m' for d in distances]
                 # log_image = BaseDetector.print_text_to_image_in_patches(messages, semantic_image,
                 #                                                         patches)
                 # # log_image = cv2.resize(log_image, (900, 600))
                 # cv2.imwrite(f'/app/logs/{self.object_type}_{self.counter}.png', log_image)
-                cv2.imwrite(f'/app/logs/semantic_{self.counter}.png', semantic_image)
-                cv2.imwrite(f'/app/logs/depth_{self.counter}.png', depth_image)
+                # cv2.imwrite(f'/app/logs/semantic_{self.counter}.png', semantic_image)
+                # cv2.imwrite(f'/app/logs/depth_{self.counter}.png', depth_image)
             self.counter += 1
             return True, min(distances)
         return False, 1000
@@ -102,15 +106,15 @@ class ObjectDetector(BaseDetector):
         right_half = [l for l in lines if min(l[0], l[2]) > img_width / 2]
         left_half = [l for l in lines if max(l[0], l[2]) < img_width / 2]
         right_proj, left_proj = None, None
-        all_proj = [ObjectDetector._get_projection(
-                line, img_height, img_width) for line in lines]
+        #all_proj = [ObjectDetector._get_projection(
+        #        line, img_height) for line in lines]
         if len(left_half) >= 1:
             left_projections = [ObjectDetector._get_projection(
-                line, img_height, img_width) for line in left_half]
+                line, img_height) for line in left_half]
             left_proj = left_projections[np.argmax([line[0] for line in left_projections])]
         if len(right_half) >= 1:
             right_projections = [ObjectDetector._get_projection(
-                line, img_height, img_width) for line in right_half]
+                line, img_height) for line in right_half]
             right_proj = right_projections[np.argmin([line[0] for line in right_projections])]
 
         return right_proj, left_proj
@@ -159,13 +163,12 @@ class ObjectDetector(BaseDetector):
         intercept = y_0 - grad * x_0
         if grad != 0:
             return (y - intercept) / grad
-        else:
-            return x_0
+        return x_0
 
     @staticmethod
     def _filter_relevant_lines(lines):
         cleared_lines = []
-        for line in (lines):
+        for line in lines:
             vector = [line[2] - line[0], line[3] - line[1]]
             length = np.sqrt(vector[0] ** 2 + vector[1] ** 2)
             angle = np.arccos(vector[0] / length)
@@ -175,11 +178,10 @@ class ObjectDetector(BaseDetector):
                 cleared_lines.append(list([line]))
         if len(cleared_lines) > 0:
             return np.squeeze(np.array(cleared_lines), axis=1)
-        else:
-            return []
+        return []
 
     @staticmethod
-    def _get_projection(line, height, width):
+    def _get_projection(line, height):
         return [
             int(ObjectDetector._cross_line_at_y(
                 line[0], line[2], line[1], line[3], height)),
@@ -188,20 +190,3 @@ class ObjectDetector(BaseDetector):
                 line[0], line[2], line[1], line[3], height/2)),
             int(height/2)
         ]
-
-if __name__ == '__main__':
-    import glob
-    config_path: str = '../../../config/detection_config.yml'
-    vehicle_detector = ObjectDetector(config_path, 'vehicle')
-    for i in range(10, 390, 10):
-        paths = glob.glob(f'logs/*_{i}.png')
-        print(i)
-        for path in paths:
-            if 'semantic' in path:
-                sem_img = cv2.imread(path)
-            else:
-                depth_img = cv2.imread(path)
-                depth_img = depth_img[:, :, 0] + depth_img[:, :, 1]*256 + depth_img[:, :, 2]*256**2
-                depth_img = depth_img / (256**3 - 1) * 1000
-
-        vehicle_detector.detect_object(sem_img, depth_img)
