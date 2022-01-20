@@ -47,6 +47,8 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
         """Compute the next driving signal to make the
         vehicle follow the suggested ideal route"""
         steering_angle = self._compute_steering_angle()
+        # targetspeed =  0.0 if not self.route_waypoints else self.target_velocity_mps
+        # signal = DrivingSignal(steering_angle, targetspeed)
         signal = DrivingSignal(steering_angle, self.target_velocity_mps)
         return signal
 
