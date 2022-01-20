@@ -1,14 +1,15 @@
 """A global route planner based on map and hmi data."""
 
-from math import floor, sin, cos, dist as euclid_dist
+from dataclasses import dataclass
+from math import floor, dist as euclid_dist
 from typing import Tuple, List
 
 import numpy as np
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
-from global_planner.xodr_converter import XodrMap, Geometry, Road, create_key
-from global_planner.polygon_offsets import bounding_box
+from global_planner.xodr_converter import XodrMap, Geometry, Road, create_key, TrafficSignType
+from global_planner.geometry import bounding_box, points_to_vector, vector_len
 
 
 class ShortestPath:
@@ -29,7 +30,7 @@ class ShortestPath:
             path.insert(0, pos)
 
         return path
-
+   
     @staticmethod
     def _dijkstra(start_pos: int, matrix: np.ndarray):
         """Implementation of the Dijkstra algorithm."""
@@ -179,22 +180,33 @@ class AdjMatrixPrep:
         raise AttributeError
 
 
+@dataclass
+class RoadWithWaypoints:
+    road: Road
+    waypoints: List[Tuple[float, float]]
+
+
 class RouteInterpolation:
     # pylint: disable=too-few-public-methods
     """Representing a helper for interpolating route waypoints"""
 
     @staticmethod
-    def interpolate_route(route: List[Tuple[float, float]], interval_m=2.0):
+    def interpolate_route(roads_with_wps: List[RoadWithWaypoints], interval_m=2.0):
         """Interpolate the given route waypoints with a given interval"""
-        interpolated_route = []
 
-        for index in range(len(route) - 1):
-            waypoints = RouteInterpolation._linear_interpolation(
-                route[index], route[index + 1], interval_m=interval_m)
-            interpolated_route.extend(waypoints)
+        for road_with_wps in roads_with_wps:
+            interpol_route = []
+            route = road_with_wps.waypoints
 
-        return RouteInterpolation._clean_route_duplicates(
-            interpolated_route, min_dist=0.1)
+            for index in range(len(route) - 1):
+                waypoints = RouteInterpolation._linear_interpolation(
+                    route[index], route[index + 1], interval_m=interval_m)
+                interpol_route.extend(waypoints)
+
+            clean_route = RouteInterpolation._clean_route_duplicates(interpol_route, min_dist=0.1)
+            road_with_wps.waypoints = clean_route
+
+        return roads_with_wps
 
     @staticmethod
     def _linear_interpolation(start: Tuple[float, float], end: Tuple[float, float],
@@ -217,6 +229,9 @@ class RouteInterpolation:
     @staticmethod
     def _clean_route_duplicates(route: List[Tuple[float, float]],
                                 min_dist: float) -> List[Tuple[float, float]]:
+        if len(route) == 0:
+            return []
+
         cleaned_route = [route[0]]
         for next_p in route[1:]:
             if euclid_dist(cleaned_route[-1], next_p) >= min_dist:
@@ -224,139 +239,186 @@ class RouteInterpolation:
         return cleaned_route
 
 
+@dataclass
+class AnnotatedRouteWaypoint:
+    x: float
+    y: float
+    next_tl_m: float
+    legal_speed: float
+    possible_lanes: List[int]
+    actual_lane: int
+    end_of_lane_m: float
+    # other_signs: List[Tuple[str, float]]
+
+
+class RouteAnnotation:
+    """Representing a helper for annotation route waypoints with meta-data."""
+
+    @staticmethod
+    def annotate_route(path: List[str], roads_with_wps: List[RoadWithWaypoints]) \
+                       -> List[AnnotatedRouteWaypoint]:
+        """Annotate the given route waypoints with road meta-data."""
+        ann_points = []
+        for points_of_road in roads_with_wps:
+
+            road = points_of_road.road
+            wps = points_of_road.waypoints
+
+            actual_lane = 0
+            edges = [(path[i], path[i + 1]) for i in range(len(path) - 1)]
+            for sec_1, sec_2 in edges:
+                road_id1 = int(sec_1.split('_')[0])
+                road_id2 = int(sec_2.split('_')[0])
+                if road_id1 == road_id2 == road.road_id:
+                    actual_lane = int(sec_1.split('_')[2])
+                elif road_id1 == -1 == road.road_id:
+                    actual_lane = int(sec_1.split('_')[2])
+                elif road_id2 == -2 == road.road_id:
+                    actual_lane = int(sec_2.split('_')[2])
+
+            dist_start = euclid_dist(wps[0], road.road_start)
+            dist_end = euclid_dist(wps[-1], road.road_end)
+            is_start_to_end = dist_start < dist_end
+
+            possible_lanes = []
+            # TODO Check it for other Towns 
+            if (road.line_type == "broken"):
+                if is_start_to_end:
+                    possible_lanes = road.left_ids + road.right_ids
+                else:
+                    # TODO: invert sign
+                    right_lanes = [-lane for lane in road.right_ids]
+                    left_lanes = [-lane for lane in road.left_ids]
+                    possible_lanes = right_lanes + left_lanes
+            else:
+                possible_lanes = road.right_ids if is_start_to_end else road.left_ids
+
+            legal_speed = 50
+            speed_signs = [s for s in road.traffic_signs
+                           if s.sign_type == TrafficSignType.SPEED_LIMIT]
+
+            traffic_lights = road.traffic_lights
+            if is_start_to_end:
+                speed_signs = list(reversed(speed_signs))
+                traffic_lights = list(reversed(traffic_lights))
+
+            length_done = 0
+            last_point = (0,0)
+            for i, wp in enumerate(wps):
+                if (i>0):
+                    length_done+= vector_len(points_to_vector(wp, last_point))
+                # TODO consider more than one sign 
+
+                if (speed_signs and length_done >= speed_signs[0].dist_from_road_entrance):
+                    legal_speed = speed_signs[0].legal_speed
+                    speed_signs.pop(0)
+
+                last_point = wp
+                next_tl_m = 999
+                if (traffic_lights and length_done <= traffic_lights[0].dist_from_road_entrance):
+                    next_tl_m = traffic_lights[0].dist_from_road_entrance - length_done
+                    traffic_lights.pop(0)
+
+                end_of_lane_m = vector_len(points_to_vector(wp, wps[-1]))
+
+                ann_wp = AnnotatedRouteWaypoint(
+                    x=wp[0], y=wp[1], next_tl_m=next_tl_m,
+                    legal_speed=legal_speed,
+                    possible_lanes=possible_lanes,
+                    actual_lane=actual_lane,
+                    end_of_lane_m=end_of_lane_m)
+
+                ann_points.append(ann_wp)
+
+        return ann_points
+
+
 class GlobalPlanner:
     """A global route planner based on map and hmi data."""
 
     @staticmethod
     def generate_waypoints(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
-                           orientation_rad: float, xodr_map: XodrMap) -> List[Tuple[float, float]]:
+                           orient_rad: float, xodr_map: XodrMap) -> List[AnnotatedRouteWaypoint]:
         """Generate route waypoints for the given start / end positions using the map"""
 
-        print(f'generating path from {start_pos} to {end_pos} ...')
+        # print(f'generating path from {start_pos} to {end_pos} ...')
         path = GlobalPlanner._get_shortest_path(start_pos, end_pos, xodr_map)
-        route_waypoints = []
-        possible_lanes = []
-        traffic_lights = []
 
-        road_metadata = []
-        # Road ID, Speed, s_value
-        last_speed = 50
-        id2road = {road.road_id: road for road in xodr_map.lane_lets}
-        path = [(path[i], path[i + 1]) for i in range(len(path) - 1)]
+        route_waypoints = GlobalPlanner._preplan_route(
+            start_pos, end_pos, path, xodr_map.lane_lets)
+        # print(f'Raw route waypoints: {route_waypoints}')
 
-        for sec_1, sec_2 in path:
+        preplan_wps = []
+        for road in route_waypoints:
+            preplan_wps += road.waypoints
+        print(f'Pre-planned route waypoints: {preplan_wps}')
+
+        assert all(map(lambda wps: len(wps.waypoints) > 1, route_waypoints))
+
+        interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
+
+        interpol_wps = []
+        for road in interpol_route:
+            interpol_wps += road.waypoints
+        print(f'Interpolated route waypoints: {interpol_wps}')
+
+        ann_route = RouteAnnotation.annotate_route(path, interpol_route)
+        # print(f'Annotated route waypoints: {ann_route}')
+        return ann_route
+
+    @staticmethod
+    def _preplan_route(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
+                          path: List[str], lane_lets: List[Road]) -> List[RoadWithWaypoints]:
+        id2road = {road.road_id: road for road in lane_lets}
+        edges = [(path[i], path[i + 1]) for i in range(len(path) - 1)]
+        points_per_road: List[RoadWithWaypoints] = []
+
+        for sec_1, sec_2 in edges:
             road_id1 = int(sec_1.split('_')[0])
             road_id2 = int(sec_2.split('_')[0])
 
             drive_road_from_start_to_end = road_id1 == road_id2
             is_initial_section = road_id1 == -1
             is_final_section = road_id2 == -2
-            road_metadata_dic = {}
 
             if drive_road_from_start_to_end:
-                road_metadata_dic['road_id'] = road_id1
-                road = id2road[road_id1]
-                road_metadata_dic['traffic_lights'] = (GlobalPlanner._handle_traffic_lights(road))
-                road_metadata_dic['traffic_signs_route'] = \
-                    ([GlobalPlanner._speed_sign_eval(road, last_speed)])
-                last_speed = road_metadata_dic['traffic_signs_route'][-1][0][0]
-                actual_lane = int(sec_1.split('_')[2])
-                if (road.line_type == "broken"):
-                    road_metadata_dic['possible_lanes'] = ([road_id1, actual_lane,
-                                                            road.left_ids + road.right_ids])
-                elif (actual_lane < 0):
-                    road_metadata_dic['possible_lanes'] = ([road_id1, actual_lane, road.right_ids])
-                else:
-                    road_metadata_dic['possible_lanes'] = ([road_id1, actual_lane, road.left_ids])
-
-                interm_wps, road_metadata_dic = GlobalPlanner._get_intermed_section_waypoints(
-                    sec_1, id2road[road_id1], road_metadata_dic)
-                route_waypoints += interm_wps
-                road_metadata.append(road_metadata_dic)
+                interm_wps = GlobalPlanner._get_intermed_section_waypoints(sec_1, id2road[road_id1])
+                assert len(interm_wps) > 1
+                points_per_road.append(RoadWithWaypoints(id2road[road_id1], interm_wps))
 
             elif is_initial_section:
-                route_waypoints.append(start_pos)
                 road = id2road[road_id2]
-                displaced_points = GlobalPlanner._displacement_points(road, sec_2, is_final=False)
-                route_waypoints.append(displaced_points)
+                displaced_point = GlobalPlanner._displace_point(road, sec_2, is_final=False)
+                points_per_road.append(RoadWithWaypoints(road, [start_pos] + [displaced_point]))
 
             elif is_final_section:
                 road = id2road[road_id1]
-                displaced_points = GlobalPlanner._displacement_points(road, sec_1, is_final=True)
-                route_waypoints.append(displaced_points)
-                route_waypoints.append(end_pos)
+                displaced_point = GlobalPlanner._displace_point(road, sec_1, is_final=True)
+                points_per_road.append(RoadWithWaypoints(road, [displaced_point]+ [end_pos]))
 
-        print("road_metadata:", road_metadata)
-        print(f'Raw route waypoints: {route_waypoints}')
-        interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
-        print(f'Interpolated route waypoints: {interpol_route}')
-        print("List [dic{x: y: next_tl: speed_sign: possible_lane: actual_lane:"
-              " end_of_lane_m: sign+dist:}]")
-        for _ in range(0, 1000):
-            print("...")
-
-        return interpol_route
-
-    # @staticmethod
-    # def _handle_traffic_lights(road):
-    #     temp = []
-    #     for tf in road.traffic_lights:
-    #         temp.append([(tf.type, tf.s_value, GlobalPlanner._calc_position_sign_light(
-    #             road.geometries)) ])
-    #
-    #     return temp
+        return points_per_road
 
     @staticmethod
-    def _handle_traffic_lights(road):
-        return [(tf.type, GlobalPlanner._calc_position_sign_light(0, 0, 0, tf.s_value))for tf in
-                road.traffic_lights]
-
-
-    @staticmethod
-    def _speed_sign_eval(road, last_speed):
-
-        if not road.traffic_signs:
-            return [(last_speed, 0.0, 0.0)]
-        return [(GlobalPlanner._speed_sign_name_eval(ts.name),
-                 ts.s_value, ts.t_value) for ts in road.traffic_signs]
-
-    @staticmethod
-    def _speed_sign_name_eval(name):
-        if name == "Speed_30":
-            return 30
-        if name == "Speed_60":
-            return 60
-        if name == "Speed_90":
-            return 90
-        return name
-
-    @staticmethod
-    def _calc_position_sign_light(x, y, orientation, distance):
-        newx = distance * cos(orientation) + x
-        newy = distance * sin(orientation) + y
-        return [newx, newy]
-
-    @staticmethod
-    def _get_intermed_section_waypoints(sec_1: str, road: Road, road_metadata_dic):
+    def _get_intermed_section_waypoints(sec_1: str, road: Road) -> List[Tuple[float, float]]:
         moving_towards_end = int(sec_1.split('_')[1])
         lane_link = int(sec_1.split('_')[2])
+
         road_geometries = road.geometries
-        road_metadata_dic['road_reverse'] = False
         if moving_towards_end:
             road_geometries = list(reversed(road.geometries))
-            road_metadata_dic['road_reverse'] = True
-            # road_metadata_dic['traffic_lights'] = [(tf[0], -float(tf[1]))
-            #                                        for tf in road_metadata_dic['traffic_lights']]
-            # road_metadata_dic['traffic_lights'] = [(ts[0], -float(ts[1]))
-            #                                        for ts in
-            #                                        road_metadata_dic['traffic_signs_route']]
 
         # TODO add support for multiple lanes
         road_waypoints = []
         for geo in road_geometries:
             points = bounding_box(geo.start_point, geo.end_point, road.road_width / 2)
-            road_waypoints.append(points[0] if lane_link < 0 else points[1])
-        return road_waypoints, road_metadata_dic
+            road_waypoints.append(points[0] if lane_link < 0 else points[2])
+
+        if len(road_geometries) == 1:
+            geo = road_geometries[-1]
+            points = bounding_box(geo.start_point, geo.end_point, road.road_width / 2)
+            road_waypoints.append(points[3] if lane_link < 0 else points[1])
+
+        return road_waypoints
 
     @staticmethod
     def _get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
@@ -368,7 +430,7 @@ class GlobalPlanner:
         return [key_list[p_id] for p_id in path_ids]
 
     @staticmethod
-    def _displacement_points(road: Road, sec: str, is_final: bool):
+    def _displace_point(road: Road, sec: str, is_final: bool):
         moving_towards_end = int(sec.split('_')[1])
         road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
         points = bounding_box(road_end_point.start_point, road_end_point.end_point,
