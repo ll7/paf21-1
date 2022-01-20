@@ -70,7 +70,8 @@ class BaseDetector:
         return depth
 
     @staticmethod
-    def print_text_to_image_in_patches(message: List[str], image: np.ndarray, patches: List[List[int]]):
+    def print_text_to_image_in_patches(message: List[str], image: np.ndarray,
+                                       patches: List[List[int]]):
         """Annotate patches with information."""
         assert(len(message) == len(patches))
         font = cv2.FONT_HERSHEY_PLAIN

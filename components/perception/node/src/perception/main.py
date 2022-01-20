@@ -10,8 +10,7 @@ from std_msgs.msg import String as StringMsg
 
 from perception.traffic_light_detection import TrafficLightDetector
 from perception.ros_msg_adapter import RosMessagesAdapter
-from perception.object_detection.object_detection_coordinates \
-    import ObjectDetectorNew as ObjectDetector
+from perception.object_detection import ObjectDetector
 
 
 class ImagesBuffer:
@@ -26,7 +25,7 @@ class ImagesBuffer:
 
 
 @dataclass
-class TrafficLightDetectionNode:
+class PerceptionNode:
     """A class representing a ROS node that's processing
     camera data to detect traffic lights."""
     vehicle_name: str
@@ -35,7 +34,6 @@ class TrafficLightDetectionNode:
     tld_publisher: rospy.Publisher = None
     tl_detector: TrafficLightDetector = None
     vehicle_detector: ObjectDetector = None
-    pedestrian_detector: ObjectDetector = None
     rbg_buffer: ImagesBuffer = ImagesBuffer()
     depth_buffer: ImagesBuffer = ImagesBuffer()
     semantic_buffer: ImagesBuffer = ImagesBuffer()
@@ -43,7 +41,6 @@ class TrafficLightDetectionNode:
     def __post_init__(self):
         self.tl_detector = TrafficLightDetector(self.config_path)
         self.vehicle_detector = ObjectDetector(self.config_path, 'vehicle')
-        # self.pedestrian_detector = ObjectDetector(self.config_path, 'pedestrian')
 
     def run_node(self):
         """Launch the ROS node to receive front camera images
@@ -61,18 +58,10 @@ class TrafficLightDetectionNode:
             if buffers_contain_img:
                 tld_info = self.tl_detector.detect_traffic_light(sem_img, rgb_img, depth_img)
                 self.vehicle_detector.detect_object(sem_img, depth_img)
-                # pedestrian_info = self.pedestrian_detector.detect_object(sem_img, depth_img)
-                obs = {'tl_phase': None, 'dist_next_obstacle_m': 1000}
+
                 if tld_info:
                     print(f'Traffic light detected: {tld_info}')
-                    obs['tl_phase'] = tld_info.phase
-                    obs['dist_next_obstacle_m'] = tld_info.distance
-                    # msg = RosMessagesAdapter.tld_info_to_json_message(tld_info)
-                    # self.tld_publisher.publish(msg)
-                obs['is_trajectory_free'] = False
-                obs['dist_next_obstacle_m'] = min(obs['dist_next_obstacle_m'], 1000)
-                if len(obs):
-                    msg = RosMessagesAdapter.obs_to_json_message(obs)
+                    msg = RosMessagesAdapter.tld_info_to_json_message(tld_info)
                     self.tld_publisher.publish(msg)
 
             rate.sleep()
@@ -103,7 +92,7 @@ class TrafficLightDetectionNode:
         rospy.Subscriber(in_rgb_topic, ImageMsg, callback)
 
     def _init_tld_info_publisher(self):
-        out_topic = f"/drive/{self.vehicle_name}/speed_info"
+        out_topic = f"/drive/{self.vehicle_name}/tld_info"
         return rospy.Publisher(out_topic, StringMsg, queue_size=10)
 
 
@@ -113,7 +102,7 @@ def main():
 
     vehicle_name = "ego_vehicle"
     publish_rate_hz = 10
-    node = TrafficLightDetectionNode(vehicle_name, publish_rate_hz)
+    node = PerceptionNode(vehicle_name, publish_rate_hz)
     node.run_node()
 
 
