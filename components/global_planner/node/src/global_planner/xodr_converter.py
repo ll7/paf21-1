@@ -9,6 +9,8 @@ from xml.etree import ElementTree as eTree
 from xml.etree.ElementTree import Element
 import numpy as np
 
+from polygon_offsets import points_to_vector, scale_vector, add_vector
+
 
 def create_key(road: int, pos: int, link: int) -> str:
     """Function to create the key of the mapping dictionary."""
