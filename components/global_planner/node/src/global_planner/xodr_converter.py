@@ -17,18 +17,12 @@ def create_key(road: int, pos: int, link: int) -> str:
     return f"{road}_{pos}_{link}"
 
 
-@dataclass
-class TrafficSign:
-    """Represents the data of a traffic sign object."""
-    name: str
-    s_value: float
-
-
-@dataclass
-class TrafficLight:
-    """Represents the data of a traffic light object."""
-    type: str
-    s_value: float
+def global_pos(road_start: Tuple[float, float], road_end: Tuple[float, float],
+               dist_from_road_start: float) -> Tuple[float, float]:
+    """Determine the global position based on the offset from the road's start point"""
+    road_vec = points_to_vector(road_start, road_end)
+    road_start_to_sign_vec = scale_vector(road_vec, dist_from_road_start)
+    return add_vector(road_start, road_start_to_sign_vec)
 
 
 @dataclass
@@ -37,6 +31,34 @@ class Geometry:
     start_point: Tuple[float, float]
     end_point: Tuple[float, float]
     length: float
+
+
+@dataclass
+class TrafficSign:
+    """Represents the data of a traffic sign object."""
+    name: str
+    dist_from_road_start: float
+    is_on_right_side: bool
+    global_pos: (float, float)
+    
+    def __init__(self, node_xml: Element, geometry):
+        self.name = node_xml.get('name')
+        self.dist_from_road_start = float(node_xml.get('s'))
+        self.is_on_right_side = float(node_xml.get('t')) > 0
+        self.global_pos = global_pos()
+
+
+@dataclass
+class TrafficLight:
+    """Represents the data of a traffic light object."""
+    type: str
+    dist_from_road_start: float
+    # global_pos: (float, float)
+
+    def __init__(self, node_xml: Element):
+        pass
+
+
 
 
 class LinkType(IntEnum):
@@ -106,10 +128,10 @@ class Road:
 
         self.left_ids, self.right_ids = Road._get_lane_id(road_xml)
         self.line_type = Road._get_line_type(road_xml)
-        self.traffic_signs = Road._get_traffic_signs(road_xml)
-        self.traffic_lights = Road._get_traffic_lights(road_xml)
         self.geometries = Road._get_geometry(road_xml)
         self.road_width = Road._get_road_width(road_xml)
+        self.traffic_signs = Road._get_traffic_signs(road_xml)
+        self.traffic_lights = Road._get_traffic_lights(road_xml)
 
     @staticmethod
     def _get_line_type(road: Element) -> str:
@@ -157,7 +179,7 @@ class Road:
         if traffic_signs_xml is None:
             return []
 
-        return [TrafficSign(obj.get('name'), (float(obj.get('s'))))
+        return [TrafficSign(obj.get('name'), (float(obj.get('s'))), (float(obj.get('t'))))
                 for obj in traffic_signs_xml.findall('object')]
 
     @staticmethod

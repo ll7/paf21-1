@@ -34,7 +34,7 @@ def scale_vector(vector: Tuple[float, float], new_len: float) -> Tuple[float, fl
 
 
 def orthogonal_offset(start_point: Tuple[float, float], end_point: Tuple[float, float],
-                      road_width: float) -> Tuple[float, float]:
+                      offset: float) -> Tuple[float, float]:
     """Calculate the orthogonal offset according the road width in right direction"""
     vector = points_to_vector(start_point, end_point)
     scaled_vector = scale_vector(vector, offset)
