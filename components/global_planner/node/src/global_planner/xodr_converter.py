@@ -1,4 +1,5 @@
 """A xodr converter based on xodr files."""
+from abc import ABC
 from math import sin, cos
 from enum import IntEnum
 from typing import List, Tuple, Dict
@@ -9,7 +10,7 @@ from xml.etree import ElementTree as eTree
 from xml.etree.ElementTree import Element
 import numpy as np
 
-from polygon_offsets import points_to_vector, scale_vector, add_vector
+from global_planner.geometry import points_to_vector, vector_len, scale_vector, add_vector
 
 
 def create_key(road: int, pos: int, link: int) -> str:
@@ -33,32 +34,69 @@ class Geometry:
     length: float
 
 
-@dataclass
-class TrafficSign:
+class TrafficSignType(IntEnum):
+    SPEED_LIMIT = 0
+    STOP = 1
+    CROSSWALK = 2
+
+
+class TrafficSignal(ABC):
     """Represents the data of a traffic sign object."""
     name: str
-    dist_from_road_start: float
-    is_on_right_side: bool
-    global_pos: (float, float)
-    
-    def __init__(self, node_xml: Element, geometry):
+    dist_from_road_entrance: float
+    is_reversed: bool
+    # global_pos: Tuple[float, float]
+
+    def __init__(self, node_xml: Element, road_start: Tuple[float, float],
+                 road_end: Tuple[float, float]):
         self.name = node_xml.get('name')
-        self.dist_from_road_start = float(node_xml.get('s'))
-        self.is_on_right_side = float(node_xml.get('t')) > 0
-        self.global_pos = global_pos()
+        self.is_reversed = float(node_xml.get('t')) <= 0
+        dist_from_start = float(node_xml.get('s'))
+        dist_from_end = vector_len(points_to_vector(road_start, road_end)) - dist_from_start
+
+        # self.global_pos = global_pos(road_start, road_end, dist_from_start)
+        self.dist_from_road_entrance = dist_from_end if self.is_reversed else dist_from_start
 
 
-@dataclass
-class TrafficLight:
-    """Represents the data of a traffic light object."""
-    type: str
-    dist_from_road_start: float
-    # global_pos: (float, float)
+class TrafficSign(TrafficSignal):
+    """Represents the data of a traffic sign object."""
 
-    def __init__(self, node_xml: Element):
-        pass
+    def __init__(self, node_xml: Element, road_start: Tuple[float, float],
+                 road_end: Tuple[float, float]):
+        super(TrafficSign, self).__init__(node_xml, road_start, road_end)
+
+    @property
+    def sign_type(self) -> TrafficSignType or None:
+        """Retrieve the sign type."""
+        if self.name.startswith('Speed_'):
+            return TrafficSignType.SPEED_LIMIT
+        elif self.name.startswith('Stencil_STOP'):
+            return TrafficSignType.STOP
+        elif self.name.startswith('SimpleCrosswalk'):
+            return TrafficSignType.CROSSWALK
+        else:
+            # LadderCrosswalk
+            # StopLine
+            # SolidSingleWhite
+            print("parsing unknown object: ", self.name)
+            return None
+
+    @property
+    def legal_speed(self) -> float:
+        """Retrieve the legal speed limit introduced by this traffic sign."""
+        if not self.sign_type == TrafficSignType.SPEED_LIMIT:
+            raise RuntimeError('Invalid operation! Traffic sign is no speed sign!')
+        return float(self.name[6:])
 
 
+class TrafficLight(TrafficSignal):
+    """Represents the data of a traffic sign object."""
+
+    # TODO: find out if there's something specific to traffic lights to store here ...
+
+    def __init__(self, node_xml: Element, road_start: Tuple[float, float],
+                 road_end: Tuple[float, float]):
+        super(TrafficLight, self).__init__(node_xml, road_start, road_end)
 
 
 class LinkType(IntEnum):
@@ -130,8 +168,22 @@ class Road:
         self.line_type = Road._get_line_type(road_xml)
         self.geometries = Road._get_geometry(road_xml)
         self.road_width = Road._get_road_width(road_xml)
-        self.traffic_signs = Road._get_traffic_signs(road_xml)
-        self.traffic_lights = Road._get_traffic_lights(road_xml)
+        self.traffic_signs = Road._get_traffic_signs(road_xml, self.road_start, self.road_end)
+        self.traffic_lights = Road._get_traffic_lights(road_xml, self.road_start, self.road_end)
+
+    @property
+    def road_start(self) -> Tuple[float, float]:
+        return self.geometries[0].start_point
+
+    @property
+    def road_end(self) -> Tuple[float, float]:
+        return self.geometries[-1].end_point
+
+    @property
+    def approx_road_length(self) -> float:
+        if not self.geometries:
+            raise RuntimeError('Invalid operation! Road has no geometries!')
+        return vector_len(points_to_vector(self.road_start, self.road_end))
 
     @staticmethod
     def _get_line_type(road: Element) -> str:
@@ -173,28 +225,32 @@ class Road:
         return default_road_width
 
     @staticmethod
-    def _get_traffic_signs(road: Element) -> List[TrafficSign]:
+    def _get_traffic_signs(road: Element, road_start: Tuple[float, float],
+                           road_end: Tuple[float, float]) -> List[TrafficSign]:
         """Get the traffic signs out of the road."""
+        traffic_signs = []
         traffic_signs_xml = road.find('objects')
-        if traffic_signs_xml is None:
-            return []
 
-        return [TrafficSign(obj.get('name'), (float(obj.get('s'))), (float(obj.get('t'))))
-                for obj in traffic_signs_xml.findall('object')]
+        if traffic_signs_xml is None:
+            return traffic_signs
+
+        traffic_signs = [TrafficSign(obj, road_start, road_end)
+                         for obj in traffic_signs_xml.findall('object')]
+        traffic_signs = [s for s in traffic_signs if s.sign_type is not None]
+        return traffic_signs
 
     @staticmethod
-    def _get_traffic_lights(road: Element) -> List[TrafficLight]:
-        xml_signals = road.find('signals')
+    def _get_traffic_lights(road: Element, road_start: Tuple[float, float],
+                            road_end: Tuple[float, float]) -> List[TrafficLight]:
+        """Get the traffic lights out of the road."""
+        traffic_lights = []
+        traffic_lights_xml = road.find('signals')
 
-        signals = []
-        if xml_signals is None:
-            return signals
+        if traffic_lights_xml is None:
+            return traffic_lights
 
-        for obj in xml_signals.findall('signal'):
-            signal_type = obj.get('name')
-            if signal_type == "Signal_3Light_Post01":
-                signals.append(TrafficLight(signal_type, float(obj.get('s'))))
-        return signals
+        return [TrafficLight(obj, road_start, road_end)
+                for obj in traffic_lights_xml.findall('signal')]
 
     @staticmethod
     def _get_geometry(road: Element):
