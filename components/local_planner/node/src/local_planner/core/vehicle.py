@@ -24,7 +24,7 @@ class Vehicle:
     max_steering_angle_rad: float = 0.5
     base_accel_mps2: float = 3.0
     base_brake_mps2: float = -8.0
-    vehicle_reaction_time_s: float = 0.1
+    vehicle_reaction_time_s: float = 0.7
 
     @property
     def is_ready(self) -> bool:
