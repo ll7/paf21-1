@@ -24,11 +24,3 @@ class RosMessagesAdapter:
         """Convert a driving signal into a ROS message"""
         json_msg = f'{{ "phase": "{tld_info.phase}", "distance": {tld_info.distance} }}'
         return StringMsg(data=json_msg)
-
-    @staticmethod
-    def obs_to_json_message(speed_obs) -> StringMsg:
-        """Convert a driving signal into a ROS message"""
-        json_msg = f'{{ "phase": "{speed_obs["tl_phase"]}", ' \
-                   f'"distance": {speed_obs["dist_next_obstacle_m"]}' \
-                   f', "trajectory_free": {not speed_obs["is_trajectory_free"]} }}'
-        return StringMsg(data=json_msg)
