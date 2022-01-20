@@ -23,6 +23,13 @@ class TrafficSign:
 
 
 @dataclass
+class TrafficLight:
+    """Represents the data of a traffic light object."""
+    type: str
+    s_value: float
+
+
+@dataclass
 class Geometry:
     """Represents the data of a geometry object."""
     start_point: Tuple[float, float]
@@ -79,6 +86,7 @@ class Road:
     right_ids: List[int]
     line_type: str
     traffic_signs: List[TrafficSign]
+    traffic_lights: List[TrafficLight]
     geometries: List[Geometry]
     road_width: float
     suc: RoadLink = None
@@ -97,6 +105,7 @@ class Road:
         self.left_ids, self.right_ids = Road._get_lane_id(road_xml)
         self.line_type = Road._get_line_type(road_xml)
         self.traffic_signs = Road._get_traffic_signs(road_xml)
+        self.traffic_lights = Road._get_traffic_lights(road_xml)
         self.geometries = Road._get_geometry(road_xml)
         self.road_width = Road._get_road_width(road_xml)
 
@@ -124,6 +133,15 @@ class Road:
         return return_ids
 
     @staticmethod
+    def _get_possible_lanes(road: Element) -> List[int]:
+        lane_id = Road._get_lane_id(road)
+        lane_type = Road._get_line_type(road)
+        if lane_type == "broken":
+            return lane_id
+        # Just Return the right lanes
+        return []
+
+    @staticmethod
     def _get_road_width(road: Element) -> float:
         """Get the lane id."""
         default_road_width = 4.0
@@ -140,15 +158,29 @@ class Road:
         return default_road_width
 
     @staticmethod
-    def _get_traffic_signs(road: Element) -> list:
+    def _get_traffic_signs(road: Element) -> List[TrafficSign]:
         """Get the traffic signs out of the road."""
-        traffic_signs = road.find('objects')
-        if traffic_signs is None:
+        traffic_signs_xml = road.find('objects')
+        if traffic_signs_xml is None:
             return []
 
-        # return a list with the traffic signs
         return [TrafficSign(obj.get('name'), (float(obj.get('s')), float(obj.get('t'))))
-                for obj in traffic_signs.findall('object')]
+                for obj in traffic_signs_xml.findall('object')]
+
+    @staticmethod
+    def _get_traffic_lights(road: Element) -> List[TrafficLight]:
+        xml_signals = road.find('signal')
+
+        signals = []
+        if xml_signals is None:
+            return signals
+
+        for obj in xml_signals.findall('signal'):
+            signal_type = obj.get('name')
+            if signal_type == "Signal_3Light_Post01":
+                signals.append(TrafficLight(signal_type, float(obj.get('s'))))
+
+        return signals
 
     @staticmethod
     def _get_geometry(road: Element):
@@ -179,7 +211,8 @@ class Road:
     @staticmethod
     def _calculate_end_point(start_point: Tuple[float, float], angle: float,
                              length: float) -> Tuple[float, float]:
-        return start_point[0] + cos(angle) * length, start_point[1] + sin(angle) * length
+        return start_point[0] + cos(angle) * length, \
+               start_point[1] + sin(angle) * length
 
 
 @dataclass
