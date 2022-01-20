@@ -34,7 +34,10 @@ class GlobalPlannerNode:
             xodr_map
         )
 
-        route_as_json = [{'x': pos[0], 'y': pos[1]} for pos in global_route]
+        for ann_wp in global_route:
+            print(ann_wp)
+
+        route_as_json = [{'x': pos.x, 'y': pos.y} for pos in global_route]
         response = NavigationRequestResponse(
             waypoints_json = json.dumps(route_as_json),
             success = True
