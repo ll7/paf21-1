@@ -1,6 +1,6 @@
 from pytest import approx
 from math import pi, sqrt
-from global_planner.polygon_offsets import orthogonal_offset, bounding_box
+from global_planner.geometry import orthogonal_offset, bounding_box
 
 
 def test_offset_north():
