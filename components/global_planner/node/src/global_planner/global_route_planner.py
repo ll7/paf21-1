@@ -30,7 +30,7 @@ class ShortestPath:
             path.insert(0, pos)
 
         return path
-   
+
     @staticmethod
     def _dijkstra(start_pos: int, matrix: np.ndarray):
         """Implementation of the Dijkstra algorithm."""
@@ -173,7 +173,6 @@ class AdjMatrixPrep:
         key = create_key(road, end, link)
         if key in mapping:
             return mapping[key]
-        # TODO should never happen
         key = create_key(road, end, -link)
         if key in mapping:
             return mapping[key]
@@ -182,6 +181,7 @@ class AdjMatrixPrep:
 
 @dataclass
 class RoadWithWaypoints:
+    """Representing a road and a set of related waypoints"""
     road: Road
     waypoints: List[Tuple[float, float]]
 
@@ -241,8 +241,9 @@ class RouteInterpolation:
 
 @dataclass
 class AnnotatedRouteWaypoint:
-    x: float
-    y: float
+    """Representing a route waypoint with some useful driving meta-data annotations"""
+    x_coord: float
+    y_coord: float
     next_tl_m: float
     legal_speed: float
     possible_lanes: List[int]
@@ -252,6 +253,7 @@ class AnnotatedRouteWaypoint:
 
 
 class RouteAnnotation:
+    # pylint: disable=too-few-public-methods
     """Representing a helper for annotation route waypoints with meta-data."""
 
     @staticmethod
@@ -264,65 +266,37 @@ class RouteAnnotation:
             road = points_of_road.road
             wps = points_of_road.waypoints
 
-            actual_lane = 0
-            edges = [(path[i], path[i + 1]) for i in range(len(path) - 1)]
-            for sec_1, sec_2 in edges:
-                road_id1 = int(sec_1.split('_')[0])
-                road_id2 = int(sec_2.split('_')[0])
-                if road_id1 == road_id2 == road.road_id:
-                    actual_lane = int(sec_1.split('_')[2])
-                elif road_id1 == -1 == road.road_id:
-                    actual_lane = int(sec_1.split('_')[2])
-                elif road_id2 == -2 == road.road_id:
-                    actual_lane = int(sec_2.split('_')[2])
-
             dist_start = euclid_dist(wps[0], road.road_start)
             dist_end = euclid_dist(wps[-1], road.road_end)
             is_start_to_end = dist_start < dist_end
 
-            possible_lanes = []
-            # TODO Check it for other Towns 
-            if (road.line_type == "broken"):
-                if is_start_to_end:
-                    possible_lanes = road.left_ids + road.right_ids
-                else:
-                    # TODO: invert sign
-                    right_lanes = [-lane for lane in road.right_ids]
-                    left_lanes = [-lane for lane in road.left_ids]
-                    possible_lanes = right_lanes + left_lanes
-            else:
-                possible_lanes = road.right_ids if is_start_to_end else road.left_ids
+            actual_lane = RouteAnnotation._get_actual_lane(path, road)
+            possible_lanes = RouteAnnotation._get_possible_lanes(road, is_start_to_end)
+            speed_signs, traffic_lights = RouteAnnotation.\
+                _get_speed_signs_and_traffic_lights(road, is_start_to_end)
 
             legal_speed = 50
-            speed_signs = [s for s in road.traffic_signs
-                           if s.sign_type == TrafficSignType.SPEED_LIMIT]
-
-            traffic_lights = road.traffic_lights
-            if is_start_to_end:
-                speed_signs = list(reversed(speed_signs))
-                traffic_lights = list(reversed(traffic_lights))
-
             length_done = 0
             last_point = (0,0)
-            for i, wp in enumerate(wps):
-                if (i>0):
-                    length_done+= vector_len(points_to_vector(wp, last_point))
-                # TODO consider more than one sign 
+            for i, waypoint in enumerate(wps):
+                if i > 0:
+                    length_done += vector_len(points_to_vector(waypoint, last_point))
+                # TODO consider more than one sign
 
                 if (speed_signs and length_done >= speed_signs[0].dist_from_road_entrance):
                     legal_speed = speed_signs[0].legal_speed
                     speed_signs.pop(0)
 
-                last_point = wp
+                last_point = waypoint
                 next_tl_m = 999
                 if (traffic_lights and length_done <= traffic_lights[0].dist_from_road_entrance):
                     next_tl_m = traffic_lights[0].dist_from_road_entrance - length_done
                     traffic_lights.pop(0)
 
-                end_of_lane_m = vector_len(points_to_vector(wp, wps[-1]))
+                end_of_lane_m = vector_len(points_to_vector(waypoint, wps[-1]))
 
                 ann_wp = AnnotatedRouteWaypoint(
-                    x=wp[0], y=wp[1], next_tl_m=next_tl_m,
+                    x_coord=waypoint[0], y_coord=waypoint[1], next_tl_m=next_tl_m,
                     legal_speed=legal_speed,
                     possible_lanes=possible_lanes,
                     actual_lane=actual_lane,
@@ -332,8 +306,52 @@ class RouteAnnotation:
 
         return ann_points
 
+    @staticmethod
+    def _get_actual_lane(path: List[str], road: Road):
+        actual_lane = 0
+        edges = [(path[i], path[i + 1]) for i in range(len(path) - 1)]
+        for sec_1, sec_2 in edges:
+            road_id1 = int(sec_1.split('_')[0])
+            road_id2 = int(sec_2.split('_')[0])
+            if road_id1 == road_id2 == road.road_id:
+                actual_lane = int(sec_1.split('_')[2])
+            elif road_id1 == -1 == road.road_id:
+                actual_lane = int(sec_1.split('_')[2])
+            elif road_id2 == -2 == road.road_id:
+                actual_lane = int(sec_2.split('_')[2])
+        return actual_lane
+
+    @staticmethod
+    def _get_possible_lanes(road: Road, is_start_to_end: bool):
+        possible_lanes = []
+        # TODO Check it for other Towns
+        if road.line_type == "broken":
+            if is_start_to_end:
+                possible_lanes = road.left_ids + road.right_ids
+            else:
+                # TODO: invert sign
+                right_lanes = [-lane for lane in road.right_ids]
+                left_lanes = [-lane for lane in road.left_ids]
+                possible_lanes = right_lanes + left_lanes
+        else:
+            possible_lanes = road.right_ids if is_start_to_end else road.left_ids
+        return possible_lanes
+
+    @staticmethod
+    def _get_speed_signs_and_traffic_lights(road: Road, is_start_to_end: bool):
+        speed_signs = [s for s in road.traffic_signs
+                        if s.sign_type == TrafficSignType.SPEED_LIMIT]
+
+        traffic_lights = road.traffic_lights
+        if is_start_to_end:
+            speed_signs = list(reversed(speed_signs))
+            traffic_lights = list(reversed(traffic_lights))
+
+        return speed_signs, traffic_lights
+
 
 class GlobalPlanner:
+    # pylint: disable=too-few-public-methods
     """A global route planner based on map and hmi data."""
 
     @staticmethod

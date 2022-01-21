@@ -10,4 +10,4 @@ def test_route_planner():
     end = (170.82284545898438, -195.2700958251953)
     route = GlobalPlanner.generate_waypoints(start, end, 0, xodr_map)
     assert len(route) > 2
-    assert all(map(lambda wp: wp.x != 0 and wp.y != 0, route))
+    assert all(map(lambda wp: wp.x_coord != 0 and wp.y_coord != 0, route))

@@ -35,12 +35,14 @@ class Geometry:
 
 
 class TrafficSignType(IntEnum):
+    """Representing a traffic sign type"""
     SPEED_LIMIT = 0
     STOP = 1
     CROSSWALK = 2
 
 
 class TrafficSignal(ABC):
+    # pylint: disable=too-few-public-methods
     """Represents the data of a traffic sign object."""
     name: str
     dist_from_road_entrance: float
@@ -61,25 +63,25 @@ class TrafficSignal(ABC):
 class TrafficSign(TrafficSignal):
     """Represents the data of a traffic sign object."""
 
-    def __init__(self, node_xml: Element, road_start: Tuple[float, float],
-                 road_end: Tuple[float, float]):
-        super(TrafficSign, self).__init__(node_xml, road_start, road_end)
+    # def __init__(self, node_xml: Element, road_start: Tuple[float, float],
+    #              road_end: Tuple[float, float]):
+    #     super(TrafficSign, self).__init__(node_xml, road_start, road_end)
 
     @property
     def sign_type(self) -> TrafficSignType or None:
         """Retrieve the sign type."""
         if self.name.startswith('Speed_'):
             return TrafficSignType.SPEED_LIMIT
-        elif self.name.startswith('Stencil_STOP'):
+        if self.name.startswith('Stencil_STOP'):
             return TrafficSignType.STOP
-        elif self.name.startswith('SimpleCrosswalk'):
+        if self.name.startswith('SimpleCrosswalk'):
             return TrafficSignType.CROSSWALK
-        else:
-            # LadderCrosswalk
-            # StopLine
-            # SolidSingleWhite
-            print("parsing unknown object: ", self.name)
-            return None
+
+        # LadderCrosswalk
+        # StopLine
+        # SolidSingleWhite
+        print("parsing unknown object: ", self.name)
+        return None
 
     @property
     def legal_speed(self) -> float:
@@ -90,13 +92,14 @@ class TrafficSign(TrafficSignal):
 
 
 class TrafficLight(TrafficSignal):
+    # pylint: disable=too-few-public-methods
     """Represents the data of a traffic sign object."""
 
     # TODO: find out if there's something specific to traffic lights to store here ...
 
-    def __init__(self, node_xml: Element, road_start: Tuple[float, float],
-                 road_end: Tuple[float, float]):
-        super(TrafficLight, self).__init__(node_xml, road_start, road_end)
+    # def __init__(self, node_xml: Element, road_start: Tuple[float, float],
+    #              road_end: Tuple[float, float]):
+    #     super(TrafficLight, self).__init__(node_xml, road_start, road_end)
 
 
 class LinkType(IntEnum):
@@ -173,14 +176,17 @@ class Road:
 
     @property
     def road_start(self) -> Tuple[float, float]:
+        """The start of the first road geometry"""
         return self.geometries[0].start_point
 
     @property
     def road_end(self) -> Tuple[float, float]:
+        """The end of the last road geometry"""
         return self.geometries[-1].end_point
 
     @property
     def approx_road_length(self) -> float:
+        """A linear approximation of the road length based on the start and end point"""
         if not self.geometries:
             raise RuntimeError('Invalid operation! Road has no geometries!')
         return vector_len(points_to_vector(self.road_start, self.road_end))
