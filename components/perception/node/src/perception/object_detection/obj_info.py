@@ -5,15 +5,9 @@ from dataclasses import dataclass
 
 
 @dataclass
-class Point:
-    """Representing a point with x- and y-coordinate"""
-    point: Tuple[float, float]
-
-
-@dataclass
 class ObjectStatus:
     """Representing the object status"""
-    trajectory: List[Point]
+    trajectory: List[Tuple[float, float]]
     velocity: List[float]
 
 

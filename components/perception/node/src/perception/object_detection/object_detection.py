@@ -1,6 +1,6 @@
 """A module that detects traffic lights"""
 
-from typing import Tuple
+from typing import Tuple, List
 from math import pi, tan
 import yaml
 
@@ -9,15 +9,11 @@ from cv2 import cv2
 import numpy as np
 
 from perception.base_detector import BaseDetector
-# from components.perception.node.src.perception.base_detector import BaseDetector
 # from perception.object_detection.obj_info import Point, ObjectStatus, ObjectInfo
 
 
-class ObjectDetectorNew(BaseDetector):
-    """A module that detects anything"""
-
-    # pylint: disable=too-few-public-methods
-
+class ObjectDetector(BaseDetector):
+    """A module that detects anything."""
     def __init__(self, config_path: str, object_type: str):
         super().__init__()
         self.config = config_path
@@ -29,18 +25,19 @@ class ObjectDetectorNew(BaseDetector):
             self.image_meta: Tuple[int, int, int] = config['image_meta']
         self.object_type: str = object_type
         self.counter: int = 1
-        self.k = ObjectDetectorNew.create_inverse_camera_matrix(self.image_meta)
+        self.k = ObjectDetector.create_inverse_camera_matrix(self.image_meta)
 
     def detect_object(self, semantic_img: np.ndarray, depth_img: np.ndarray):
+        """Detect objects in the semantic image and return the distance."""
         mask = self.find_object_patches(semantic_img)
-
-        normalized_points = self.depth_to_local_point_cloud(depth_img)
-        if self.counter % 10 == 0:
-            np.save(f'/app/logs/pointcloud_{self.counter}.npy', normalized_points)
         depth_img = depth_img * mask
         depth_img[depth_img == 0] = 1000
+        normalized_points = self.depth_to_local_point_cloud(depth_img)
         self.counter += 1
-        # ObjectDetectorNew.cluster_point_cloud(normalized_points)
+        ObjectDetector.cluster_point_cloud(normalized_points)
+        # if self.counter % 100 == 0:
+        #     np.save(f'/app/logs/pointcloud_{self.counter}.npy', normalized_points)
+        #
 
     def depth_to_local_point_cloud(self, depth_image: np.ndarray):
         """
@@ -67,7 +64,7 @@ class ObjectDetectorNew(BaseDetector):
         normalized_depth = np.reshape(depth_image, pixel_length)
 
         # Search for sky pixels (where the depth is 1.0) to delete them
-        max_depth_indexes = np.where(normalized_depth >= 1.0)
+        max_depth_indexes = np.where(normalized_depth >= 0.8)
         normalized_depth = np.delete(normalized_depth, max_depth_indexes)
         u_coord = np.delete(u_coord, max_depth_indexes)
         v_coord = np.delete(v_coord, max_depth_indexes)
@@ -82,15 +79,17 @@ class ObjectDetectorNew(BaseDetector):
         normalized_points[:, 0] = normalized_points[:, 0] * -1
         return normalized_points
 
-    def find_object_patches(self, semantic_image: np.ndarray):
-        """Find the object patches from the semantic image"""
+    def find_object_patches(self, semantic_image: np.ndarray) -> np.ndarray:
+        """Find the object patches from the semantic image."""
         mask = np.array(self.mask)
         masked_image = cv2.inRange(semantic_image, mask, mask)
+        if self.counter % 10 == 0 and self.counter < 10000:
+            cv2.imwrite(f'/app/logs/masked_image_{self.counter}.png', masked_image)
         return masked_image / 255
 
     @staticmethod
     def group_up_points(p_labels, points, n_cluster):
-        """"Group points to cluster."""
+        """Group points to cluster."""
         groups = []
         for i in range(n_cluster):
             idx = np.where(p_labels == i)[0]
@@ -99,8 +98,8 @@ class ObjectDetectorNew(BaseDetector):
 
     @staticmethod
     def create_inverse_camera_matrix(image_meta: Tuple[int, int, int]) -> np.ndarray:
-        """creates inverse k matrix"""
-        # (Intrinsic) K Matrix
+        """Creates inverse k matrix."""
+        # intrinsic k matrix
         k = np.identity(3)
         width, height, fov = image_meta
         k[0, 2] = width / 2.0
@@ -109,21 +108,25 @@ class ObjectDetectorNew(BaseDetector):
         return np.linalg.inv(k)
 
     @staticmethod
-    def cluster_point_cloud(normalized_points):
-        """cluster points into groups and get bounding rectangle"""
+    def cluster_point_cloud(normalized_points) -> List[Tuple[float, float]]:
+        """Cluster points into groups and get bounding rectangle."""
         if len(normalized_points) > 0:
+            # TODO consider only the highest point in the z axis
+            # TODO consider clustering with segmentation mask
             labels = DBSCAN(eps=2, min_samples=1).fit_predict(normalized_points)
             n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-            n_noise_ = list(labels).count(-1)
-            print(f"Estimated number of clusters: {n_clusters_}")
-            print(f"Estimated number of noise points: {n_noise_}")
+            print(f"Estimated number of objects: {n_clusters_}")
             normalized_points[:, 2] = normalized_points[:, 2]
-            cluster = ObjectDetectorNew.group_up_points(labels, normalized_points, n_clusters_)
+            cluster = ObjectDetector.group_up_points(labels, normalized_points, n_clusters_)
+            middle_points = []
             for group in cluster:
-                x_ = group[:, 0]
-                y_ = group[:, 2]
+                x_pos = group[:, 0]
+                y_pos = group[:, 2]
                 offset = 0.02
-                corner = (min(x_) - offset, max(y_) + offset)
-                height = min(y_) - max(y_) - offset * 2
-                width = max(x_) - min(x_) + offset * 2
-                # print('width', width)
+                corner = (min(x_pos) - offset, max(y_pos) + offset)
+                height = min(y_pos) - max(y_pos) - offset * 2
+                width = max(x_pos) - min(x_pos) + offset * 2
+                middle_points.append((corner[0] + width / 2, corner[1] + height / 2))
+
+            return middle_points
+        return []

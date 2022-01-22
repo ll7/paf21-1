@@ -22,19 +22,10 @@ class RosMessagesAdapter:
     """Convert between ROS messages and driving data"""
 
     @staticmethod
-    def json_message_to_speed_info(msg: StringMsg) -> TrafficLightInfo:
-        """converts message from perception to a Speed Observation"""
+    def json_message_to_tld_info(msg: StringMsg) -> TrafficLightInfo:
         obj = json.loads(msg.data)
         print("obj: ", obj)
-        observation = SpeedObservation()
-        if obj.trajectory_free is not None:
-            observation.is_trajectory_free = obj.trajectory_free
-        if obj.phase is not None:
-            observation.tl_phase = obj.phase
-        if obj.distance is not None:
-            observation.dist_next_obstacle_m = obj.distance
-
-        return observation
+        return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
 
     @staticmethod
     def nav_message_to_waypoints(msg: WaypointsMsg) -> List[Tuple[float, float]]:
@@ -58,7 +49,7 @@ class RosMessagesAdapter:
     def message_to_vehicle_position(msg: OdometryMsg) -> Tuple[float, float]:
         """Convert a ROS message into the vehicle position"""
         pos = msg.pose.pose.position
-        return (pos.x, pos.y)
+        return pos.x, pos.y
 
     @staticmethod
     def message_to_orientation(msg: ImuMsg) -> float:
