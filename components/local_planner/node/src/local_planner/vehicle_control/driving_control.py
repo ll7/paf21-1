@@ -4,7 +4,7 @@ and other driving metadata into actionable driving signals"""
 import sys
 from typing import Tuple, List
 from dataclasses import dataclass, field
-from math import dist, atan, cos
+from math import cos
 
 from local_planner.core import Vehicle, geometry
 
@@ -29,47 +29,26 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
 
     def update_route(self, waypoints: List[Tuple[float, float]]):
         """Update the route to be followed and cache first waypoint"""
-<<<<<<< HEAD
-        #print("Route Update")
         if waypoints:
             if not self.initial_vehicle_pos_set:
                 self.initial_vehicle_pos_set = True
-                self.cached_wp.insert(0, self.vehicle.pos)
-            #print("IF")
-            #print(waypoints[0])
-            #print(self.cached_wp[0])
-            #print(waypoints[0] != self.cached_wp[0])
-            if waypoints[0] != self.cached_wp[0]:
-                #print("cached_wp")
-                #print(self.cached_wp)
-                #print("waypoints")
-                #print(waypoints)
-                self.cached_wp.insert(0, waypoints[0])
-
-=======
-        if waypoints:
-            if not self.initial_vehicle_pos_set:
-                self.initial_vehicle_pos_set = True
->>>>>>> a9949ad047e98e4a217ba8569448048a19d1e7ef
         self.route_waypoints = waypoints
 
     def update_target_velocity(self, velocity_mps: float):
         """Update vehicle's velocity"""
         target_velocity_mps = velocity_mps
-        radius = geometry.approx_curvature_radius()
+        #radius = geometry.approx_curvature_radius(self.route_waypoints)
 
-        current_velocity_mps = self.vehicle.actual_velocity_mps
-        print('Actual Velocity : ', current_velocity_mps)
+        #print('Actual Velocity : ', current_velocity_mps)
         # OPTION 1 :
         self.target_velocity_mps = abs(target_velocity_mps * cos(self.steering_angle))
 
         print('target velocity :', self.target_velocity_mps )
-        # print('route_waypoints: ', self.route_waypoints)
+        print('route_waypoints: ', self.route_waypoints[1])
         #print('vehicle pos :', self.vehicle.pos)
         # self.target_distance_m = target_distance_m
         return self.target_velocity_mps
        
-
     def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
         """Update the vehicle's current position"""
         self.vehicle.move(vehicle_pos)
@@ -131,53 +110,8 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         prev_to_next = geometry.points_to_vector(prev_wp, next_wp)
         prev_to_vehicle = geometry.points_to_vector(prev_wp, self.vehicle.pos)
 
-
-        # Trajectory Direction
-        orientation: int
-        traj_direct: Tuple
-        if first_wp_idx < second_wp_idx:
-            traj_direct = \
-                geometry.points_to_vector(self.cached_wp[second_wp_idx],
-                                          self.cached_wp[first_wp_idx])
-            orientation = (traj_direct[0] * (pos[0] - self.cached_wp[second_wp_idx][0])) - \
-                          (traj_direct[1] * (pos[1] - self.cached_wp[second_wp_idx][1]))
-        else:
-            traj_direct = \
-                geometry.points_to_vector(self.cached_wp[first_wp_idx],
-                                          self.cached_wp[second_wp_idx])
-            orientation = (traj_direct[0] * (pos[0] - self.cached_wp[first_wp_idx][0])) - \
-                          (traj_direct[1] * (pos[1] - self.cached_wp[first_wp_idx][1]))
-
-        traj_orientation = geometry.vector_to_dir(traj_direct)
-
         # Controller Settings
         k = 0.3
         k_s = 1
-
-        # Calculate lateral error
-
-        #print("Vehicle Orientation")
-        #print(self.vehicle.orientation_rad)
-        #print("Traj_orientation")
-        #print(traj_orientation)
-        #print("Velocity")
-        #print(self.vehicle.actual_velocity_mps)
-        #print("first_wp_dist")
-        #print(first_wp_dist)
-
-        heading_error = traj_orientation - self.vehicle.orientation_rad
-        if orientation > 0:
-            cross_track_error = atan(k * first_wp_dist / (k_s + self.vehicle.actual_velocity_mps))
-        else:
-            cross_track_error = atan(k * (-first_wp_dist) / (k_s + self.vehicle.actual_velocity_mps))
-
-        #print("heading_error")
-        #print(heading_error)
-        #print(orientation)
-        #print("cross_track_error")
-        #print(cross_track_error)
-        #print(self.vehicle.steering_angle)
-        #print("cached_wp")
-        #print(self.cached_wp)
-
-        return heading_error + cross_track_error
+        
+        return heading_error

@@ -7,7 +7,7 @@ from typing import List, Tuple
 from local_planner.vehicle_control import DrivingController
 from local_planner.core.vehicle import Vehicle
 
-from components.local_planner.node.src.local_planner.core.geometry import points_to_vector, angle_between
+from local_planner.core.geometry import points_to_vector, angle_between
 
 
 @dataclass
