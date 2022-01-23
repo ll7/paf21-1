@@ -1,6 +1,8 @@
 """This module contains a collection of geometric helper functions"""
 
-from math import dist as euclid_dist, atan2, pi, sqrt
+from math import dist as euclid_dist, atan2, pi, sqrt, acos
+from numpy import dot
+from numpy.linalg import norm
 from typing import Tuple
 
 def points_to_vector(p_from: Tuple[float, float], p_to: Tuple[float, float]):
@@ -29,6 +31,10 @@ def norm_angle(angle_rad: float) -> float:
     if angle_rad == pi:
         angle_rad = -pi
     return angle_rad
+
+def angle_between(vec1: Tuple[float, float], vec2: Tuple[float, float]):
+    return acos(dot(vec1, vec2)/norm(vec1)/norm(vec2))
+
 
 def approx_curvature_radius(p_start: Tuple[float, float],
                             p_middle: Tuple[float, float],

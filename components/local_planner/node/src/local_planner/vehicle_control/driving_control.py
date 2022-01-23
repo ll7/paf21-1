@@ -21,7 +21,6 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
     """A class for processing waypoints and driving metadata into
     actionable driving signals regarding velocity and steering control"""
     vehicle: Vehicle
-    cached_wp: List[Tuple[float, float]] = field(default_factory=list)
     route_waypoints: List[Tuple[float, float]] = field(default_factory=list)
     target_velocity_mps: float = 0.0
     target_distance_m: float = 0.0
@@ -29,22 +28,9 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
 
     def update_route(self, waypoints: List[Tuple[float, float]]):
         """Update the route to be followed and cache first waypoint"""
-        print("Route Update")
         if waypoints:
             if not self.initial_vehicle_pos_set:
                 self.initial_vehicle_pos_set = True
-                self.cached_wp.insert(0, self.vehicle.pos)
-            print("IF")
-            print(waypoints[0])
-            print(self.cached_wp[0])
-            print(waypoints[0] != self.cached_wp[0])
-            if waypoints[0] != self.cached_wp[0]:
-                print("cached_wp")
-                print(self.cached_wp)
-                print("waypoints")
-                print(waypoints)
-                self.cached_wp.insert(0, waypoints[0])
-
         self.route_waypoints = waypoints
 
     def update_target_velocity(self, target_velocity_mps: float):
@@ -84,39 +70,34 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         return steering_angle
 
     def _can_steer(self):
-        return len(self.route_waypoints) > 0 \
+        return len(self.route_waypoints) > 1 \
                and self.vehicle.orientation_rad \
                and self.vehicle.pos
 
     def _get_aim_point(self):
-        return self.route_waypoints[0]
+        return self.route_waypoints[1]
 
     def stanley_method(self) -> float:
         """Implementation of Stanley Controller"""
 
-        # Vehicle Position
+        # only one waypoint in list = destination reached = steering straight
+        if len(self.route_waypoints) < 2:
+            return 0.0
+
         pos = self.vehicle.pos
 
-        # calc nearest and Second-Nearest Waypoint
-        first_wp_idx = -1
-        first_wp_dist = sys.maxsize
-        second_wp_idx = -1
-        second_wp_dist = sys.maxsize
-        enumerator = 0
-        for point in self.cached_wp:
+        prev_wp = self.route_waypoints[0]
+        next_wp = self.route_waypoints[1]
 
-            if point is None:
-                break
-            if dist(pos, point) < first_wp_dist:
-                second_wp_idx = first_wp_idx
-                second_wp_dist = first_wp_dist
-                first_wp_idx = enumerator
-                first_wp_dist = dist(pos, point)
-            else:
-                if dist(pos, point) < second_wp_dist:
-                    second_wp_idx = enumerator
-                    second_wp_dist = dist(pos, point)
-            enumerator += 1
+        #calc heading error
+        vec_traj = geometry.points_to_vector(prev_wp, next_wp)
+        dir_traj = geometry.vector_to_dir(vec_traj)
+        heading_error = dir_traj - self.vehicle.orientation_rad
+
+        #calc crosstrack error
+        prev_to_next = geometry.points_to_vector(prev_wp, next_wp)
+        prev_to_vehicle = geometry.points_to_vector(prev_wp, self.vehicle.pos)
+
 
         # Trajectory Direction
         orientation: int
