@@ -118,15 +118,16 @@ class ObjectDetector(BaseDetector):
             print(f"Estimated number of objects: {n_clusters_}")
             normalized_points[:, 2] = normalized_points[:, 2]
             cluster = ObjectDetector.group_up_points(labels, normalized_points, n_clusters_)
-            middle_points = []
+            centroids = []
             for group in cluster:
-                x_pos = group[:, 0]
-                y_pos = group[:, 2]
-                offset = 0.02
-                corner = (min(x_pos) - offset, max(y_pos) + offset)
-                height = min(y_pos) - max(y_pos) - offset * 2
-                width = max(x_pos) - min(x_pos) + offset * 2
-                middle_points.append((corner[0] + width / 2, corner[1] + height / 2))
+                centroids.append(ObjectDetector.centroid(group))
 
-            return middle_points
+            return centroids
         return []
+
+    @staticmethod
+    def centroid(arr):
+        length = arr.shape[0]
+        sum_x = np.sum(arr[:, 0])
+        sum_y = np.sum(arr[:, 1])
+        return sum_x/length, sum_y/length
