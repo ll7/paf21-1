@@ -2,14 +2,14 @@ carla:
   ackermann_control:
     # override the default values of the pid speed controller
     # (only relevant for ackermann control mode) 
-    speed_Kp: 0  # min: 0, max: 1.
-    speed_Ki: 0  # min: 0, max: 1.
-    speed_Kd: 0  # min: 0, max: 10.
+    speed_Kp: 0.0  # min: 0, max: 1. - controls how much the car turns to the right path
+    speed_Ki: 0.0  # min: 0, max: 1. - error of previous step
+    speed_Kd: 0.0  # min: 0, max: 10. - controls counter act of the turn 
     # override the default values of the pid acceleration controller
     # (only relevant for ackermann control mode)
-    accel_Kp: 0  # min: 0, max: 10.
-    accel_Ki: 0  # min: 0, max: 10.
-    accel_Kd: 0  # min: 0, max: 10.
+    accel_Kp: 0.0  # min: 0, max: 10.
+    accel_Ki: 0.0  # min: 0, max: 10.
+    accel_Kd: 0.0  # min: 0, max: 10.
     # set the minimum acceleration in (m/s^2)
     # This border value is used to enable the speed controller which is used to control driving 
     # at more or less constant speed.

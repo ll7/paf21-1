@@ -4,7 +4,7 @@ and other driving metadata into actionable driving signals"""
 import sys
 from typing import Tuple, List
 from dataclasses import dataclass, field
-from math import dist, atan
+from math import dist, atan, cos
 
 from local_planner.core import Vehicle, geometry
 
@@ -26,31 +26,44 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
     target_velocity_mps: float = 0.0
     target_distance_m: float = 0.0
     initial_vehicle_pos_set: bool = False
+    steering_angle : float = 0.0
 
     def update_route(self, waypoints: List[Tuple[float, float]]):
         """Update the route to be followed and cache first waypoint"""
-        print("Route Update")
+        #print("Route Update")
         if waypoints:
             if not self.initial_vehicle_pos_set:
                 self.initial_vehicle_pos_set = True
                 self.cached_wp.insert(0, self.vehicle.pos)
-            print("IF")
-            print(waypoints[0])
-            print(self.cached_wp[0])
-            print(waypoints[0] != self.cached_wp[0])
+            #print("IF")
+            #print(waypoints[0])
+            #print(self.cached_wp[0])
+            #print(waypoints[0] != self.cached_wp[0])
             if waypoints[0] != self.cached_wp[0]:
-                print("cached_wp")
-                print(self.cached_wp)
-                print("waypoints")
-                print(waypoints)
+                #print("cached_wp")
+                #print(self.cached_wp)
+                #print("waypoints")
+                #print(waypoints)
                 self.cached_wp.insert(0, waypoints[0])
 
         self.route_waypoints = waypoints
 
-    def update_target_velocity(self, target_velocity_mps: float):
-        """Update the route to be followed"""
-        self.target_velocity_mps = target_velocity_mps
+    def update_target_velocity(self, velocity_mps: float):
+        """Update vehicle's velocity"""
+        target_velocity_mps = velocity_mps
+        radius = geometry.approx_curvature_radius()
+
+        current_velocity_mps = self.vehicle.actual_velocity_mps
+        print('Actual Velocity : ', current_velocity_mps)
+        # OPTION 1 :
+        self.target_velocity_mps = abs(target_velocity_mps * cos(self.steering_angle))
+
+        print('target velocity :', self.target_velocity_mps )
+        # print('route_waypoints: ', self.route_waypoints)
+        #print('vehicle pos :', self.vehicle.pos)
         # self.target_distance_m = target_distance_m
+        return self.target_velocity_mps
+       
 
     def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
         """Update the vehicle's current position"""
@@ -68,8 +81,8 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
     def next_signal(self) -> DrivingSignal:
         """Compute the next driving signal to make the
         vehicle follow the suggested ideal route"""
-        steering_angle = self._compute_steering_angle()
-        signal = DrivingSignal(steering_angle, self.target_velocity_mps)
+        self.steering_angle = self._compute_steering_angle()
+        signal = DrivingSignal(self.steering_angle, self.target_velocity_mps)
         return signal
 
     def _compute_steering_angle(self) -> float:
@@ -80,6 +93,7 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         # self.vehicle.steer_towards(aim_point)
         steering_angle = self.stanley_method()
         self.vehicle.set_steering_angle(steering_angle)
+        print('steering angle : ', steering_angle)
 
         return steering_angle
 
@@ -142,14 +156,14 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
 
         # Calculate lateral error
 
-        print("Vehicle Orientation")
-        print(self.vehicle.orientation_rad)
-        print("Traj_orientation")
-        print(traj_orientation)
-        print("Velocity")
-        print(self.vehicle.actual_velocity_mps)
-        print("first_wp_dist")
-        print(first_wp_dist)
+        #print("Vehicle Orientation")
+        #print(self.vehicle.orientation_rad)
+        #print("Traj_orientation")
+        #print(traj_orientation)
+        #print("Velocity")
+        #print(self.vehicle.actual_velocity_mps)
+        #print("first_wp_dist")
+        #print(first_wp_dist)
 
         heading_error = traj_orientation - self.vehicle.orientation_rad
         if orientation > 0:
@@ -157,13 +171,13 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         else:
             cross_track_error = atan(k * (-first_wp_dist) / (k_s + self.vehicle.actual_velocity_mps))
 
-        print("heading_error")
-        print(heading_error)
-        print(orientation)
-        print("cross_track_error")
-        print(cross_track_error)
-        print(self.vehicle.steering_angle)
-        print("cached_wp")
-        print(self.cached_wp)
+        #print("heading_error")
+        #print(heading_error)
+        #print(orientation)
+        #print("cross_track_error")
+        #print(cross_track_error)
+        #print(self.vehicle.steering_angle)
+        #print("cached_wp")
+        #print(self.cached_wp)
 
         return heading_error + cross_track_error
