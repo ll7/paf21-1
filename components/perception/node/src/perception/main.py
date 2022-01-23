@@ -32,6 +32,7 @@ class PerceptionNode:
     publish_rate_in_hz: int
     config_path: str = '/app/src/perception/config/detection_config.yml'
     tld_publisher: rospy.Publisher = None
+    obj_publisher: rospy.Publisher = None
     tl_detector: TrafficLightDetector = None
     vehicle_detector: ObjectDetector = None
     rbg_buffer: ImagesBuffer = ImagesBuffer()
@@ -57,12 +58,16 @@ class PerceptionNode:
             buffers_contain_img = not (sem_img is None or rgb_img is None or depth_img is None)
             if buffers_contain_img:
                 tld_info = self.tl_detector.detect_traffic_light(sem_img, rgb_img, depth_img)
-                self.vehicle_detector.detect_object(sem_img, depth_img)
+                obj_infos = self.vehicle_detector.detect_object(sem_img, depth_img)
 
                 if tld_info:
                     print(f'Traffic light detected: {tld_info}')
                     msg = RosMessagesAdapter.tld_info_to_json_message(tld_info)
                     self.tld_publisher.publish(msg)
+                if obj_infos:
+                    print(f'Objects detected: {obj_infos}')
+                    msg = RosMessagesAdapter.obj_info_to_json_message(obj_infos)
+                    self.obj_publisher.publish(msg)
 
             rate.sleep()
 

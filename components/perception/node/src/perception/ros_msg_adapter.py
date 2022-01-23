@@ -1,11 +1,13 @@
 """Adapter for converting between ROS messages and internal data types"""
 
+from typing import List
 import numpy as np
 from sensor_msgs.msg import Image as ImageMsg
 from std_msgs.msg import String as StringMsg
 from cv_bridge import CvBridge
 
 from perception.traffic_light_detection import TrafficLightInfo
+from perception.object_detection import ObjectInfo
 
 
 class RosMessagesAdapter:
@@ -23,4 +25,16 @@ class RosMessagesAdapter:
     def tld_info_to_json_message(tld_info: TrafficLightInfo) -> StringMsg:
         """Convert a driving signal into a ROS message"""
         json_msg = f'{{ "phase": "{tld_info.phase}", "distance": {tld_info.distance} }}'
+        return StringMsg(data=json_msg)
+
+    @staticmethod
+    def obj_info_to_json_message(obj_infos: List[ObjectInfo]) -> StringMsg:
+        """Convert a driving signal into a ROS message"""
+        json_msg = '{'
+        for obj in obj_infos:
+            json_msg += '{'
+            json_msg += f"'id': {obj.identifier}, 'obj_class': {obj.obj_class}," \
+                        f" 'rel_pos': {obj.rel_position}"
+            json_msg += '},'
+        json_msg += '}'
         return StringMsg(data=json_msg)

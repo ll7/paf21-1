@@ -9,7 +9,7 @@ from cv2 import cv2
 import numpy as np
 
 from perception.base_detector import BaseDetector
-# from perception.object_detection.obj_info import Point, ObjectStatus, ObjectInfo
+from perception.object_detection.obj_info import ObjectInfo
 
 
 class ObjectDetector(BaseDetector):
@@ -25,21 +25,24 @@ class ObjectDetector(BaseDetector):
             self.image_meta: Tuple[int, int, int] = config['image_meta']
         self.object_type: str = object_type
         self.counter: int = 1
+        self.last_obj_infos: List[ObjectInfo] = []
+        self.object_counter: int = 0
         self.k = ObjectDetector.create_inverse_camera_matrix(self.image_meta)
 
-    def detect_object(self, semantic_img: np.ndarray, depth_img: np.ndarray):
+    def detect_object(self, semantic_img: np.ndarray, depth_img: np.ndarray) -> List[ObjectInfo]:
         """Detect objects in the semantic image and return the distance."""
-        mask = self.find_object_patches(semantic_img)
+        mask = self.get_object_mask(semantic_img)
         depth_img = depth_img * mask
         depth_img[depth_img == 0] = 1000
         normalized_points = self.depth_to_local_point_cloud(depth_img)
         self.counter += 1
-        ObjectDetector.cluster_point_cloud(normalized_points)
-        # if self.counter % 100 == 0:
-        #     np.save(f'/app/logs/pointcloud_{self.counter}.npy', normalized_points)
-        #
+        centroids = ObjectDetector.cluster_point_cloud(normalized_points)
+        obj_infos = self.create_object_infos(centroids)
+        if self.counter % 100 == 0 and self.counter < 0:
+            np.save(f'/app/logs/pointcloud_{self.counter}.npy', normalized_points)
+        return obj_infos
 
-    def depth_to_local_point_cloud(self, depth_image: np.ndarray):
+    def depth_to_local_point_cloud(self, depth_image: np.ndarray) -> np.ndarray:
         """
         Convert an image containing CARLA encoded depth-map to a 2D array containing
         the 3D position (relative to the camera) of each pixel.
@@ -79,7 +82,7 @@ class ObjectDetector(BaseDetector):
         normalized_points[:, 0] = normalized_points[:, 0] * -1
         return normalized_points
 
-    def find_object_patches(self, semantic_image: np.ndarray) -> np.ndarray:
+    def get_object_mask(self, semantic_image: np.ndarray) -> np.ndarray:
         """Find the object patches from the semantic image."""
         mask = np.array(self.mask)
         masked_image = cv2.inRange(semantic_image, mask, mask)
@@ -88,12 +91,13 @@ class ObjectDetector(BaseDetector):
         return masked_image / 255
 
     @staticmethod
-    def group_up_points(p_labels, points, n_cluster):
+    def group_up_points(p_labels: int, points: List[Tuple[float, float]],
+                        n_cluster: int) -> List[np.ndarray]:
         """Group points to cluster."""
         groups = []
         for i in range(n_cluster):
             idx = np.where(p_labels == i)[0]
-            groups.append(points[idx])
+            groups.append(np.array(points[idx]))
         return groups
 
     @staticmethod
@@ -126,8 +130,35 @@ class ObjectDetector(BaseDetector):
         return []
 
     @staticmethod
-    def centroid(arr):
+    def centroid(arr: np.ndarray) -> Tuple[float, float]:
+        """Calculate the centroid."""
         length = arr.shape[0]
         sum_x = np.sum(arr[:, 0])
         sum_y = np.sum(arr[:, 1])
-        return sum_x/length, sum_y/length
+        return sum_x / length, sum_y / length
+
+    def create_object_infos(self, centroids: List[Tuple[float, float]]) -> List[ObjectInfo]:
+        """Create the object infos for the list of centroids."""
+        obj_infos = []
+        for centroid in centroids:
+            obj_infos.append(self.find_nearest_centroid(centroid))
+
+        self.last_obj_infos = obj_infos
+        return obj_infos
+
+    def find_nearest_centroid(self, centroid: Tuple[float, float]) -> ObjectInfo:
+        """Return the object info of the nearest saved centroid."""
+        nearest_centroid = -1
+        nearest_dist = 2.0
+        for obj_info in self.last_obj_infos:
+            print(f'Object info {obj_info}')
+            distance = dist(centroid, obj_info.rel_position)
+            if distance < nearest_dist:
+                nearest_centroid = obj_info.identifier
+                nearest_dist = distance
+        if nearest_centroid == -1:
+            nearest_centroid = self.object_counter
+            self.object_counter += 1
+
+        return ObjectInfo(identifier=nearest_centroid, obj_class=self.object_type,
+                          rel_position=centroid)

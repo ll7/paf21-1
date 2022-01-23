@@ -17,7 +17,6 @@ from local_planner.vehicle_control import DrivingSignal
 from local_planner.state_machine import SpeedObservation
 
 
-
 class RosMessagesAdapter:
     """Convert between ROS messages and driving data"""
 
@@ -26,6 +25,25 @@ class RosMessagesAdapter:
         obj = json.loads(msg.data)
         print("obj: ", obj)
         return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
+
+    # @staticmethod
+    # def json_message_to_obj_infos(msg: StringMsg) -> List[ObjectInfo]:
+    #     obj = json.loads(msg.data)
+    #     print("obj: ", obj)
+    #     return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
+    #
+    # @staticmethod
+    # def obj_info_to_json_message(obj_infos: List[ObjectInfo]) -> StringMsg:
+    #     """Convert a driving signal into a ROS message"""
+    #     json_msg = '{'
+    #     for obj in obj_infos:
+    #         json_msg += '{'
+    #         json_msg += f"'id': {obj.identifier}, 'obj_class': {obj.obj_class}," \
+    #                     f" 'rel_pos': {obj.rel_position}"
+    #         json_msg += '},'
+    #     json_msg += '}'
+    #     print(json_msg)
+    #     return StringMsg(data=json_msg)
 
     @staticmethod
     def nav_message_to_waypoints(msg: WaypointsMsg) -> List[Tuple[float, float]]:
