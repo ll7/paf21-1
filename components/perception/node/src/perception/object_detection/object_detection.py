@@ -1,7 +1,7 @@
 """A module that detects traffic lights"""
 
 from typing import Tuple, List
-from math import pi, tan
+from math import pi, tan, dist
 import yaml
 
 from sklearn.cluster import DBSCAN

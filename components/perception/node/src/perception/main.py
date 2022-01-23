@@ -70,6 +70,7 @@ class PerceptionNode:
         """Initialize the ROS node's publishers and subscribers"""
         rospy.init_node(f'local_planner_{self.vehicle_name}', anonymous=True)
         self.tld_publisher = self._init_tld_info_publisher()
+        self.obj_publisher = self._init_object_info_publisher()
         self._init_front_camera_subscribers()
 
     def _init_front_camera_subscribers(self):
@@ -93,6 +94,10 @@ class PerceptionNode:
 
     def _init_tld_info_publisher(self):
         out_topic = f"/drive/{self.vehicle_name}/tld_info"
+        return rospy.Publisher(out_topic, StringMsg, queue_size=10)
+
+    def _init_object_info_publisher(self):
+        out_topic = f"/drive/{self.vehicle_name}/object_info"
         return rospy.Publisher(out_topic, StringMsg, queue_size=10)
 
 
