@@ -1,9 +1,10 @@
 """Module for transitioning a fine-grained, idealistic route
 and other driving metadata into actionable driving signals"""
-import math
+
 import sys
 from typing import Tuple, List
 from dataclasses import dataclass, field
+from math import cos
 from math import atan
 from numpy import cross
 from numpy.linalg import norm
@@ -27,6 +28,7 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
     target_velocity_mps: float = 0.0
     target_distance_m: float = 0.0
     initial_vehicle_pos_set: bool = False
+    steering_angle : float = 0.0
 
     def update_route(self, waypoints: List[Tuple[float, float]]):
         """Update the route to be followed and cache first waypoint"""
@@ -35,10 +37,20 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
                 self.initial_vehicle_pos_set = True
         self.route_waypoints = waypoints
 
-    def update_target_velocity(self, target_velocity_mps: float):
-        """Update the route to be followed"""
-        self.target_velocity_mps = target_velocity_mps
+    def update_target_velocity(self, velocity_mps: float):
+        """Update vehicle's velocity"""
+        target_velocity_mps = velocity_mps
+        #radius = geometry.approx_curvature_radius(self.route_waypoints)
+
+        #print('Actual Velocity : ', current_velocity_mps)
+        # OPTION 1 :
+        self.target_velocity_mps = abs(target_velocity_mps * cos(self.steering_angle))
+
+        print('target velocity :', self.target_velocity_mps )
+        print('route_waypoints: ', self.route_waypoints[1])
+        #print('vehicle pos :', self.vehicle.pos)
         # self.target_distance_m = target_distance_m
+        return self.target_velocity_mps
 
     def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
         """Update the vehicle's current position"""
@@ -56,8 +68,8 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
     def next_signal(self) -> DrivingSignal:
         """Compute the next driving signal to make the
         vehicle follow the suggested ideal route"""
-        steering_angle = self._compute_steering_angle()
-        signal = DrivingSignal(steering_angle, self.target_velocity_mps)
+        self.steering_angle = self._compute_steering_angle()
+        signal = DrivingSignal(self.steering_angle, self.target_velocity_mps)
         return signal
 
     def _compute_steering_angle(self) -> float:
@@ -68,6 +80,7 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         # self.vehicle.steer_towards(aim_point)
         steering_angle = self.stanley_method()
         self.vehicle.set_steering_angle(steering_angle)
+        print('steering angle : ', steering_angle)
 
         return steering_angle
 

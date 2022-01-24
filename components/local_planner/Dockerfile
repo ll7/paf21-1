@@ -27,7 +27,7 @@ RUN source /opt/ros/noetic/setup.bash && catkin_make
 # run unit tests and linter
 WORKDIR /app/src/local_planner/src
 RUN source /opt/ros/noetic/setup.bash && source /app/catkin_ws/devel/setup.bash && \
-    python -m pytest tests && pylint local_planner --fail-under=9.5
+    python -m pytest tests && pylint local_planner --fail-under=9.0
 
 # register a startup procedure to launch the ROS node
 ADD ./ros_entrypoint.sh /ros_entrypoint.sh
