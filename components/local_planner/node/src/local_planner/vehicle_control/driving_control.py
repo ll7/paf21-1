@@ -3,8 +3,8 @@ and other driving metadata into actionable driving signals"""
 
 from typing import Tuple, List
 from dataclasses import dataclass, field
-
-from local_planner.core import Vehicle
+from local_planner.core import Vehicle, geometry
+from math import sqrt, floor
 
 @dataclass
 class DrivingSignal:
@@ -20,15 +20,30 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
     route_waypoints: List[Tuple[float, float]] = field(default_factory=list)
     target_velocity_mps: float = 0.0
     target_distance_m: float = 0.0
+    # friction coefficients
+    coeff_dry : float = 0.8
+    coeff_wet : float = 0.4
+    coeff_ice : float = 0.2
 
     def update_route(self, waypoints: List[Tuple[float, float]]):
         """Update the route to be followed"""
         self.route_waypoints = waypoints
 
     def update_target_velocity(self, target_velocity_mps: float):
-        """Update the route to be followed"""
-        self.target_velocity_mps = target_velocity_mps
-        #self.target_distance_m = target_distance_m
+        """Update the target velocity"""
+        if len(self.route_waypoints) < 2 :
+            self.target_velocity_mps = target_velocity_mps
+        else: 
+            middle_waypoint = round(len(self.route_waypoints) / 2)
+            print('len waypoints : ', len(self.route_waypoints))
+            radius = geometry.approx_curvature_radius(self.route_waypoints[1], 
+                self.route_waypoints[middle_waypoint], 
+                self.route_waypoints[-1])
+            print('RADIUS: ', radius)
+            if radius > 100:
+                self.target_velocity_mps = target_velocity_mps
+            else:
+                self.target_velocity_mps = floor(sqrt(9.81 * self.coeff_dry * radius))
 
     def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
         """Update the vehicle's current position"""
