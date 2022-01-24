@@ -151,7 +151,6 @@ class ObjectDetector(BaseDetector):
         nearest_centroid = -1
         nearest_dist = 2.0
         for obj_info in self.last_obj_infos:
-            print(f'Object info {obj_info}')
             distance = dist(centroid, obj_info.rel_position)
             if distance < nearest_dist:
                 nearest_centroid = obj_info.identifier

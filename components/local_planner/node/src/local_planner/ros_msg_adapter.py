@@ -10,7 +10,6 @@ from std_msgs.msg import String as StringMsg, Float32 as FloatMsg
 from nav_msgs.msg import Path as WaypointsMsg
 from nav_msgs.msg import Odometry as OdometryMsg
 from sensor_msgs.msg import Imu as ImuMsg
-from std_srvs.srv import Trigger
 
 from local_planner.state_machine import TrafficLightInfo, TrafficLightPhase
 from local_planner.vehicle_control import DrivingSignal
@@ -22,13 +21,14 @@ class RosMessagesAdapter:
 
     @staticmethod
     def json_message_to_tld_info(msg: StringMsg) -> TrafficLightInfo:
+        """Convert a ROS message into a TrafficLightInfo"""
         obj = json.loads(msg.data)
         print("traffic_light: ", obj)
         return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
 
     @staticmethod
     def json_message_to_object_info(msg: StringMsg) -> List[ObjectInfo]:
-        print(msg.data)
+        """Convert a ROS message into a list of ObjectInfo"""
         obj = json.loads(msg.data)
         print("object", obj)
         return obj
