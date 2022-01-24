@@ -40,15 +40,16 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
     def update_target_velocity(self, velocity_mps: float):
         """Update vehicle's velocity"""
         target_velocity_mps = velocity_mps
-        #radius = geometry.approx_curvature_radius(self.route_waypoints)
+        # radius = geometry.approx_curvature_radius(self.route_waypoints)
 
-        #print('Actual Velocity : ', current_velocity_mps)
+        # print('Actual Velocity : ', current_velocity_mps)
         # OPTION 1 :
         self.target_velocity_mps = abs(target_velocity_mps * cos(self.steering_angle))
 
         print('target velocity :', self.target_velocity_mps )
-        print('route_waypoints: ', self.route_waypoints[1])
-        #print('vehicle pos :', self.vehicle.pos)
+        if len(self.route_waypoints) > 2:
+            print('route_waypoints: ', self.route_waypoints[1])
+        # print('vehicle pos :', self.vehicle.pos)
         # self.target_distance_m = target_distance_m
         return self.target_velocity_mps
 

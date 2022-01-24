@@ -269,7 +269,7 @@ def test_accel_static_obstacle_out_range():
     target_speed = speed_s.get_target_speed()
 
     assert(speed_s.current_state == SpeedState.ACCEL)
-    print("ts", target_speed)
+    # print("ts", target_speed)
     assert (target_speed >= 50/3.6)
 
 
@@ -387,6 +387,6 @@ def test_brake_static_obstacle_out_range():
 
     speed_s.update_state(speed_o)
     target_speed = speed_s.get_target_speed()
-    print("ts:", target_speed)
+    # print("ts:", target_speed)
     assert (speed_s.current_state == SpeedState.KEEP)
     assert (target_speed >= 50 / 3.6)

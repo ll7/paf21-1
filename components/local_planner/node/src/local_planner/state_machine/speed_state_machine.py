@@ -64,12 +64,12 @@ class SpeedStateMachine:
         else:
             raise ValueError(f'Unsupported speed state {self.current_state}!')
 
-        print("target_speed_mps:", self.target_speed_mps,
-              " is_trajectory_free:",obs.is_trajectory_free,
-              " tl_phase:",obs.tl_phase)
-        print("actual_velocity_mps:", self.vehicle.actual_velocity_mps,
-              " legal_speed_limit_mps:", self.legal_speed_limit_mps)
-        print(self.current_state)
+        # print("target_speed_mps:", self.target_speed_mps,
+        #      " is_trajectory_free:",obs.is_trajectory_free,
+        #      " tl_phase:",obs.tl_phase)
+        # print("actual_velocity_mps:", self.vehicle.actual_velocity_mps,
+        #      " legal_speed_limit_mps:", self.legal_speed_limit_mps)
+        # print(self.current_state)
 
     def _is_in_speed_tolerance(self):
         return 0 <= (self.legal_speed_limit_mps - self.vehicle.actual_velocity_mps) \
@@ -118,7 +118,7 @@ class SpeedStateMachine:
         stopping_distance = (velocity_kmh / 10)**2
         reaction_distance = self.vehicle.vehicle_reaction_time_s * self.vehicle.actual_velocity_mps
         halting_distance = stopping_distance + reaction_distance
-        print("halting_distance",halting_distance, obs.dist_next_obstacle_m)
+        # print("halting_distance",halting_distance, obs.dist_next_obstacle_m)
         return halting_distance >= obs.dist_next_obstacle_m
 
     def _is_brake_required(self, obs: SpeedObservation):
@@ -142,14 +142,14 @@ class SpeedStateMachine:
         maneuver_time_s = (target_velocity - self.vehicle.actual_velocity_mps) / accel_mps2
         braking_dist = self.vehicle.actual_velocity_mps * maneuver_time_s + \
                        accel_mps2 * maneuver_time_s ** 2 / 2
-        print('braking distance', braking_dist)
-        print("maneuver_time_s: ", maneuver_time_s,
-              "  actual_velocity_mps",  self.vehicle.actual_velocity_mps)
+        # print('braking distance', braking_dist)
+        # print("maneuver_time_s: ", maneuver_time_s,
+        #      "  actual_velocity_mps",  self.vehicle.actual_velocity_mps)
         object_offset = 10
         time_until_brake = (distance_m - object_offset - braking_dist) \
                            / self.vehicle.actual_velocity_mps \
             if self.vehicle.actual_velocity_mps > 0 else 999
-        print('time until brake', time_until_brake)
+        # print('time until brake', time_until_brake)
         return time_until_brake
 
     def get_target_speed(self) -> float:
