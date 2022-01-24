@@ -3,10 +3,11 @@
 import numpy as np
 from math import dist
 from dataclasses import dataclass, field
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from local_planner.vehicle_control import DrivingController
 from local_planner.core.vehicle import Vehicle
+
 
 @dataclass
 class ObjectInfo:

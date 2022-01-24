@@ -39,3 +39,11 @@ class RosMessagesAdapter:
         json_msg = json_msg[:-1]
         json_msg += ']'
         return StringMsg(data=json_msg)
+
+    @staticmethod
+    def obj_info_to_json_message2(obj_infos: List[ObjectInfo]) -> StringMsg:
+        """Convert a driving signal into a ROS message"""
+        json_msg = [f'{ "id": {obj.identifier}, "obj_class": {obj.obj_class}, "rel_position": {obj.rel_position}}' for obj in obj_infos]
+        json_msg = dict(json_msg)
+        print(json_msg)
+        return StringMsg(data=json_msg)
