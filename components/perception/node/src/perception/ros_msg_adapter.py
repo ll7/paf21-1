@@ -23,27 +23,16 @@ class RosMessagesAdapter:
 
     @staticmethod
     def tld_info_to_json_message(tld_info: TrafficLightInfo) -> StringMsg:
-        """Convert a driving signal into a ROS message"""
+        """Convert a traffic light info into a ROS message"""
         json_msg = f'{{ "phase": "{tld_info.phase}", "distance": {tld_info.distance} }}'
         return StringMsg(data=json_msg)
 
     @staticmethod
     def obj_info_to_json_message(obj_infos: List[ObjectInfo]) -> StringMsg:
-        """Convert a driving signal into a ROS message"""
+        """Convert a list of object info into a ROS message"""
         json_msg = '['
         for obj in obj_infos:
-            json_msg += '{'
-            json_msg += f'"id": {obj.identifier}, "obj_class": "{obj.obj_class}",' \
-                        f' "rel_position": {obj.rel_position}'
-            json_msg += '},'
-        json_msg = json_msg[:-1]
-        json_msg += ']'
-        return StringMsg(data=json_msg)
-
-    @staticmethod
-    def obj_info_to_json_message2(obj_infos: List[ObjectInfo]) -> StringMsg:
-        """Convert a driving signal into a ROS message"""
-        json_msg = [f'{ "id": {obj.identifier}, "obj_class": {obj.obj_class}, "rel_position": {obj.rel_position}}' for obj in obj_infos]
-        json_msg = dict(json_msg)
-        print(json_msg)
+            json_msg += f'{{"identifier": {obj.identifier}, "obj_class": "{obj.obj_class}",' \
+                        f' "rel_position": {list(obj.rel_position)}}},'
+        json_msg = json_msg[:-1] + ']'
         return StringMsg(data=json_msg)
