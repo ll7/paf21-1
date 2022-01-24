@@ -26,7 +26,8 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
     vehicle: Vehicle
     route_waypoints: List[Tuple[float, float]] = field(default_factory=list)
     target_velocity_mps: float = 0.0
-    target_distance_m: float = 0.0
+    initial_vehicle_pos_set = False
+
     # friction coefficients
     coeff_dry : float = 0.8
     coeff_wet : float = 0.4
@@ -81,8 +82,6 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         if not self._can_steer():
             return 0.0
 
-        # aim_point = self._get_aim_point()
-        # self.vehicle.steer_towards(aim_point)
         steering_angle = self.stanley_method()
         self.vehicle.set_steering_angle(steering_angle)
         print('steering angle : ', steering_angle)
