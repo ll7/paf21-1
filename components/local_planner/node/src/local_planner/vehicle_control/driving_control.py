@@ -1,10 +1,12 @@
 """Module for transitioning a fine-grained, idealistic route
 and other driving metadata into actionable driving signals"""
-
+import math
 import sys
 from typing import Tuple, List
 from dataclasses import dataclass, field
-from math import dist, atan
+from math import atan
+from numpy import cross
+from numpy.linalg import norm
 
 from local_planner.core import Vehicle, geometry
 
@@ -84,67 +86,31 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         if len(self.route_waypoints) < 2:
             return 0.0
 
-        pos = self.vehicle.pos
 
+        pos = self.vehicle.pos
+        v = self.vehicle.actual_velocity_mps
         prev_wp = self.route_waypoints[0]
         next_wp = self.route_waypoints[1]
 
-        #calc heading error
+
+        # calc heading error
         vec_traj = geometry.points_to_vector(prev_wp, next_wp)
         dir_traj = geometry.vector_to_dir(vec_traj)
         heading_error = dir_traj - self.vehicle.orientation_rad
-
-        #calc crosstrack error
-        prev_to_next = geometry.points_to_vector(prev_wp, next_wp)
-        prev_to_vehicle = geometry.points_to_vector(prev_wp, self.vehicle.pos)
-
-
-        # Trajectory Direction
-        orientation: int
-        traj_direct: Tuple
-        if first_wp_idx < second_wp_idx:
-            traj_direct = \
-                geometry.points_to_vector(self.cached_wp[second_wp_idx],
-                                          self.cached_wp[first_wp_idx])
-            orientation = (traj_direct[0] * (pos[0] - self.cached_wp[second_wp_idx][0])) - \
-                          (traj_direct[1] * (pos[1] - self.cached_wp[second_wp_idx][1]))
-        else:
-            traj_direct = \
-                geometry.points_to_vector(self.cached_wp[first_wp_idx],
-                                          self.cached_wp[second_wp_idx])
-            orientation = (traj_direct[0] * (pos[0] - self.cached_wp[first_wp_idx][0])) - \
-                          (traj_direct[1] * (pos[1] - self.cached_wp[first_wp_idx][1]))
-
-        traj_orientation = geometry.vector_to_dir(traj_direct)
 
         # Controller Settings
         k = 0.3
         k_s = 1
 
-        # Calculate lateral error
+        # calc crosstrack error
+        prev_to_next = geometry.points_to_vector(prev_wp, next_wp)
+        prev_to_vehicle = geometry.points_to_vector(prev_wp, pos)
 
-        print("Vehicle Orientation")
-        print(self.vehicle.orientation_rad)
-        print("Traj_orientation")
-        print(traj_orientation)
-        print("Velocity")
-        print(self.vehicle.actual_velocity_mps)
-        print("first_wp_dist")
-        print(first_wp_dist)
-
-        heading_error = traj_orientation - self.vehicle.orientation_rad
-        if orientation > 0:
-            cross_track_error = atan(k * first_wp_dist / (k_s + self.vehicle.actual_velocity_mps))
-        else:
-            cross_track_error = atan(k * (-first_wp_dist) / (k_s + self.vehicle.actual_velocity_mps))
-
-        print("heading_error")
-        print(heading_error)
-        print(orientation)
-        print("cross_track_error")
-        print(cross_track_error)
-        print(self.vehicle.steering_angle)
-        print("cached_wp")
-        print(self.cached_wp)
+        top = cross(prev_to_next, prev_to_vehicle)
+        top = norm(top)
+        bottom = norm(prev_to_next)
+        e = top/bottom
+        arg = (k*e)/(k_s+v)
+        cross_track_error = atan(arg)
 
         return heading_error + cross_track_error

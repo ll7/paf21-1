@@ -6,8 +6,7 @@ from typing import List, Tuple
 
 from local_planner.vehicle_control import DrivingController
 from local_planner.core.vehicle import Vehicle
-
-from components.local_planner.node.src.local_planner.core.geometry import points_to_vector, angle_between
+from local_planner.core.geometry import points_to_vector, angle_between
 
 
 @dataclass
@@ -42,7 +41,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         return [] if vehicle_not_ready else self._compute_local_route()
 
     def _compute_local_route(self) -> List[Tuple[float, float]]:
-
+        print("compute_local_route")
         # routes with length lower 2 are invalid
         if len(self.global_route) < 2:
             return self.global_route
@@ -50,10 +49,12 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         # not at finish?
         if self.next_wp < len(self.global_route):
             next_to_prev = points_to_vector(self.global_route[self.next_wp], self.global_route[self.prev_wp])
-            next_to_pos = points_to_vector(self.global_route[self.next_wp], self.global_route[self.vehicle.pos])
+            print(self.vehicle.pos)
+            next_to_pos = points_to_vector(self.global_route[self.next_wp], self.vehicle.pos)
             angle = angle_between(next_to_prev, next_to_pos)
         else:
             bound = min(50, len(self.global_route) - self.prev_wp)
+            print(self.global_route[self.prev_wp:bound])
             return self.global_route[self.prev_wp:bound]
 
         # next Route section and
@@ -66,10 +67,11 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
                 break
 
             next_to_prev = points_to_vector(self.global_route[self.next_wp], self.global_route[self.prev_wp])
-            next_to_pos = points_to_vector(self.global_route[self.next_wp], self.global_route[self.vehicle.pos])
+            next_to_pos = points_to_vector(self.global_route[self.next_wp], self.vehicle.pos)
             angle = angle_between(next_to_prev, next_to_pos)
 
         bound = min(50, len(self.global_route) - self.prev_wp)
+        print(self.global_route[self.prev_wp:bound])
         return self.global_route[self.prev_wp:bound]
 
 
