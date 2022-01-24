@@ -24,7 +24,6 @@ class LocalPlannerNode:
     vehicle: Vehicle
     publish_rate_in_hz: int
     driving_signal_publisher: rospy.Publisher = None
-    highlighted_image_publisher: rospy.Publisher = None
     nav_service: InfiniteDrivingService = None
     route_planner: TrajectoryPlanner = None
     driving_control: DrivingController = None
@@ -80,7 +79,8 @@ class LocalPlannerNode:
     def _init_object_info_subscriber(self):
         in_topic = f"/drive/{self.vehicle.name}/object_info"
         msg_to_object_info = RosMessagesAdapter.json_message_to_object_info
-        callback = lambda msg: self.route_planner.refresh_detected_objects(msg_to_object_info(msg))
+        callback = lambda msg: self.speed_state_machine.update_state(
+            self.route_planner.detect_vehicle_in_lane(msg_to_object_info(msg)))
         rospy.Subscriber(in_topic, StringMsg, callback)
 
     def _init_vehicle_orientation_subscriber(self):
