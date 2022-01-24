@@ -14,7 +14,7 @@ from std_srvs.srv import Trigger
 
 from local_planner.state_machine import TrafficLightInfo, TrafficLightPhase
 from local_planner.vehicle_control import DrivingSignal
-from local_planner.state_machine import SpeedObservation
+from local_planner.route_planner import ObjectInfo
 
 
 class RosMessagesAdapter:
@@ -23,27 +23,15 @@ class RosMessagesAdapter:
     @staticmethod
     def json_message_to_tld_info(msg: StringMsg) -> TrafficLightInfo:
         obj = json.loads(msg.data)
-        print("obj: ", obj)
+        print("traffic_light: ", obj)
         return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
 
-    # @staticmethod
-    # def json_message_to_obj_infos(msg: StringMsg) -> List[ObjectInfo]:
-    #     obj = json.loads(msg.data)
-    #     print("obj: ", obj)
-    #     return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
-    #
-    # @staticmethod
-    # def obj_info_to_json_message(obj_infos: List[ObjectInfo]) -> StringMsg:
-    #     """Convert a driving signal into a ROS message"""
-    #     json_msg = '{'
-    #     for obj in obj_infos:
-    #         json_msg += '{'
-    #         json_msg += f"'id': {obj.identifier}, 'obj_class': {obj.obj_class}," \
-    #                     f" 'rel_pos': {obj.rel_position}"
-    #         json_msg += '},'
-    #     json_msg += '}'
-    #     print(json_msg)
-    #     return StringMsg(data=json_msg)
+    @staticmethod
+    def json_message_to_object_info(msg: StringMsg) -> List[ObjectInfo]:
+        print(msg.data)
+        obj = json.loads(msg.data)
+        print("object", obj)
+        return obj
 
     @staticmethod
     def nav_message_to_waypoints(msg: WaypointsMsg) -> List[Tuple[float, float]]:

@@ -67,6 +67,7 @@ class PerceptionNode:
                 if obj_infos:
                     print(f'Objects detected: {obj_infos}')
                     msg = RosMessagesAdapter.obj_info_to_json_message(obj_infos)
+                    RosMessagesAdapter.obj_info_to_json_message2(obj_infos)
                     self.obj_publisher.publish(msg)
 
             rate.sleep()

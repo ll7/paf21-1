@@ -27,6 +27,7 @@ class TrafficLightDetector(BaseDetector):
             self.input_shape: Tuple[int, int, int] = config['nn_input_size']
             self.classes_dict: Dict[int, str] = config['classes']
             self.mask: Tuple[int, int, int] = config['tl_mask']
+            # self.scaling: float = 1 / config['scaling_factor']
             self.box_offset: int = config['box_offset']
         self.counter: int = 1
 
