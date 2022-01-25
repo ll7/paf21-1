@@ -47,7 +47,7 @@ class ObjectDetector(BaseDetector):
         the 3D position (relative to the camera) of each pixel.
         """
         # depth_image = depth_image[:120, :]
-        scaling_factor = 1 / 3.5
+        scaling_factor = 1 / 1
         far = 1000  # meters
         depth_image = depth_image / far
         image_height, image_width = depth_image.shape
@@ -76,17 +76,19 @@ class ObjectDetector(BaseDetector):
         p3d = np.dot(self.k, p2d) * normalized_depth * far
 
         # Formatting the output to: [[X1,Y1,Z1],[X2,Y2,Z2], ... [Xn,Yn,Zn]]
-        normalized_points = np.transpose(p3d) * scaling_factor
+        normalized_points = np.transpose(p3d)
         # -1 because x-axis appeared to be flipped
-        normalized_points[:, 0] = normalized_points[:, 0] * -1
+        normalized_points[:, 0] = normalized_points[:, 0] * -1 * scaling_factor
+        normalized_points[:, 1] = normalized_points[:, 1] * scaling_factor
+        print(normalized_points)
         return normalized_points
 
     def get_object_mask(self, semantic_image: np.ndarray) -> np.ndarray:
         """Find the object patches from the semantic image."""
         mask = np.array(self.mask)
         masked_image = cv2.inRange(semantic_image, mask, mask)
-        if self.counter % 10 == 0 and self.counter < 10000:
-            cv2.imwrite(f'/app/logs/masked_image_{self.counter}.png', masked_image)
+        #if self.counter % 10 == 0 and self.counter < 10000:
+        #    cv2.imwrite(f'/app/logs/masked_image_{self.counter}.png', masked_image)
         return masked_image / 255
 
     @staticmethod
@@ -116,13 +118,16 @@ class ObjectDetector(BaseDetector):
         if len(normalized_points) > 0:
             # TODO consider only the highest point in the z axis
             # TODO consider clustering with segmentation mask
+            squeezing_factor = 100
+            normalized_points[:, 2] = normalized_points[:, 2] / squeezing_factor
             labels = DBSCAN(eps=2, min_samples=1).fit_predict(normalized_points)
             n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
             print(f"Estimated number of objects: {n_clusters_}")
-            normalized_points[:, 2] = normalized_points[:, 2]
+            normalized_points[:, 2] = normalized_points[:, 2] * squeezing_factor
             cluster = ObjectDetector.group_up_points(labels, normalized_points, n_clusters_)
             centroids = []
             for group in cluster:
+                print('group:', group)
                 centroids.append(ObjectDetector.centroid(group))
 
             return centroids
@@ -133,7 +138,7 @@ class ObjectDetector(BaseDetector):
         """Calculate the centroid."""
         length = arr.shape[0]
         sum_x = np.sum(arr[:, 0])
-        sum_y = np.sum(arr[:, 1])
+        sum_y = np.sum(arr[:, 2])
         return sum_x / length, sum_y / length
 
     def create_object_infos(self, centroids: List[Tuple[float, float]]) -> List[ObjectInfo]:
