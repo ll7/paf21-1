@@ -60,7 +60,6 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         # TODO: include maneuvers here ...
         return short_term_route
 
-    # TODO think of other location for following functions
     def refresh_detected_objects(self, object_list: List[Dict]):
         """Refresh the objects that were detected by the perception"""
         keys = []
@@ -93,13 +92,20 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         """Detect a vehicle in the same direction."""
         self.refresh_detected_objects(object_list)
         spd_obs = SpeedObservation()
-        # print(f'Detected Vehicle {self.objects}')
+        cached_local_route = np.concatenate([[self.vehicle.pos], self.cached_local_route])
         for _, obj in self.objects.items():
-            distance = dist(self.vehicle.pos, obj.trajectory[-1])
-            if obj.velocity >= 0 and distance < spd_obs.dist_next_obstacle_m:
-                spd_obs.is_trajectory_free = False
-                spd_obs.dist_next_obstacle_m = distance
-                spd_obs.object_speed_ms = obj.velocity
-                print(f'Detected Vehicle {obj.identifier}: Dist {distance} , Velo: {obj.velocity}')
+            last_obj_pos = obj.trajectory[-1]
+            for point in cached_local_route:
+                # ToDo: Do this for every predicted position of the object
+                distance = dist(last_obj_pos, point)
+                if distance > 2.0:
+                    continue
 
+                distance = dist(self.vehicle.pos, last_obj_pos)
+                if distance < spd_obs.dist_next_obstacle_m:
+                    spd_obs.is_trajectory_free = False
+                    spd_obs.dist_next_obstacle_m = distance
+                    spd_obs.object_speed_ms = obj.velocity
+
+        print(spd_obs)
         return spd_obs

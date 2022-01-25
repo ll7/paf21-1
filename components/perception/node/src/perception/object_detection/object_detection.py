@@ -37,8 +37,6 @@ class ObjectDetector(BaseDetector):
         self.counter += 1
         centroids = ObjectDetector.cluster_point_cloud(normalized_points)
         obj_infos = self.create_object_infos(centroids)
-        if self.counter % 100 == 0 and self.counter < 0:
-            np.save(f'/app/logs/pointcloud_{self.counter}.npy', normalized_points)
         return obj_infos
 
     def depth_to_local_point_cloud(self, depth_image: np.ndarray) -> np.ndarray:
@@ -46,8 +44,6 @@ class ObjectDetector(BaseDetector):
         Convert an image containing CARLA encoded depth-map to a 2D array containing
         the 3D position (relative to the camera) of each pixel.
         """
-        # depth_image = depth_image[:120, :]
-        scaling_factor = 1 / 1
         far = 1000  # meters
         depth_image = depth_image / far
         image_height, image_width = depth_image.shape
@@ -70,9 +66,8 @@ class ObjectDetector(BaseDetector):
         normalized_depth = np.delete(normalized_depth, max_depth_indexes)
         u_coord = np.delete(u_coord, max_depth_indexes)
         v_coord = np.delete(v_coord, max_depth_indexes)
-        # pd2 = [u,v,1]
+
         p2d = np.array([u_coord, v_coord, np.ones_like(u_coord)])
-        # P = [X,Y,Z]
         p3d = np.dot(self.k, p2d) * normalized_depth * far
 
         # Formatting the output to: [[X1,Y1,Z1],[X2,Y2,Z2], ... [Xn,Yn,Zn]]
@@ -87,7 +82,7 @@ class ObjectDetector(BaseDetector):
         """Find the object patches from the semantic image."""
         mask = np.array(self.mask)
         masked_image = cv2.inRange(semantic_image, mask, mask)
-        #if self.counter % 10 == 0 and self.counter < 10000:
+        # if self.counter % 10 == 0 and self.counter < 10000:
         #    cv2.imwrite(f'/app/logs/masked_image_{self.counter}.png', masked_image)
         return masked_image / 255
 
@@ -104,7 +99,6 @@ class ObjectDetector(BaseDetector):
     @staticmethod
     def create_inverse_camera_matrix(image_meta: Tuple[int, int, int]) -> np.ndarray:
         """Creates inverse k matrix."""
-        # intrinsic k matrix
         k = np.identity(3)
         width, height, fov = image_meta
         k[0, 2] = width / 2.0
@@ -116,8 +110,7 @@ class ObjectDetector(BaseDetector):
     def cluster_point_cloud(normalized_points) -> List[Tuple[float, float]]:
         """Cluster points into groups and get bounding rectangle."""
         if len(normalized_points) > 0:
-            # TODO consider only the highest point in the z axis
-            # TODO consider clustering with segmentation mask
+            # TODO consider clustering with segmentation mask, only the highest point in the z axis
             squeezing_factor = 100
             normalized_points[:, 2] = normalized_points[:, 2] / squeezing_factor
             labels = DBSCAN(eps=2, min_samples=1).fit_predict(normalized_points)
@@ -127,7 +120,6 @@ class ObjectDetector(BaseDetector):
             cluster = ObjectDetector.group_up_points(labels, normalized_points, n_clusters_)
             centroids = []
             for group in cluster:
-                print('group:', group)
                 centroids.append(ObjectDetector.centroid(group))
 
             return centroids
@@ -153,7 +145,7 @@ class ObjectDetector(BaseDetector):
     def find_nearest_centroid(self, centroid: Tuple[float, float]) -> ObjectInfo:
         """Return the object info of the nearest saved centroid."""
         nearest_centroid = -1
-        nearest_dist = 2.0
+        nearest_dist = 3.0
         for obj_info in self.last_obj_infos:
             distance = dist(centroid, obj_info.rel_position)
             if distance < nearest_dist:

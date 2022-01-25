@@ -43,8 +43,7 @@ class RosMessagesAdapter:
     def message_to_vehicle_velocity(msg: OdometryMsg):
         """converts the odometry message to velocity"""
         array = [msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z]
-        print("Speed ", np.linalg.norm(array))
-        return np.linalg.norm(array)
+        return np.linalg.norm(array), time_stamp
 
     @staticmethod
     def message_to_target_velocity(msg: FloatMsg) -> float:
