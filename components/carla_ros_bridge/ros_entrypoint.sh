@@ -9,5 +9,5 @@ sleep $CARLA_SIM_WAIT_SECS
 
 # launch the given ROS nodes from Docker CMD args
 roslaunch $@ &
-sleep 5 && python /opt/carla/PythonAPI/examples/spawn_npc.py --host carla-simulator -n 40 -w 50 &
+sleep 5 && python /opt/carla/PythonAPI/examples/spawn_npc.py --host carla-simulator -n 80 -w 0 &
 wait
