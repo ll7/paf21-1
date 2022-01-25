@@ -77,24 +77,16 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
                                                              trajectory=[new_position])
         self.objects = {k: self.objects[k] for k in keys}
 
-    def convert_relative_to_world2(self, coordinate: Tuple[float, float]) -> Tuple[float, float]:
-        """Converts relative coordinates to world coordinates"""
-        translation = self.vehicle.pos
-        theta = self.vehicle.orientation_rad
-        t_matrix = np.array([[translation[0], 0], [0, translation[1]]])
-        rotation_matrix = np.array([[np.cos(theta), np.sin(theta)],
-                                   [-np.sin(theta), np.cos(theta)]])
-        coordinate = np.matmul(t_matrix * rotation_matrix, coordinate)
-        return coordinate[0], coordinate[1]
-
     def convert_relative_to_world(self, coordinate: Tuple[float, float]) -> Tuple[float, float]:
         """Converts relative coordinates to world coordinates"""
+        local_coord = coordinate
         translation = self.vehicle.pos
         theta = self.vehicle.orientation_rad
         t_vector = np.array([translation[0], translation[1]])
-        rotation_matrix = np.array([[np.cos(theta), np.sin(theta)],
-                                    [-np.sin(theta), np.cos(theta)]])
-        coordinate = np.matmul(rotation_matrix, coordinate) * 3.5 + t_vector
+        rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)],
+                                    [np.sin(theta), np.cos(theta)]])
+        coordinate = np.matmul(rotation_matrix, coordinate) + t_vector
+        print('coordinates:', coordinate, translation, local_coord)
         return coordinate[0], coordinate[1]
 
     def detect_vehicle_in_lane(self, object_list: List[Dict]) -> SpeedObservation:
