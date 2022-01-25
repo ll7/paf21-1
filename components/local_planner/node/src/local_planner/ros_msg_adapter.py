@@ -23,14 +23,14 @@ class RosMessagesAdapter:
     def json_message_to_tld_info(msg: StringMsg) -> TrafficLightInfo:
         """Convert a ROS message into a TrafficLightInfo"""
         obj = json.loads(msg.data)
-        print("traffic_light: ", obj)
+        # print("traffic_light: ", obj)
         return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
 
     @staticmethod
     def json_message_to_object_info(msg: StringMsg) -> List[ObjectInfo]:
         """Convert a ROS message into a list of ObjectInfo"""
         obj = json.loads(msg.data)
-        print("object", obj)
+        # print("object", obj)
         return obj
 
     @staticmethod

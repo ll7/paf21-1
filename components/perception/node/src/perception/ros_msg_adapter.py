@@ -30,6 +30,8 @@ class RosMessagesAdapter:
     @staticmethod
     def obj_info_to_json_message(obj_infos: List[ObjectInfo]) -> StringMsg:
         """Convert a list of object info into a ROS message"""
+        if not obj_infos:
+            return StringMsg(data='[]')
         json_msg = '['
         for obj in obj_infos:
             json_msg += f'{{"identifier": {obj.identifier}, "obj_class": "{obj.obj_class}",' \

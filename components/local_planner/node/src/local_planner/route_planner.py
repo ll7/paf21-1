@@ -7,7 +7,8 @@ import numpy as np
 
 from local_planner.vehicle_control import DrivingController
 from local_planner.core.vehicle import Vehicle
-from local_planner.state_machine import SpeedObservation
+from local_planner.state_machine import SpeedObservation, TrafficLightInfo, TrafficLightPhase
+
 
 
 @dataclass
@@ -93,8 +94,8 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
                     #   rel_dist = rel_dist - dist(self.vehicle.pos, last_pos)
                     #   rel_velocity = rel_dist / time_difference
                     # abs_velocity = self.vehicle.actual_velocity_mps + rel_velocity
-                    print(f'global vel {self.objects[obj["identifier"]].velocity},'
-                          f' {time_difference}, {obj["identifier"]}')
+                    # print(f'global vel {self.objects[obj["identifier"]].velocity},'
+                    #      f' {time_difference}, {obj["identifier"]}')
                 else:
                     self.objects[obj['identifier']] = ObjectInfo(identifier=obj['identifier'],
                                                                  obj_class=obj['obj_class'],
@@ -111,16 +112,17 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         coordinate = np.matmul(rotation_matrix, coordinate) + t_vector
         return coordinate[0], coordinate[1]
 
-    def detect_vehicle_in_lane(self, object_list: List[Dict]) -> SpeedObservation:
+    def detect_vehicle_in_lane(self) -> SpeedObservation:
         """Detect a vehicle in the same direction."""
-        self.refresh_detected_objects(object_list)
         spd_obs = SpeedObservation()
         cached_local_route = np.concatenate([[self.vehicle.pos], self.cached_local_route])
         for _, obj in self.objects.items():
             last_obj_pos = obj.trajectory[-1]
+            distances = []
             for point in cached_local_route:
                 # ToDo: Do this for every predicted position of the object
                 distance = dist(last_obj_pos, point)
+                distances.append(distance)
                 if distance > 2.0:
                     continue
 
@@ -129,6 +131,4 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
                     spd_obs.is_trajectory_free = False
                     spd_obs.dist_next_obstacle_m = distance
                     spd_obs.object_speed_ms = obj.velocity
-
-        print(spd_obs)
         return spd_obs

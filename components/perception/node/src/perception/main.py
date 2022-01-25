@@ -59,15 +59,13 @@ class PerceptionNode:
             if buffers_contain_img:
                 tld_info = self.tl_detector.detect_traffic_light(sem_img, rgb_img, depth_img)
                 obj_infos = self.vehicle_detector.detect_object(sem_img, depth_img)
-
                 if tld_info:
                     print(f'Traffic light detected: {tld_info}')
                     msg = RosMessagesAdapter.tld_info_to_json_message(tld_info)
                     self.tld_publisher.publish(msg)
-                if obj_infos:
-                    print(f'Frame {self.vehicle_detector.counter} ;Objects detected: {obj_infos}')
-                    msg = RosMessagesAdapter.obj_info_to_json_message(obj_infos)
-                    self.obj_publisher.publish(msg)
+
+                msg = RosMessagesAdapter.obj_info_to_json_message(obj_infos)
+                self.obj_publisher.publish(msg)
 
             rate.sleep()
 

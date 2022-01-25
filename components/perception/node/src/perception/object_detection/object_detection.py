@@ -105,9 +105,9 @@ class ObjectDetector(BaseDetector):
         """Cluster points into groups and get bounding rectangle."""
         if len(normalized_points) > 0:
             # TODO consider clustering with segmentation mask, only the highest point in the z axis
-            squeezing_factor = 100
-            normalized_points[:, 2] = normalized_points[:, 2] / squeezing_factor
-            labels = DBSCAN(eps=2, min_samples=1).fit_predict(normalized_points)
+            squeezing_factor = 1
+            normalized_points[:, 1] = normalized_points[:, 2] / squeezing_factor
+            labels = DBSCAN(eps=1.5, min_samples=1).fit_predict(normalized_points)
             n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
             print(f"Estimated number of objects: {n_clusters_}")
             normalized_points[:, 2] = normalized_points[:, 2] * squeezing_factor
