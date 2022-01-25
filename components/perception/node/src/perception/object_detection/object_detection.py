@@ -20,7 +20,6 @@ class ObjectDetector(BaseDetector):
         with open(config_path, encoding='utf-8') as file:
             config = yaml.safe_load(file)
             self.mask: Tuple[int, int, int] = config[object_type + '_mask']
-            self.box_offset: int = config['box_offset']
             self.image_meta: Tuple[int, int, int] = config['image_meta']
         self.object_type: str = object_type
         self.counter: int = 1
@@ -70,13 +69,8 @@ class ObjectDetector(BaseDetector):
         p2d = np.array([u_coord, v_coord, np.ones_like(u_coord)])
         p3d = np.dot(self.k, p2d) * normalized_depth * far
 
-        # Formatting the output to: [[X1,Y1,Z1],[X2,Y2,Z2], ... [Xn,Yn,Zn]]
-        normalized_points = np.transpose(p3d)
-        # -1 because x-axis appeared to be flipped
-        normalized_points[:, 0] = normalized_points[:, 0] * -1 * scaling_factor
-        normalized_points[:, 1] = normalized_points[:, 1] * scaling_factor
-        print(normalized_points)
-        return normalized_points
+        # Formatting the output to: [[X1,Y1,Z1],[X2,Y2,Z2], ... [Xn,Yn,Zn]
+        return np.transpose(p3d)
 
     def get_object_mask(self, semantic_image: np.ndarray) -> np.ndarray:
         """Find the object patches from the semantic image."""
