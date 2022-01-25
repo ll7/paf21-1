@@ -29,6 +29,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
     global_route: List[Tuple[float, float]] = field(default_factory=list)
     cached_local_route: List[Tuple[float, float]] = field(default_factory=list)
     objects: Dict[int, ObjectInfo] = field(default_factory=dict)
+    old_timestamp: float = 0.1
 
     def update_global_route(self, waypoints: List[Tuple[float, float]]):
         """Update the global route to follow"""
@@ -56,36 +57,42 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         self.cached_local_route = self.cached_local_route[enumerator:]
         bound = min(50, len(self.cached_local_route))
         short_term_route = self.cached_local_route[:bound]
-
         # TODO: include maneuvers here ...
         return short_term_route
 
     def refresh_detected_objects(self, object_list: List[Dict]):
         """Refresh the objects that were detected by the perception"""
         keys = []
-        for obj in object_list:
-            new_position = self.convert_relative_to_world(obj['rel_position'])
-            keys.append(obj['identifier'])
-            if obj['identifier'] in self.objects:
-                last_position = self.objects[obj['identifier']].trajectory[-1]
-                self.objects[obj['identifier']].trajectory.append(new_position)
-                self.objects[obj['identifier']].velocity = dist(new_position, last_position) / 0.1
-            else:
-                self.objects[obj['identifier']] = ObjectInfo(identifier=obj['identifier'],
-                                                             obj_class=obj['obj_class'],
-                                                             trajectory=[new_position])
-        self.objects = {k: self.objects[k] for k in keys}
+        time_difference = self.vehicle.time - self.old_timestamp
+        if time_difference > 0:
+            for obj in object_list:
+                new_pos = self.convert_relative_to_world(obj['rel_position'])
+                keys.append(obj['identifier'])
+                if obj['identifier'] in self.objects:
+                    last_pos = self.objects[obj['identifier']].trajectory[-1]
+                    self.objects[obj['identifier']].trajectory.append(new_pos)
+                    self.objects[obj['identifier']].velocity = dist(new_pos, last_pos) \
+                                                               / time_difference
+                    #   rel_dist = dist(self.vehicle.pos, new_pos)
+                    #   rel_dist = rel_dist - dist(self.vehicle.pos, last_pos)
+                    #   rel_velocity = rel_dist / time_difference
+                    # abs_velocity = self.vehicle.actual_velocity_mps + rel_velocity
+                    print(f'global vel {self.objects[obj["identifier"]].velocity},'
+                          f' {time_difference}, {obj["identifier"]}')
+                else:
+                    self.objects[obj['identifier']] = ObjectInfo(identifier=obj['identifier'],
+                                                                 obj_class=obj['obj_class'],
+                                                                 trajectory=[new_pos])
+            self.objects = {k: self.objects[k] for k in keys}
+            self.old_timestamp = self.vehicle.time
 
     def convert_relative_to_world(self, coordinate: Tuple[float, float]) -> Tuple[float, float]:
         """Converts relative coordinates to world coordinates"""
-        local_coord = coordinate
-        translation = self.vehicle.pos
-        theta = self.vehicle.orientation_rad
-        t_vector = np.array([translation[0], translation[1]])
+        theta = self.vehicle.orientation_rad - np.pi / 2
+        t_vector = np.array(self.vehicle.pos)
         rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)],
                                     [np.sin(theta), np.cos(theta)]])
         coordinate = np.matmul(rotation_matrix, coordinate) + t_vector
-        print('coordinates:', coordinate, translation, local_coord)
         return coordinate[0], coordinate[1]
 
     def detect_vehicle_in_lane(self, object_list: List[Dict]) -> SpeedObservation:
