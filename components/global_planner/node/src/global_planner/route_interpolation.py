@@ -9,17 +9,17 @@ class RouteInterpolation:
     """Representing a helper for interpolating route waypoints"""
 
     @staticmethod
-    def interpolate_route(route: List[Tuple[float, float]], interval_m=2.0):
+    def interpolate_route(orig_route: List[Tuple[float, float]], interval_m=2.0):
         """Interpolate the given route waypoints with a given interval"""
-        interpolated_route = []
+        route = []
 
-        for index in range(len(route) - 1):
+        for index in range(len(orig_route) - 1):
             waypoints = RouteInterpolation._linear_interpolation(
-                route[index], route[index + 1], interval_m=interval_m)
-            interpolated_route.extend(waypoints)
+                orig_route[index], orig_route[index + 1], interval_m=interval_m)
+            route.extend(waypoints)
 
-        return RouteInterpolation._clean_route_duplicates(
-            interpolated_route, min_dist=0.1)
+        route = route + [orig_route[-1]]
+        return RouteInterpolation._clean_route_duplicates(route, min_dist=0.1)
 
     @staticmethod
     def _linear_interpolation(start: Tuple[float, float], end: Tuple[float, float],
