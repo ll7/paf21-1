@@ -30,6 +30,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
     cached_local_route: List[Tuple[float, float]] = field(default_factory=list)
     objects: Dict[int, ObjectInfo] = field(default_factory=dict)
     old_timestamp: float = 0.1
+    tld_info: TrafficLightInfo = TrafficLightInfo()
 
     def update_global_route(self, waypoints: List[Tuple[float, float]]):
         """Update the global route to follow"""
@@ -60,10 +61,24 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         # TODO: include maneuvers here ...
         return short_term_route
 
-    def refresh_detected_objects(self, object_list: List[Dict]):
+    def get_speed_observation(self) -> SpeedObservation:
+        if self.cached_local_route:
+            speed_obs = self.detect_vehicle_in_lane()
+            speed_obs.tl_phase = self.tld_info.phase
+            speed_obs.dist_next_obstacle_m = min(speed_obs.dist_next_obstacle_m,
+                                                 self.tld_info.distance)
+            print(f'Speed_obs {speed_obs}')
+            return speed_obs
+        return SpeedObservation()
+
+    def update_tld_info(self, tld_info: TrafficLightInfo):
+        self.tld_info = tld_info
+
+    def update_objects(self, object_list: List[Dict]):
         """Refresh the objects that were detected by the perception"""
         keys = []
-        time_difference = self.vehicle.time - self.old_timestamp
+        # time_difference = self.vehicle.time - self.old_timestamp
+        time_difference = 0.1
         if time_difference > 0:
             for obj in object_list:
                 new_pos = self.convert_relative_to_world(obj['rel_position'])
