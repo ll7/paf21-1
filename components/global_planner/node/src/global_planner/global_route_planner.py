@@ -147,7 +147,6 @@ class AdjMatrixPrep:
         num_nodes = xodr_map.matrix.shape[0]
         u_turn_penalty = 100.0
         for _, is_right_road_side, road in neighbor_sections:
-            # TODO extend multiple lane per side
             lane_link = -1 if is_right_road_side else 1
             ref_id = 1 if is_right_road_side else 0
 
@@ -189,19 +188,10 @@ class GlobalPlanner:
     def generate_waypoints(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
                            orientation_rad: float, xodr_map: XodrMap) -> List[AnnRouteWaypoint]:
         """Generate route waypoints for the given start / end positions using the map"""
-
-        print(f'generating path from {start_pos} to {end_pos} ...')
-
-        path = GlobalPlanner._get_shortest_path(start_pos, end_pos, xodr_map)
-        print(f'determined shortest path {path}')
-    
+        path = GlobalPlanner.get_shortest_path(start_pos, end_pos, xodr_map)
         route_waypoints = GlobalPlanner._preplan_route(start_pos, end_pos, path, xodr_map)
-        print(f'Raw route waypoints: {route_waypoints}')
-
         interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
-        print(f'Interpolated route waypoints: {interpol_route}')
-
-        route_metadata = RouteAnnotation.preprocess_route_metadata(path, xodr_map)
+        route_metadata = RouteAnnotation.preprocess_route_metadata(start_pos, path, xodr_map)
         ann_route = RouteAnnotation.annotate_waypoints(interpol_route, route_metadata)
         return ann_route
 
@@ -227,12 +217,12 @@ class GlobalPlanner:
             elif is_initial_section:
                 route_waypoints.append(start_pos)
                 road = xodr_map.road_by_id(road_id2)
-                displaced_points = GlobalPlanner._displacement_points(road, sec_2, is_final=False)
+                displaced_points = GlobalPlanner._displace_points(road, sec_2, is_final=False)
                 route_waypoints.append(displaced_points)
 
             elif is_final_section:
                 road = xodr_map.road_by_id(road_id1)
-                displaced_points = GlobalPlanner._displacement_points(road, sec_1, is_final=True)
+                displaced_points = GlobalPlanner._displace_points(road, sec_1, is_final=True)
                 route_waypoints.append(displaced_points)
                 route_waypoints.append(end_pos)
 
@@ -254,7 +244,7 @@ class GlobalPlanner:
         return road_waypoints
 
     @staticmethod
-    def _get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
+    def get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
                            xodr_map: XodrMap) -> List[str]:
         AdjMatrixPrep.extend_matrix(start_pos, end_pos, xodr_map)
         start_id, end_id = xodr_map.mapping['-1_0_0'], xodr_map.mapping['-2_0_0']
@@ -263,11 +253,10 @@ class GlobalPlanner:
         return [key_list[p_id] for p_id in path_ids]
 
     @staticmethod
-    def _displacement_points(road: Road, sec: str, is_final: bool):
+    def _displace_points(road: Road, sec: str, is_final: bool):
         moving_towards_end = int(sec.split('_')[1])
-        road_end_point = road.geometries[-1] if moving_towards_end else road.geometries[0]
-        points = bounding_box(road_end_point.start_point, road_end_point.end_point,
-                              road.road_width / 2)
+        end_geo = road.geometries[-1] if moving_towards_end else road.geometries[0]
+        points = bounding_box(end_geo.start_point, end_geo.end_point, road.road_width / 2)
         if is_final:
             return points[2] if moving_towards_end else points[0]
         return points[3] if moving_towards_end else points[1]
