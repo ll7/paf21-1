@@ -21,7 +21,6 @@ class ObjectDetector(BaseDetector):
             config = yaml.safe_load(file)
             self.mask: Tuple[int, int, int] = config[object_type + '_mask']
             self.box_offset: int = config['box_offset']
-            self.object_type: str = object_type
             self.image_meta: Tuple[int, int, int] = config['image_meta']
         self.object_type: str = object_type
         self.counter: int = 1
