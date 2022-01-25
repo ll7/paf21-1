@@ -24,7 +24,6 @@ class LocalPlannerNode:
     vehicle: Vehicle
     publish_rate_in_hz: int
     driving_signal_publisher: rospy.Publisher = None
-    highlighted_image_publisher: rospy.Publisher = None
     nav_service: InfiniteDrivingService = None
     route_planner: TrajectoryPlanner = None
     driving_control: DrivingController = None
@@ -52,6 +51,7 @@ class LocalPlannerNode:
 
         while not rospy.is_shutdown():
             local_route = self.route_planner.calculate_trajectory()
+            self.speed_state_machine.update_state(self.route_planner.get_speed_observation())
             velocity = self.speed_state_machine.get_target_speed()
             self.driving_control.update_route(local_route)
             self.driving_control.update_target_velocity(velocity)
@@ -66,14 +66,18 @@ class LocalPlannerNode:
         self._init_vehicle_position_subscriber()
         self._init_vehicle_orientation_subscriber()
         self._init_tld_info_subscriber()
+        self._init_object_info_subscriber()
 
     def _init_tld_info_subscriber(self):
         in_topic = f"/drive/{self.vehicle.name}/tld_info"
         msg_to_tld_info = RosMessagesAdapter.json_message_to_tld_info
-        tld_info_to_speed_obs = lambda x: SpeedObservation(
-            tl_phase=x.phase, dist_next_obstacle_m=x.distance)
-        callback = lambda msg: self.speed_state_machine.update_state(
-            tld_info_to_speed_obs(msg_to_tld_info(msg)))
+        callback = lambda msg: self.route_planner.update_tld_info(msg_to_tld_info(msg))
+        rospy.Subscriber(in_topic, StringMsg, callback)
+
+    def _init_object_info_subscriber(self):
+        in_topic = f"/drive/{self.vehicle.name}/object_info"
+        msg_to_object_info = RosMessagesAdapter.json_message_to_object_info
+        callback = lambda msg: self.route_planner.update_objects(msg_to_object_info(msg))
         rospy.Subscriber(in_topic, StringMsg, callback)
 
     def _init_vehicle_orientation_subscriber(self):
