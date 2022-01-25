@@ -65,8 +65,9 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         if self.cached_local_route:
             speed_obs = self.detect_vehicle_in_lane()
             speed_obs.tl_phase = self.tld_info.phase
-            speed_obs.dist_next_obstacle_m = min(speed_obs.dist_next_obstacle_m,
-                                                 self.tld_info.distance)
+            if speed_obs.tl_phase == TrafficLightPhase.RED:
+                speed_obs.dist_next_obstacle_m = min(speed_obs.dist_next_obstacle_m,
+                                                     self.tld_info.distance)
             print(f'Speed_obs {speed_obs}')
             return speed_obs
         return SpeedObservation()
