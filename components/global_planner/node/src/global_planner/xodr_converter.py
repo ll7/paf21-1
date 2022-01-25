@@ -45,9 +45,9 @@ class TrafficSignal(ABC):
     # pylint: disable=too-few-public-methods
     """Represents the data of a traffic sign object."""
     name: str
-    dist_from_road_entrance: float
+    dist_from_start: float
     is_reversed: bool
-    # global_pos: Tuple[float, float]
+    pos: Tuple[float, float]
 
     def __init__(self, node_xml: Element, road_start: Tuple[float, float],
                  road_end: Tuple[float, float]):
@@ -56,8 +56,8 @@ class TrafficSignal(ABC):
         dist_from_start = float(node_xml.get('s'))
         dist_from_end = vector_len(points_to_vector(road_start, road_end)) - dist_from_start
 
-        # self.global_pos = global_pos(road_start, road_end, dist_from_start)
-        self.dist_from_road_entrance = dist_from_end if self.is_reversed else dist_from_start
+        self.pos = global_pos(road_start, road_end, dist_from_start)
+        self.dist_from_start = dist_from_end if self.is_reversed else dist_from_start
 
 
 class TrafficSign(TrafficSignal):
@@ -190,6 +190,11 @@ class Road:
         if not self.geometries:
             raise RuntimeError('Invalid operation! Road has no geometries!')
         return vector_len(points_to_vector(self.road_start, self.road_end))
+
+    @property
+    def speed_signs(self) -> List[TrafficSign]:
+        """All speed signs from the traffic signs list."""
+        return [s for s in self.traffic_signs if s.sign_type == TrafficSignType.SPEED_LIMIT]
 
     @staticmethod
     def _get_line_type(road: Element) -> str:
@@ -348,10 +353,18 @@ class XodrMap:
     junctions: List[Junction]
     mapping: Dict[str, int]
     matrix: np.ndarray = None
+    _roads_dict: Dict[int, Road] = None
 
     def __post_init__(self):
         if self.matrix is None:
             self.matrix = self._create_links()
+        if self.lane_lets is None:
+            self.lane_lets = []
+        self._roads_dict = { road.road_id:road for road in self.lane_lets }
+
+    def road_by_id(self, road_id: int) -> Road:
+        """Look up a road by id"""
+        return self._roads_dict[road_id]
 
     def _create_links(self):
         """Link geometry, predecessor and successor in the weighted matrix."""

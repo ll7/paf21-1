@@ -37,7 +37,7 @@ class GlobalPlannerNode:
         for ann_wp in global_route:
             print(ann_wp)
 
-        route_as_json = [{'x': pos.x_coord, 'y': pos.y_coord} for pos in global_route]
+        route_as_json = [{'x': wp.pos[0], 'y': wp.pos[1]} for wp in global_route]
         response = NavigationRequestResponse(
             waypoints_json = json.dumps(route_as_json),
             success = True
