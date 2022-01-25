@@ -47,7 +47,7 @@ class RouteAnnotation:
         regarding route metadata to annotate."""
 
         path_sections: List[PathSection] = RouteAnnotation._norm_path(path, xodr_map.road_by_id)
-
+        print("path_sections", path_sections)
         traffic_lights: List[TrafficLight] = []
         speed_signs: List[TrafficSign] = []
 
@@ -95,6 +95,11 @@ class RouteAnnotation:
                 drive_reverse = is_road_end
                 norm_lane_id = abs(lane_id)
                 poss_lanes = road.left_ids + road.right_ids
+                if road.line_type != "broken":
+                    if is_road_end == 0:
+                        poss_lanes = road.left_ids
+                    else:
+                        poss_lanes = road.right_ids
                 poss_lanes = list(sorted([id * (1 if drive_reverse else -1) for id in poss_lanes]))
                 lane_offset = road.road_width * (norm_lane_id - 0.5)
                 road_bounds = bounding_box(road.road_start, road.road_end, lane_offset)
@@ -116,8 +121,8 @@ class RouteAnnotation:
         max_dist = 999.0
         radius_handled = 5.0
         default_speed = 50.0
-
-        tl_id, ss_id, sec_id = 0, 0, 0
+        # TODO consider first and last road
+        tl_id, ss_id, sec_id = 0, 0, -1
         tl_dist, ss_dist, sec_dist = float('inf'), float('inf'), float('inf')
 
         next_tl_pos = lambda: metadata.traffic_lights_ahead[tl_id].pos \
@@ -131,13 +136,17 @@ class RouteAnnotation:
 
         print(f'num traffic lights: {len(metadata.traffic_lights_ahead)}')
         print(f'num speed signs: {len(metadata.speed_signs_ahead)}')
-
         for wp in waypoints:
+            if sec_id < 0:
+                sec_id += 1
+                continue
             tl_pos, ss_pos, sec_end_pos = next_tl_pos(), next_ss_pos(), next_sec_end()
             tl_dist = euclid_dist(wp, tl_pos) if tl_pos else max_dist
             ss_dist = euclid_dist(wp, ss_pos) if ss_pos else max_dist
             sec_dist = euclid_dist(wp, sec_end_pos) if sec_end_pos else max_dist
-
+            if (len(metadata.sections_ahead)<= sec_id):
+                print("this will fail", len(metadata.sections_ahead), sec_id, "last:", metadata.sections_ahead[sec_id-1])
+                continue
             actual_lane = metadata.sections_ahead[sec_id].lane_id
             poss_lanes = metadata.sections_ahead[sec_id].possible_lanes
             legal_speed = metadata.speed_signs_ahead[ss_id-1].legal_speed if ss_id > 0 else default_speed
@@ -154,5 +163,5 @@ class RouteAnnotation:
             if sec_dist < radius_handled:
                 print(f'section {sec_id} end found at {wp}')
                 sec_id += 1
-
+        print(ann_waypoints)
         return ann_waypoints
