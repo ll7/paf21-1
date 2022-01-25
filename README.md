@@ -38,17 +38,10 @@ Running steps 2-4 could look something like this (see the README files for furth
 # clone the GitHub repo
 git clone https://github.com/ll7/paf21-1
 cd paf21-1
-git lfs pull
 
-# build the components
-cd components
-docker-compose -f carla-sim-build.yml build
-docker-compose -f driving-components-build.yml build
-
-# launch the default scenario
-cd ../scenarios/default_scenario
-xhost +
-docker-compose up -d
+./launch.sh
+# ... let the simulation do stuff ...
+./shutdown.sh
 ```
 
 ## Repository Structure
