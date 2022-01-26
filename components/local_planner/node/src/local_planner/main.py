@@ -59,8 +59,6 @@ class LocalPlannerNode:
             velocity = self.speed_state_machine.get_target_speed()
             self.driving_control.update_route(local_route)
             self.driving_control.update_target_velocity(velocity)
-            print("vehicle pos")
-            print(self.vehicle.pos)
             driving_signal = self.driving_control.next_signal()
             print("driving signal")
             print(driving_signal)

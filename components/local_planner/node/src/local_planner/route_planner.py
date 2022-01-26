@@ -67,7 +67,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         while angle > 0.5*math.pi:
             self.next_wp += 1
             self.prev_wp += 1
-            print(angle)
+            # print(angle)
 
             #finish?
             if self.next_wp == len(self.global_route):
@@ -78,10 +78,10 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
             angle = angle_between(next_to_prev, next_to_pos)
 
         bound = min(self.prev_wp + lenght_route, len(self.global_route))
-        print(self.global_route[self.prev_wp:bound])
-        print(len(self.global_route[self.prev_wp:bound]))
-        print(self.prev_wp)
-        print(self.next_wp)
+        # print(self.global_route[self.prev_wp:bound])
+        # print(len(self.global_route[self.prev_wp:bound]))
+        # print(self.prev_wp)
+        # print(self.next_wp)
         return self.global_route[self.prev_wp:bound]
 
 

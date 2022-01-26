@@ -1,6 +1,6 @@
 """Module for transitioning a fine-grained, idealistic route
 and other driving metadata into actionable driving signals"""
-
+import math
 from typing import Tuple, List
 from dataclasses import dataclass, field
 from math import cos
@@ -8,7 +8,6 @@ from math import atan
 from numpy import cross
 from numpy.linalg import norm
 
-from local_planner.core import Vehicle, geometry
 
 from local_planner.core import Vehicle, geometry
 from math import sqrt, floor
@@ -93,15 +92,18 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
             return 0.0
 
         # Steer towards method
-        print("aim_point")
-        print(self._get_aim_point())
-        self.vehicle.steer_towards(self._get_aim_point())
-        print(self.vehicle.steering_angle)
-        steering_angle = self.vehicle.steering_angle
+        #print("aim_point")
+        #print(self._get_aim_point())
+        #self.vehicle.steer_towards(self._get_aim_point())
+        #print(self.vehicle.steering_angle)
+        #steering_angle = self.vehicle.steering_angle
+
+        # print("dist_next_wp")
+        # print(norm(geometry.points_to_vector(self.vehicle.pos, self.route_waypoints[1])))
 
         # stanley method
-        # steering_angle = self.stanley_method()
-        # self.vehicle.set_steering_angle(steering_angle)
+        steering_angle = self.stanley_method()
+        self.vehicle.set_steering_angle(steering_angle)
 
         return steering_angle
 
@@ -127,24 +129,55 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         prev_wp = self.route_waypoints[0]
         next_wp = self.route_waypoints[1]
 
+        # print("pos")
+        # print(pos)
+        # print("v")
+        # print(v)
+        # print("prev_wp")
+        # print(prev_wp)
+        # print("next_wp")
+        # print(next_wp)
+
         # calc heading error
         vec_traj = geometry.points_to_vector(prev_wp, next_wp)
         dir_traj = geometry.vector_to_dir(vec_traj)
         heading_error = dir_traj - self.vehicle.orientation_rad
+        # correction
+        if heading_error < -math.pi:
+            heading_error = 2*math.pi+heading_error
+        if heading_error > math.pi:
+            heading_error = -(2*math.pi)+heading_error
 
         # Controller Settings
-        k = 0.3
-        k_s = 1
+        k = 2
+        k_s = 4
 
         # calc crosstrack error
         prev_to_next = geometry.points_to_vector(prev_wp, next_wp)
         prev_to_vehicle = geometry.points_to_vector(prev_wp, pos)
 
-        top = cross(prev_to_next, prev_to_vehicle)
-        top = norm(top)
+        # https://de.serlo.org/mathe/2137/abstand-eines-punktes-zu-einer-geraden-berechnen-analytische-geometrie
+        top = -cross(prev_to_next, prev_to_vehicle)
+        # top = norm(top)
         bottom = norm(prev_to_next)
         e = top/bottom
+
+        # print("e")
+        # print(e)
+
         arg = (k*e)/(k_s+v)
         cross_track_error = atan(arg)
+        print("cross_track error")
+        print(cross_track_error)
 
+        # print("vehicle orientation rad")
+        # print(self.vehicle.orientation_rad)
+        # print("traj orientation rad")
+        # print(dir_traj)
+        print("heading error")
+        print(heading_error)
+
+
+        print("steering_angle")
+        print(heading_error + cross_track_error)
         return heading_error + cross_track_error
