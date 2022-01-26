@@ -58,7 +58,6 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         self.cached_local_route = self.cached_local_route[enumerator:]
         bound = min(50, len(self.cached_local_route))
         short_term_route = self.cached_local_route[:bound]
-
         return short_term_route
 
     def get_speed_observation(self) -> SpeedObservation:
@@ -115,7 +114,8 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         """Detect a vehicle in the same direction."""
         spd_obs = SpeedObservation()
         cached_local_route = np.concatenate([[self.vehicle.pos], self.cached_local_route])
-        for _, obj in self.objects.items():
+        items = self.objects.items()
+        for _, obj in items:
             last_obj_pos = obj.trajectory[-1]
             distances = []
             for point in cached_local_route:
