@@ -21,7 +21,7 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
     target_velocity_mps: float = 0.0
     target_distance_m: float = 0.0
     # friction coefficients
-    coeff_dry : float = 0.8
+    coeff_dry : float = 0.6
     coeff_wet : float = 0.4
     coeff_ice : float = 0.2
 
@@ -30,20 +30,25 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
         self.route_waypoints = waypoints
 
     def update_target_velocity(self, target_velocity_mps: float):
-        """Update the target velocity"""
+        """Update the target velocity using kurvature radius"""
+        print('TARGET VELOCITY FROM SM: ', target_velocity_mps)
         if len(self.route_waypoints) < 2 :
             self.target_velocity_mps = target_velocity_mps
         else: 
             middle_waypoint = round(len(self.route_waypoints) / 2)
-            print('len waypoints : ', len(self.route_waypoints))
             radius = geometry.approx_curvature_radius(self.route_waypoints[1], 
                 self.route_waypoints[middle_waypoint], 
                 self.route_waypoints[-1])
             print('RADIUS: ', radius)
-            if radius > 100:
+            if radius > 90:
                 self.target_velocity_mps = target_velocity_mps
             else:
-                self.target_velocity_mps = floor(sqrt(9.81 * self.coeff_dry * radius))
+                self.target_velocity_mps = floor(sqrt(9.81 * self.coeff_dry * radius)) / 2.0
+            
+            #print('POS: ', self.vehicle.pos, ' waypoint 1 : ', self.route_waypoints[0], self.route_waypoints[middle_waypoint], self.route_waypoints[-1])
+        print('STEERING ANGLE: ', self.vehicle.steering_angle)
+        #print('ORIENTATION RAD: ', self.vehicle.orientation_rad)
+        print('TARGET VELOCITY SET: ', self.target_velocity_mps)
 
     def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
         """Update the vehicle's current position"""
