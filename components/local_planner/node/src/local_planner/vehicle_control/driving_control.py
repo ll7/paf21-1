@@ -32,23 +32,26 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
     def update_target_velocity(self, target_velocity_mps: float):
         """Update the target velocity using kurvature radius"""
         print('TARGET VELOCITY FROM SM: ', target_velocity_mps)
+        """
         if len(self.route_waypoints) < 2 :
             self.target_velocity_mps = target_velocity_mps
         else: 
             middle_waypoint = round(len(self.route_waypoints) / 2)
             radius = geometry.approx_curvature_radius(self.route_waypoints[1], 
-                self.route_waypoints[middle_waypoint], 
-                self.route_waypoints[-1])
+                self.route_waypoints[middle_waypoint], self.route_waypoints[-1])
             print('RADIUS: ', radius)
             if radius > 90:
                 self.target_velocity_mps = target_velocity_mps
             else:
-                self.target_velocity_mps = floor(sqrt(9.81 * self.coeff_dry * radius)) / 2.0
-            
-            #print('POS: ', self.vehicle.pos, ' waypoint 1 : ', self.route_waypoints[0], self.route_waypoints[middle_waypoint], self.route_waypoints[-1])
+            self.target_velocity_mps = floor(sqrt(9.81 * self.coeff_dry * radius))
+        """
+        if target_velocity_mps == 0:
+            self.target_velocity_mps = 0
+        else:
+            self.target_velocity_mps = target_velocity_mps - abs(self.coeff_dry * self.vehicle.steering_angle)
         print('STEERING ANGLE: ', self.vehicle.steering_angle)
-        #print('ORIENTATION RAD: ', self.vehicle.orientation_rad)
         print('TARGET VELOCITY SET: ', self.target_velocity_mps)
+        
 
     def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
         """Update the vehicle's current position"""
