@@ -374,7 +374,6 @@ class XodrMap:
     def _link_roads(self, matrix):
         """Link the geometries between each other."""
         for road in self.lane_lets:
-            # TODO Cost function
             length = 0
             for geometry in road.geometries:
                 length += geometry.length

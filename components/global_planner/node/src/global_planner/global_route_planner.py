@@ -80,7 +80,6 @@ class RoadDetection:
     def find_neighbor_sections(pos: Tuple[float, float],
                                xodr_map: XodrMap) -> List[Tuple[int, bool, Road]]:
         """Find the neighboring road sections related to the given position on the map"""
-        # TODO extend multiple lane per side
         neighbors = []
         for road in xodr_map.lane_lets:
             for index, geo in enumerate(road.geometries):
@@ -174,7 +173,6 @@ class AdjMatrixPrep:
         key = create_key(road, end, link)
         if key in mapping:
             return mapping[key]
-        # TODO should never happen
         key = create_key(road, end, -link)
         if key in mapping:
             return mapping[key]
@@ -236,7 +234,6 @@ class GlobalPlanner:
         road_geometries = list(reversed(road.geometries)) \
             if moving_towards_end else road.geometries
 
-        # TODO add support for multiple lanes
         road_waypoints = []
         for geo in road_geometries:
             points = bounding_box(geo.start_point, geo.end_point, road.road_width/2)

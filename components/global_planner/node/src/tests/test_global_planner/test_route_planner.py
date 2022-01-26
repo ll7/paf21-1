@@ -41,7 +41,6 @@ def test_route_metadata():
     # lane id always 1 and possible lanes contain the lane id
     assert all(map(lambda s: s.lane_id == 1, metadata.sections_ahead))
     assert all(map(lambda s: s.lane_id in s.possible_lanes, metadata.sections_ahead))
-    # TODO: modify the route such that there's a test case for a broken lane
 
     # all relevant traffic lights found
     exp_tl_pos = [(77.15649762782473, 0.04155127482227584),
@@ -70,7 +69,6 @@ def test_route_interpolation():
     # succeeding points are interpolated within max. 4 meters of distance
     neighbors = [(route[i], route[i+1]) for i in range(len(route)-1)]
     assert all(map(lambda n: dist(n[0].pos, n[1].pos) < 4.0, neighbors))
-    # TODO: enforce a more dense interpolation
 
 
 def test_route_annotations():

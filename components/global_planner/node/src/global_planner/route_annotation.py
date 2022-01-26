@@ -50,8 +50,7 @@ class RouteAnnotation:
         max_dist = 999.0
         radius_handled = 5.0
         default_speed = 50.0
-        
-        # TODO consider first and last road
+
         tl_id, ss_id, sec_id = 0, 0, 0
         tl_dist, ss_dist, sec_dist = float('inf'), float('inf'), float('inf')
 
