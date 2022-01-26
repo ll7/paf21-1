@@ -34,6 +34,9 @@ class ObjectDetector(BaseDetector):
         depth_img[depth_img == 0] = 1000
         normalized_points = self.depth_to_local_point_cloud(depth_img)
         self.counter += 1
+        if self.counter % 100 == 0 and self.counter < 10000:
+            np.save(f'/app/logs/pointcloud_{self.counter}', normalized_points)
+            cv2.imwrite(f'/app/logs/depth_{self.counter}.png', depth_img)
         centroids = ObjectDetector.cluster_point_cloud(normalized_points)
         obj_infos = self.create_object_infos(centroids)
         return obj_infos
@@ -75,9 +78,11 @@ class ObjectDetector(BaseDetector):
     def get_object_mask(self, semantic_image: np.ndarray) -> np.ndarray:
         """Find the object patches from the semantic image."""
         mask = np.array(self.mask)
+        if self.counter % 100 == 0 and self.counter < 10000:
+            cv2.imwrite(f'/app/logs/semantic_{self.counter}.png', semantic_image)
         masked_image = cv2.inRange(semantic_image, mask, mask)
-        # if self.counter % 10 == 0 and self.counter < 10000:
-        #    cv2.imwrite(f'/app/logs/masked_image_{self.counter}.png', masked_image)
+        if self.counter % 100 == 0 and self.counter < 10000:
+            cv2.imwrite(f'/app/logs/masked_image_{self.counter}.png', masked_image)
         return masked_image / 255
 
     @staticmethod

@@ -69,6 +69,8 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
             if speed_obs.tl_phase == TrafficLightPhase.RED:
                 speed_obs.dist_next_obstacle_m = min(speed_obs.dist_next_obstacle_m,
                                                      self.tld_info.distance)
+                speed_obs.object_speed_ms = 0
+
             print(f'Speed_obs {speed_obs}')
             return speed_obs
         return SpeedObservation()
@@ -115,8 +117,10 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
     def detect_vehicle_in_lane(self) -> SpeedObservation:
         """Detect a vehicle in the same direction."""
         spd_obs = SpeedObservation()
-        cached_local_route = np.concatenate([[self.vehicle.pos], self.cached_local_route])
-        for _, obj in self.objects.items():
+        objects = self.objects.copy()
+        vehicle_pos = self.vehicle.pos
+        cached_local_route = np.concatenate([[vehicle_pos], self.cached_local_route])
+        for _, obj in objects.items():
             last_obj_pos = obj.trajectory[-1]
             distances = []
             for point in cached_local_route:
@@ -126,7 +130,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
                 if distance > 2.0:
                     continue
 
-                distance = dist(self.vehicle.pos, last_obj_pos)
+                distance = dist(vehicle_pos, last_obj_pos)
                 if distance < spd_obs.dist_next_obstacle_m:
                     spd_obs.is_trajectory_free = False
                     spd_obs.dist_next_obstacle_m = distance
