@@ -42,9 +42,20 @@ class Vehicle:
     def steer_towards(self, aim_point: Tuple[float, float]):
         """Adjust the steering angle for driving towards the given point"""
         aim_vector = points_to_vector(self.pos, aim_point)
+        print("aim_vector")
+        print(aim_vector)
         aim_angle_rad = vector_to_dir(aim_vector)
+        print("aim_angle_rad")
+        print(aim_angle_rad)
+        print("vehicle orientation")
+        print(self.orientation_rad)
         steer_angle = aim_angle_rad - self.orientation_rad
+        print("steer_angle")
+        print(steer_angle)
         self.steering_angle = norm_angle(steer_angle)
+        print("self.steering_angle")
+        print(self.steering_angle)
+
 
     def set_steering_angle(self, steering_angle):
         """"Set the Steering Angles within it's limits"""

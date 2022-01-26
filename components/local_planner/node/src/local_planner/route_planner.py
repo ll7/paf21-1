@@ -22,7 +22,9 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
 
     def update_global_route(self, waypoints: List[Tuple[float, float]]):
         """Update the global route to follow"""
+        print("update global route")
         print(waypoints)
+        print(len(waypoints))
 
         self.global_route = waypoints
         if len(self.global_route) < 2:
@@ -41,26 +43,31 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         return [] if vehicle_not_ready else self._compute_local_route()
 
     def _compute_local_route(self) -> List[Tuple[float, float]]:
+        lenght_route = 50
         print("compute_local_route")
         # routes with length lower 2 are invalid
         if len(self.global_route) < 2:
             return self.global_route
 
+        angle: float
+
         # not at finish?
         if self.next_wp < len(self.global_route):
             next_to_prev = points_to_vector(self.global_route[self.next_wp], self.global_route[self.prev_wp])
-            print(self.vehicle.pos)
+            # print(self.vehicle.pos)
             next_to_pos = points_to_vector(self.global_route[self.next_wp], self.vehicle.pos)
             angle = angle_between(next_to_prev, next_to_pos)
         else:
             bound = min(50, len(self.global_route) - self.prev_wp)
-            print("if: ", self.global_route[self.prev_wp:bound])
+
+            # print(self.global_route[self.prev_wp:bound])
             return self.global_route[self.prev_wp:bound]
 
         # next Route section and
         while angle > 0.5*math.pi:
             self.next_wp += 1
             self.prev_wp += 1
+            print(angle)
 
             #finish?
             if self.next_wp == len(self.global_route):
@@ -70,9 +77,11 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
             next_to_pos = points_to_vector(self.global_route[self.next_wp], self.vehicle.pos)
             angle = angle_between(next_to_prev, next_to_pos)
 
-        bound = min(50, len(self.global_route) - self.prev_wp)
-        print("finish")
+        bound = min(self.prev_wp + lenght_route, len(self.global_route))
         print(self.global_route[self.prev_wp:bound])
+        print(len(self.global_route[self.prev_wp:bound]))
+        print(self.prev_wp)
+        print(self.next_wp)
         return self.global_route[self.prev_wp:bound]
 
 

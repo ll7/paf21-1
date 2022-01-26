@@ -23,7 +23,7 @@ class RosMessagesAdapter:
     @staticmethod
     def json_message_to_tld_info(msg: StringMsg) -> TrafficLightInfo:
         obj = json.loads(msg.data)
-        print("obj: ", obj)
+        # print("obj: ", obj)
         return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
 
     @staticmethod
@@ -36,7 +36,7 @@ class RosMessagesAdapter:
     def message_to_vehicle_velocity(msg: OdometryMsg):
         """converts the odometry message to velocity"""
         array = [msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z]
-        print("Speed ", np.linalg.norm(array))
+        # print("Speed ", np.linalg.norm(array))
         return np.linalg.norm(array)
 
     @staticmethod

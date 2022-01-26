@@ -42,19 +42,29 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
 
     def update_target_velocity(self, target_velocity_mps: float):
         """Update the target velocity"""
+
+        # State machine
+        self.target_velocity_mps = target_velocity_mps
+
+        """
+        Pavlo
+        print("update target velocity")
         if len(self.route_waypoints) < 2 :
             self.target_velocity_mps = target_velocity_mps
         else:
             middle_waypoint = round(len(self.route_waypoints) / 2)
-            print('len waypoints : ', len(self.route_waypoints))
+            # print('len waypoints : ', len(self.route_waypoints))
             radius = geometry.approx_curvature_radius(self.route_waypoints[1],
                 self.route_waypoints[middle_waypoint],
                 self.route_waypoints[-1])
-            print('RADIUS: ', radius)
+            # print('RADIUS: ', radius)
             if radius > 100:
                 self.target_velocity_mps = target_velocity_mps
             else:
                 self.target_velocity_mps = floor(sqrt(9.81 * self.coeff_dry * radius))
+        print(target_velocity_mps)
+        print(self.target_velocity_mps)
+        """
 
     def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
         """Update the vehicle's current position"""
@@ -82,9 +92,16 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         if not self._can_steer():
             return 0.0
 
-        steering_angle = self.stanley_method()
-        self.vehicle.set_steering_angle(steering_angle)
-        print('steering angle : ', steering_angle)
+        # Steer towards method
+        print("aim_point")
+        print(self._get_aim_point())
+        self.vehicle.steer_towards(self._get_aim_point())
+        print(self.vehicle.steering_angle)
+        steering_angle = self.vehicle.steering_angle
+
+        # stanley method
+        # steering_angle = self.stanley_method()
+        # self.vehicle.set_steering_angle(steering_angle)
 
         return steering_angle
 
@@ -93,7 +110,9 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
                and self.vehicle.orientation_rad \
                and self.vehicle.pos
 
-    def _get_aim_point(self):
+    def _get_aim_point(self) -> Tuple[float, float]:
+        if len(self.route_waypoints) > 2:
+            return self.route_waypoints[2]
         return self.route_waypoints[1]
 
     def stanley_method(self) -> float:
@@ -103,12 +122,10 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         if len(self.route_waypoints) < 2:
             return 0.0
 
-
         pos = self.vehicle.pos
         v = self.vehicle.actual_velocity_mps
         prev_wp = self.route_waypoints[0]
         next_wp = self.route_waypoints[1]
-
 
         # calc heading error
         vec_traj = geometry.points_to_vector(prev_wp, next_wp)

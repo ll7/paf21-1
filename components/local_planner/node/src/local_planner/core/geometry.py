@@ -39,10 +39,17 @@ def norm_angle(angle_rad: float) -> float:
 
 def angle_between(vec1: Tuple[float, float], vec2: Tuple[float, float]):
     """Calculate angle between two vectors within [0, +pi]"""
-    print("angle between")
-    print(vec1)
-    print(vec2)
-    return acos(dot(vec1, vec2)/norm(vec1)/norm(vec2))
+
+    arg = dot(vec1, vec2) / norm(vec1) / norm(vec2)
+
+    # fix rounding error arg shouldn't be >1
+    if arg > 1:
+        arg = 1
+
+    out = acos(arg)
+
+    return out
+
 
 
 def approx_curvature_radius(p_start: Tuple[float, float],
