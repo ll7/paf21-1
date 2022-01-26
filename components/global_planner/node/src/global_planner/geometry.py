@@ -56,3 +56,21 @@ def bounding_box(start_point: Tuple[float, float], end_point: Tuple[float, float
             sub_vector(start_point, offset),
             sub_vector(end_point, offset),
             add_vector(end_point, offset)]
+
+
+def is_below_line(l_1: Tuple[float, float], l_2: Tuple[float, float],
+                  point: Tuple[float, float]) -> bool:
+    """Determine whether the point p lies below
+    a line defined by the points l1 and l2"""
+
+    # normalize the points such that the leftmost
+    # point of l1 and l2 is the coord system origin
+    l_1, l_2 = (l_1, l_2) if l_1[0] < l_2[0] else (l_2, l_1)
+    l_1, l_2, point = (0.0, 0.0), sub_vector(l_2, l_1), sub_vector(point, l_1)
+
+    # determine the point l3 that lies on the linear
+    # and has same the x coord as point p
+    steem = l_2[1] / l_2[0]
+    l_3 = (point[0], point[0] * steem)
+
+    return point[1] < l_3[1]
