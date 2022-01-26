@@ -9,7 +9,7 @@ import rospy
 
 from nav_srvs.srv import NavigationRequest, NavigationRequestResponse
 from global_planner.global_route_planner import GlobalPlanner
-from global_planner.xodr_converter import XODRConverter, XodrMap
+from global_planner.xodr_converter import XODRConverter
 
 
 @dataclass
@@ -34,7 +34,15 @@ class GlobalPlannerNode:
             xodr_map
         )
 
-        route_as_json = [{'x': pos[0], 'y': pos[1]} for pos in global_route]
+        for ann_wp in global_route:
+            print(ann_wp)
+
+        route_as_json = [{'x': wp.pos[0], 'y': wp.pos[1],
+                          'actual_lane': wp.actual_lane,
+                          'possible_lanes': wp.possible_lanes,
+                          'legal_speed': wp.legal_speed,
+                          'dist_next_tl': wp.dist_next_tl} for wp in global_route]
+
         response = NavigationRequestResponse(
             waypoints_json = json.dumps(route_as_json),
             success = True

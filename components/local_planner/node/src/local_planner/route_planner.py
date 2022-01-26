@@ -50,7 +50,6 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         point_counts_as_done = 5
         enumerator = 0
 
-        # TODO: add a more sophisticated approach to filter the waypoints ahead
         for point in self.cached_local_route:
             if dist(point, self.vehicle.pos) > point_counts_as_done:
                 break
@@ -59,7 +58,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         self.cached_local_route = self.cached_local_route[enumerator:]
         bound = min(50, len(self.cached_local_route))
         short_term_route = self.cached_local_route[:bound]
-        # TODO: include maneuvers here ...
+
         return short_term_route
 
     def get_speed_observation(self) -> SpeedObservation:
