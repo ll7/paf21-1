@@ -17,6 +17,7 @@ class AnnRouteWaypoint:
     possible_lanes: List[int]
     legal_speed: float
     dist_next_tl: float
+    end_lane_m: float
 
 
 @dataclass
@@ -64,7 +65,6 @@ class RouteAnnotation:
         ann_waypoints: List[AnnRouteWaypoint] = []
 
         legal_speed = metadata.initial_speed
-
         for wp in waypoints:
             tl_pos, ss_pos, sec_end_pos = next_tl_pos(), next_ss_pos(), next_sec_end()
             tl_dist = euclid_dist(wp, tl_pos) if tl_pos else max_dist
@@ -74,7 +74,7 @@ class RouteAnnotation:
             actual_lane = metadata.sections_ahead[sec_id].lane_id
             poss_lanes = metadata.sections_ahead[sec_id].possible_lanes
 
-            ann_wp = AnnRouteWaypoint(wp, actual_lane, poss_lanes, legal_speed, tl_dist)
+            ann_wp = AnnRouteWaypoint(wp, actual_lane, poss_lanes, legal_speed, tl_dist, sec_dist)
             ann_waypoints.append(ann_wp)
 
             if tl_dist < radius_handled:
