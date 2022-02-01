@@ -329,12 +329,14 @@ class Junction:
                 self.connections.append(connection)
 
     @staticmethod
-    def _get_connection_links(lane_links, connection, mapping) -> List[Tuple[int, int]]:
+    def _get_connection_links(lane_links: Element, connection: Connection,
+                              mapping: Dict[str, int]) -> List[Tuple[int, int]]:
         links = []
         for lane_link in lane_links:
-            from_lane = int(lane_link.get('from'))
+            from_lane, to_lane = int(lane_link.get('from')), int(lane_link.get('to'))
+
+            # TODO: is pos = 0 appropriate for multi-lane navigation? how are roads modeled?
             key_from = create_key(connection.incoming_road, 0, from_lane)
-            to_lane = int(lane_link.get('to'))
             key_to = create_key(connection.connecting_road, 0, to_lane)
 
             if key_from in mapping and key_to in mapping:
@@ -426,10 +428,13 @@ class XodrMap:
             else:
                 matrix[index_link][index_road] = 1e-6
 
-    def _get_connected_lane_ids(self, lane_link: int, link: RoadLink, road_id: int):
-        key = create_key(link.road_link_id, link.contact_link, link.sign * lane_link)
+    def _get_connected_lane_ids(self, lane_link_id: int, link: RoadLink, road_id: int):
+        # TODO: support multi-lane navigation
+        key = create_key(link.road_link_id, link.contact_link, link.sign * lane_link_id)
+        if key == '54_0_-2':
+            print(road_id, lane_link_id, link)
         index_link = self.mapping[key]
-        key = create_key(road_id, link.contact_road, lane_link)
+        key = create_key(road_id, link.contact_road, lane_link_id)
         index_road = self.mapping[key]
         return index_link, index_road
 
