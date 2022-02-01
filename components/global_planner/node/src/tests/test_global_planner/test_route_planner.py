@@ -6,14 +6,20 @@ from global_planner.global_route_planner import GlobalPlanner
 from global_planner.xodr_converter import XODRConverter
 
 
-def load_map():
+def load_town_01():
     xodr_path = Path("/app/res/xodr/Town01.xodr")
     xodr_map = XODRConverter.read_xodr(xodr_path)
     return xodr_map
 
 
+def load_town_03():
+    xodr_path = Path("/app/res/xodr/Town03.xodr")
+    xodr_map = XODRConverter.read_xodr(xodr_path)
+    return xodr_map
+
+
 def test_path_finding():
-    xodr_map = load_map()
+    xodr_map = load_town_01()
     start = (1.5599901676177979, -149.83001708984375)
     end = (322.09625244140625, -55.15309143066406)
     path = GlobalPlanner.get_shortest_path(start, end, xodr_map)
@@ -23,8 +29,22 @@ def test_path_finding():
                     '16_0_-1', '16_1_-1', '253_0_-1', '253_1_-1', '10_1_1', '-2_0_0']
 
 
+def test_path_finding_multilane():
+    xodr_map = load_town_03()
+    start = (1.5599901676177979, -149.83001708984375)
+    end = (322.09625244140625, -55.15309143066406)
+    path = GlobalPlanner.get_shortest_path(start, end, xodr_map)
+
+    print(path)
+    assert False
+
+    # assert path == ['-1_0_0', '15_0_1', '13_0_-1', '13_1_-1', '3_1_1', '3_0_1', '117_1_1', '117_0_1',
+    #                 '2_1_1', '2_0_1', '61_1_1', '61_0_1', '1_1_1', '1_0_1', '27_1_1', '27_0_1',
+    #                 '16_0_-1', '16_1_-1', '253_0_-1', '253_1_-1', '10_1_1', '-2_0_0']
+
+
 def test_route_metadata():
-    xodr_map = load_map()
+    xodr_map = load_town_01()
     start = (1.5599901676177979, -149.83001708984375)
     path = ['-1_0_0', '15_0_1', '13_0_-1', '13_1_-1', '3_1_1', '3_0_1', '117_1_1', '117_0_1',
             '2_1_1', '2_0_1', '61_1_1', '61_0_1', '1_1_1', '1_0_1', '27_1_1', '27_0_1',
@@ -57,7 +77,7 @@ def test_route_metadata():
 
 
 def test_route_interpolation():
-    xodr_map = load_map()
+    xodr_map = load_town_01()
     start = (1.5599901676177979, -149.83001708984375)
     end = (322.09625244140625, -55.15309143066406)
     route = GlobalPlanner.generate_waypoints(start, end, 0, xodr_map)
@@ -72,7 +92,7 @@ def test_route_interpolation():
 
 
 def test_route_annotations():
-    xodr_map = load_map()
+    xodr_map = load_town_01()
     start = (1.5599901676177979, -149.83001708984375)
     end = (322.09625244140625, -55.15309143066406)
     route = GlobalPlanner.generate_waypoints(start, end, 0, xodr_map)
