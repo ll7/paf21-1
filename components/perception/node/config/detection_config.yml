@@ -1,10 +1,9 @@
+# object detector
+image_meta: [300, 200, 120]   # width, height, fov
 vehicle_mask: [142, 0, 0]
 pedestrian_mask: [60, 20, 220]
+# traffic light detector
 tl_mask: [30, 170, 250]
-road_line_mask: [50, 234, 157]
-side_walk_mask: [128, 64, 128]
-image_meta: [300, 200, 120]
-scaling_factor: 3.5
 box_offset: 0
 classes: {0: 'Backside', 1: 'Green', 2: 'Red', 3: 'Yellow'}
 nn_input_size: [32, 32, 3]

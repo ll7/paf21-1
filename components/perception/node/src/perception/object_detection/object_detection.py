@@ -8,14 +8,12 @@ from sklearn.cluster import DBSCAN
 from cv2 import cv2
 import numpy as np
 
-from perception.base_detector import BaseDetector
 from perception.object_detection.obj_info import ObjectInfo
 
 
-class ObjectDetector(BaseDetector):
+class ObjectDetector:
     """A module that detects anything."""
     def __init__(self, config_path: str, object_type: str):
-        super().__init__()
         self.config = config_path
         with open(config_path, encoding='utf-8') as file:
             config = yaml.safe_load(file)
