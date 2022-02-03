@@ -26,8 +26,8 @@ class TrafficLightDetector(BaseDetector):
             self.model: Model = load_model(config['weights_path'])
             self.input_shape: Tuple[int, int, int] = config['nn_input_size']
             self.classes_dict: Dict[int, str] = config['classes']
-            self.lower_mask: Tuple[int, int, int] = config['lower_bound']
-            self.upper_mask: Tuple[int, int, int] = config['upper_bound']
+            self.mask: Tuple[int, int, int] = config['tl_mask']
+            # self.scaling: float = 1 / config['scaling_factor']
             self.box_offset: int = config['box_offset']
         self.counter: int = 1
 
@@ -52,8 +52,9 @@ class TrafficLightDetector(BaseDetector):
                 tl_phase = self._classify_tl_phase(cut_rgb_image)
                 tl_info = TrafficLightInfo(phase=tl_phase, distance=dist)
 
-                if self.counter % 10 == 0 and self.counter < 10000:
-                    log_image = self.print_text_to_image(dist, tl_phase, rgb_image, rgb_patch)
+                if self.counter % 10 == 0 and self.counter < 0:
+                    message = f'Distance: {dist} m, Color:{tl_phase}'
+                    log_image = self.print_text_to_image(message, rgb_image, rgb_patch)
                     cv2.imwrite(f'/app/logs/test_data_tl_{self.counter}.png', log_image)
                 self.counter += 1
 

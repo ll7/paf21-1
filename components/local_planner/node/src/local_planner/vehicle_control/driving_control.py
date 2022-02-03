@@ -10,7 +10,6 @@ from numpy.linalg import norm
 
 
 from local_planner.core import Vehicle, geometry
-from math import sqrt, floor
 
 @dataclass
 class DrivingSignal:
@@ -28,7 +27,7 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
     initial_vehicle_pos_set = False
 
     # friction coefficients
-    coeff_dry : float = 0.8
+    coeff_dry : float = 0.6
     coeff_wet : float = 0.4
     coeff_ice : float = 0.2
 
@@ -65,13 +64,31 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         print(self.target_velocity_mps)
         """
 
+        """Update vehicle's velocity usinf angle direction in radians"""
+        angle = 0
+        if len(self.route_waypoints) > 0:
+            angle = geometry.angle_direction(self.route_waypoints)
+        
+        print('ANGLE : ',  angle)
+
+        if target_velocity_mps == 0:
+            self.target_velocity_mps = 0
+        elif angle > 0.7:
+            self.target_velocity_mps = 2
+        else:
+            self.target_velocity_mps = target_velocity_mps
+        
+        print('TARGET VELOCITY SET: ', self.target_velocity_mps)
+        
+
     def update_vehicle_position(self, vehicle_pos: Tuple[float, float]):
         """Update the vehicle's current position"""
         self.vehicle.move(vehicle_pos)
 
-    def update_vehicle_state(self, position: Tuple[float, float], velocity: float):
+    def update_vehicle_state(self, position: Tuple[float, float], velocity: Tuple[float, float]):
         """Update the vehicle's positional and velocity values"""
-        self.vehicle.actual_velocity_mps = velocity
+        self.vehicle.actual_velocity_mps, time = velocity
+        self.vehicle.time = time
         self.vehicle.pos = position
 
     def update_vehicle_orientation(self, orientation: float):

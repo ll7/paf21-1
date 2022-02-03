@@ -23,8 +23,8 @@ class TrafficLightPhase(IntEnum):
 @dataclass
 class TrafficLightInfo:
     """Representing information on a recently detected traffic light"""
-    phase: TrafficLightPhase
-    distance: float
+    phase: TrafficLightPhase = TrafficLightPhase.GREEN
+    distance: float = 1000
 
 
 @dataclass
@@ -142,10 +142,12 @@ class SpeedStateMachine:
         maneuver_time_s = (target_velocity - self.vehicle.actual_velocity_mps) / accel_mps2
         braking_dist = self.vehicle.actual_velocity_mps * maneuver_time_s + \
                        accel_mps2 * maneuver_time_s ** 2 / 2
-        # print('braking distance', braking_dist)
-        # print("maneuver_time_s: ", maneuver_time_s,
-        #      "  actual_velocity_mps",  self.vehicle.actual_velocity_mps)
-        object_offset = 10
+
+        print('braking distance', braking_dist)
+        print("maneuver_time_s: ", maneuver_time_s,
+              "  actual_velocity_mps",  self.vehicle.actual_velocity_mps)
+        object_offset = 7
+
         time_until_brake = (distance_m - object_offset - braking_dist) \
                            / self.vehicle.actual_velocity_mps \
             if self.vehicle.actual_velocity_mps > 0 else 999

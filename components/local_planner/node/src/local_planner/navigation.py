@@ -14,7 +14,6 @@ from local_planner.core import Vehicle
 
 
 def load_spawn_positions() -> List[Tuple[float, float]]:
-    # TODO: put this into a config file
     return [(335.489990234375, -273.7433166503906), (299.3999938964844, -133.2400360107422),
         (299.3999938964844, -129.75), (299.3999938964844, -59.33003616333008),
         (299.3999938964844, -55.84000015258789), (272.2900085449219, -59.33003616333008),
@@ -155,7 +154,6 @@ class InfiniteDrivingService():
 
     def __post_init__(self):
         if self.destinations is None:
-            # TODO: load this from a config file
             self.destinations = load_spawn_positions()
 
     def run_infinite_driving(self):
