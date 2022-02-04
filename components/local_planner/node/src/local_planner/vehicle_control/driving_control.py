@@ -4,7 +4,6 @@ and other driving metadata into actionable driving signals"""
 from typing import Tuple, List
 from dataclasses import dataclass, field
 from local_planner.core import Vehicle, geometry
-from math import sqrt, floor
 
 @dataclass
 class DrivingSignal:
@@ -30,26 +29,20 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
         self.route_waypoints = waypoints
 
     def update_target_velocity(self, target_velocity_mps: float):
-        """Update the target velocity using kurvature radius"""
-        print('TARGET VELOCITY FROM SM: ', target_velocity_mps)
-        """
-        if len(self.route_waypoints) < 2 :
-            self.target_velocity_mps = target_velocity_mps
-        else: 
-            middle_waypoint = round(len(self.route_waypoints) / 2)
-            radius = geometry.approx_curvature_radius(self.route_waypoints[1], 
-                self.route_waypoints[middle_waypoint], self.route_waypoints[-1])
-            print('RADIUS: ', radius)
-            if radius > 90:
-                self.target_velocity_mps = target_velocity_mps
-            else:
-            self.target_velocity_mps = floor(sqrt(9.81 * self.coeff_dry * radius))
-        """
+        """Update vehicle's velocity usinf angle direction in radians"""
+        angle = 0
+        if len(self.route_waypoints) > 0:
+            angle = geometry.angle_direction(self.route_waypoints)
+        
+        print('ANGLE : ',  angle)
+
         if target_velocity_mps == 0:
             self.target_velocity_mps = 0
+        elif angle > 0.7:
+            self.target_velocity_mps = 2
         else:
-            self.target_velocity_mps = target_velocity_mps - abs(self.coeff_dry * self.vehicle.steering_angle)
-        print('STEERING ANGLE: ', self.vehicle.steering_angle)
+            self.target_velocity_mps = target_velocity_mps
+        
         print('TARGET VELOCITY SET: ', self.target_velocity_mps)
         
 

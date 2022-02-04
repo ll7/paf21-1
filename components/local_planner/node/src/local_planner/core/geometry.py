@@ -1,7 +1,7 @@
 """This module contains a collection of geometric helper functions"""
 
-from math import dist as euclid_dist, atan2, pi, sqrt
-from typing import Tuple
+from math import dist as euclid_dist, atan2, pi, sqrt, acos
+from typing import Tuple, List
 
 def points_to_vector(p_from: Tuple[float, float], p_to: Tuple[float, float]):
     """Transform the given points into a vector pointing from the start to the end"""
@@ -47,3 +47,46 @@ def approx_curvature_radius(p_start: Tuple[float, float],
     menger = (4 * tri_area) / (tri_len_a * tri_len_b * tri_len_c)
     radius = abs(1.0 / (menger + epsilon))
     return radius
+
+def angle_direction(waypoints : List[Tuple[float, float]]) -> float:
+    """Find the angle direction using waypoints"""
+    # if we move on x-axis, mirror the points
+    if abs(waypoints[0][0]) - abs(waypoints[1][0]) > 1:
+        for point in range(len(waypoints)): 
+            waypoints[point] = list(waypoints[point])
+            waypoints[point][0], waypoints[point][1] = waypoints[point][1], waypoints[point][0]
+            waypoints[point] = tuple(waypoints[point])
+
+    # search for triangle
+    triangle = [waypoints[0], waypoints[-1]]
+    for i in range(len(waypoints) - 1):
+        if abs(abs(waypoints[0][0]) - abs(waypoints[i][0])) > 2:
+            triangle.insert(1, waypoints[i])
+            break
+    if len(triangle) == 3:
+        print("triangle : ", triangle)
+        angle_between_vec = angle_between_vectors(triangle[0], triangle[1], triangle[2])
+        return angle_between_vec
+    else:
+        #  no triangle and henc no angle to compute
+        return 0.0
+    
+
+def angle_between_vectors(a_start : Tuple[float, float], 
+                        b_middle : Tuple[float, float],
+                        c_end : Tuple[float, float]) -> float:
+    """Find angle between two vectors"""
+    vec_a = (b_middle[0] - a_start[0], b_middle[1] - a_start[1])
+    vec_b = (c_end[0] - a_start[0], c_end[1] - a_start[1])
+    angle = acos( (vec_a[0] * vec_b[0] + vec_a[1] * vec_b[1]) / (euclid_dist(a_start, b_middle) *  euclid_dist(a_start, c_end)) )
+    return angle
+
+def angle_in_triangle(a_start: Tuple[float, float], 
+                    b_middle : Tuple[float, float], 
+                    c_end: Tuple[float, float] ) -> float:
+    """Find angle between cathetus and hypotenuse using cos in rectangular triangle"""
+    rectangular_cathetus = euclid_dist(a_start, b_middle) 
+    hypotenuse = euclid_dist(a_start, c_end) 
+    print(rectangular_cathetus, hypotenuse)
+    angle = acos(rectangular_cathetus / hypotenuse)
+    return angle
