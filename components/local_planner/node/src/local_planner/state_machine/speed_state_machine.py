@@ -44,15 +44,15 @@ class SpeedStateMachine:
     current_state: SpeedState = SpeedState.ACCEL
     target_speed_mps: float = 0
     legal_speed_limit_mps: float = 50 / 3.6
-    speed_offset_up_ms: float = 5.0 / 3.6
-    speed_offset_down_ms: float = 3.0 / 3.6
+    speed_offset_up_mps: float = 5.0 / 3.6
+    speed_offset_down_mps: float = 3.0 / 3.6
 
     def update_state(self, obs: SpeedObservation):
         """Update the speed state machine with a new observation"""
         # WARNING: only uncomment when intending to ignore traffic lights
         # obs.tl_phase = TrafficLightPhase.GREEN
         if obs.detected_speed_limit is not None:
-            self.legal_speed_limit_mps = obs.detected_speed_limit/3.6
+            self.legal_speed_limit_mps = obs.detected_speed_limit / 3.6
 
         # """Update the machine's state given a speed observation."""
         if self.current_state == SpeedState.ACCEL:
@@ -72,29 +72,33 @@ class SpeedStateMachine:
         # print(self.current_state)
 
     def _is_in_speed_tolerance(self):
-        return 0 <= (self.legal_speed_limit_mps - self.vehicle.actual_velocity_mps) \
-               <= self.speed_offset_up_ms
+        speed_diff = self.vehicle.actual_velocity_mps - self.legal_speed_limit_mps
+        return -self.speed_offset_down_mps <= speed_diff <= self.speed_offset_up_mps
 
-    def _is_speed_follow(self, speed):
-        if speed > 10/3.6:
-            return 0 <= (speed - self.vehicle.actual_velocity_mps) <= self.speed_offset_down_ms
+    def _is_speed_follow(self, leading_obj_speed_mps: float):
+        is_moving_object = leading_obj_speed_mps > 10 / 3.6
+        if is_moving_object:
+            speed_diff = leading_obj_speed_mps - self.vehicle.actual_velocity_mps
+            return 0 <= speed_diff <= self.speed_offset_down_mps
         return False
 
     def _handle_keep(self, obs: SpeedObservation):
-        if (self.legal_speed_limit_mps + self.speed_offset_up_ms
+        if (self.legal_speed_limit_mps + self.speed_offset_up_mps
             < self.vehicle.actual_velocity_mps) or \
                 (not obs.is_trajectory_free and self._is_brake_required(obs)) \
                 or (obs.tl_phase == TrafficLightPhase.RED and self._is_brake_required(obs)):
             self.current_state = SpeedState.BRAKE
         elif self.legal_speed_limit_mps > self.vehicle.actual_velocity_mps \
-                and obs.is_trajectory_free and\
+                and obs.is_trajectory_free and \
                 (obs.tl_phase == TrafficLightPhase.GREEN or not self._is_brake_required(obs)):
             self.current_state = SpeedState.ACCEL
 
     def _handle_accel(self, obs: SpeedObservation):
-        if self._is_in_speed_tolerance() or \
-                (self._is_speed_follow(obs.object_speed_ms) and
-                 self._is_brake_required(obs) and not obs.is_trajectory_free):
+        reached_target_speed = self._is_in_speed_tolerance()
+        follow_leading_vehicle = self._is_speed_follow(obs.object_speed_ms) and \
+            not obs.is_trajectory_free and not self._is_brake_required(obs)
+        # TODO: check if the follow_leading_vehicle condition is now correct (seemed to be wrong)
+        if reached_target_speed or follow_leading_vehicle:
             self.current_state = SpeedState.KEEP
         elif self.legal_speed_limit_mps < self.vehicle.actual_velocity_mps or \
                 (self._is_brake_required(obs) and not obs.is_trajectory_free) \
@@ -113,13 +117,13 @@ class SpeedStateMachine:
         else:
             self.current_state = SpeedState.KEEP
 
-    def _is_brake_required_distance(self, obs: SpeedObservation):
-        velocity_kmh = self.vehicle.actual_velocity_mps * 3.6
-        stopping_distance = (velocity_kmh / 10)**2
-        reaction_distance = self.vehicle.vehicle_reaction_time_s * self.vehicle.actual_velocity_mps
-        halting_distance = stopping_distance + reaction_distance
-        # print("halting_distance",halting_distance, obs.dist_next_obstacle_m)
-        return halting_distance >= obs.dist_next_obstacle_m
+    # def _is_brake_required_distance(self, obs: SpeedObservation):
+    #     velocity_kmh = self.vehicle.actual_velocity_mps * 3.6
+    #     stopping_distance = (velocity_kmh / 10)**2
+    #     reaction_distance = self.vehicle.vehicle_reaction_time_s * self.vehicle.actual_velocity_mps
+    #     halting_distance = stopping_distance + reaction_distance
+    #     # print("halting_distance",halting_distance, obs.dist_next_obstacle_m)
+    #     return halting_distance >= obs.dist_next_obstacle_m
 
     def _is_brake_required(self, obs: SpeedObservation):
         wait_time_s = self._time_until_brake(obs.dist_next_obstacle_m, obs.object_speed_ms)
@@ -143,9 +147,9 @@ class SpeedStateMachine:
         braking_dist = self.vehicle.actual_velocity_mps * maneuver_time_s + \
                        accel_mps2 * maneuver_time_s ** 2 / 2
 
-        print('braking distance', braking_dist)
-        print("maneuver_time_s: ", maneuver_time_s,
-              "  actual_velocity_mps",  self.vehicle.actual_velocity_mps)
+        # print('braking distance', braking_dist)
+        # print("maneuver_time_s: ", maneuver_time_s,
+        #       "  actual_velocity_mps",  self.vehicle.actual_velocity_mps)
         object_offset = 7
 
         time_until_brake = (distance_m - object_offset - braking_dist) \
