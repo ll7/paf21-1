@@ -40,7 +40,7 @@ class RosMessagesAdapter:
         return waypoints
 
     @staticmethod
-    def message_to_vehicle_velocity(msg: OdometryMsg):
+    def message_to_vehicle_velocity_and_timestamp(msg: OdometryMsg):
         """converts the odometry message to velocity"""
         time_stamp = msg.header.stamp.secs + msg.header.stamp.nsecs * 1e-9
         array = [msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z]
