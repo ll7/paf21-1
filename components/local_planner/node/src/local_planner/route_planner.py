@@ -8,9 +8,8 @@ import numpy as np
 
 from local_planner.vehicle_control import DrivingController
 from local_planner.core.vehicle import Vehicle
-from local_planner.core.geometry import points_to_vector, angle_between
+from local_planner.core.geometry import angle_between_vectors, points_to_vector
 from local_planner.state_machine import SpeedObservation, TrafficLightInfo, TrafficLightPhase
-
 
 
 @dataclass
@@ -30,32 +29,30 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
     vehicle: Vehicle
     driving_control: DrivingController = None
     global_route: List[Tuple[float, float]] = field(default_factory=list)
-    next_wp: int = -1
-    prev_wp: int = -1
+    next_wp_id: int = -1
+    prev_wp_id: int = -1
     cached_local_route: List[Tuple[float, float]] = field(default_factory=list)
     lenght_route: int = 50
     objects: Dict[int, ObjectInfo] = field(default_factory=dict)
     old_timestamp: float = 0.1
     tld_info: TrafficLightInfo = TrafficLightInfo()
 
-
     def update_global_route(self, waypoints: List[Tuple[float, float]]):
         """Update the global route to follow"""
-        print("update global route")
-        print(waypoints)
-        print(len(waypoints))
+
+        print(f"update global route ({len(waypoints)} points): {waypoints}")
+        print("time,veh_x,vehicle_y,vehicle_orient,vehicle_vel,signal_vel,signal_steer")
 
         self.global_route = waypoints
         if len(self.global_route) < 2:
-            self.next_wp = -1
-            self.prev_wp = -1
-            self.cached_local_route = field(default_factory=list)
+            self.next_wp_id = -1
+            self.prev_wp_id = -1
+            self.cached_local_route = []
         else:
-            self.next_wp = 1
-            self.prev_wp = 0
-            bound = min(self.prev_wp + self.lenght_route, len(self.global_route))
-            self.cached_local_route = self.global_route[self.prev_wp:bound]
-            
+            self.next_wp_id = 1
+            self.prev_wp_id = 0
+            bound = min(self.prev_wp_id + self.lenght_route, len(self.global_route))
+            self.cached_local_route = self.global_route[self.prev_wp_id:bound]
 
     def calculate_trajectory(self) -> List[Tuple[float, float]]:
         """Combines trajectory and respective velocity to one data struct"""
@@ -68,60 +65,57 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         else:
             self.cached_local_route = self._compute_local_route()
             return self.cached_local_route
-        
 
     def _compute_local_route(self) -> List[Tuple[float, float]]:
-        print("compute_local_route")
-        # routes with length lower 2 are invalid
+
         if len(self.global_route) < 2:
             return self.global_route
 
-        angle: float
+        is_last_wp = self.next_wp_id == len(self.global_route)
+        if is_last_wp:
+            # TODO: check if this new behavior works
+            return self.global_route[self.prev_wp_id:self.next_wp_id]
 
-        # not at finish?
-        if self.next_wp < len(self.global_route):
-            next_to_prev = points_to_vector(self.global_route[self.next_wp], self.global_route[self.prev_wp])
-            # print(self.vehicle.pos)
-            next_to_pos = points_to_vector(self.global_route[self.next_wp], self.vehicle.pos)
-            angle = angle_between(next_to_prev, next_to_pos)
-        else:
-            bound = min(50, len(self.global_route) - self.prev_wp)
-            # print(self.global_route[self.prev_wp:bound])
-            return self.global_route[self.prev_wp:bound]
+        # delete route waypoints behind car
+        while True:
+            prev_wp = self.global_route[self.prev_wp_id]
+            next_wp = self.global_route[self.next_wp_id]
+            vec_route = points_to_vector(prev_wp, next_wp)
+            vec_car = points_to_vector(self.vehicle.pos, next_wp)
+            angle = angle_between_vectors(vec_route, vec_car)
 
-        # next Route section and
-        while angle > 0.5*math.pi:
-            self.next_wp += 1
-            self.prev_wp += 1
-            # print(angle)
-
-            #finish?
-            if self.next_wp == len(self.global_route):
+            is_wp_in_front_of_car = abs(angle) < 0.5 * math.pi
+            is_last_wp_of_route = self.next_wp_id == len(self.global_route) - 1
+            if is_wp_in_front_of_car or is_last_wp_of_route:
                 break
 
-            next_to_prev = points_to_vector(self.global_route[self.next_wp], self.global_route[self.prev_wp])
-            next_to_pos = points_to_vector(self.global_route[self.next_wp], self.vehicle.pos)
-            angle = angle_between(next_to_prev, next_to_pos)
+            self.next_wp_id += 1
+            self.prev_wp_id += 1
+            # print(f'reached route wp {next_wp}, angle={abs(angle)}')
 
-        bound = min(self.prev_wp + self.lenght_route, len(self.global_route))
-        # print(self.global_route[self.prev_wp:bound])
-        # print(len(self.global_route[self.prev_wp:bound]))
-        # print(self.prev_wp)
-        # print(self.next_wp)
-        return self.global_route[self.prev_wp:bound]
+        bound = min(self.prev_wp_id + self.lenght_route, len(self.global_route))
+        return self.global_route[self.prev_wp_id:bound]
 
     def get_speed_observation(self) -> SpeedObservation:
-        if self.cached_local_route:
-            speed_obs = self.detect_vehicle_in_lane()
-            speed_obs.tl_phase = self.tld_info.phase
-            if speed_obs.tl_phase == TrafficLightPhase.RED:
-                speed_obs.dist_next_obstacle_m = min(speed_obs.dist_next_obstacle_m,
-                                                     self.tld_info.distance)
-                speed_obs.object_speed_ms = 0
+        if not self.cached_local_route:
+            return SpeedObservation()
 
-            print(f'Speed_obs {speed_obs}')
-            return speed_obs
-        return SpeedObservation()
+        # fuse object detection with traffic light detection
+        speed_obs = self.detect_vehicle_in_lane()
+        speed_obs.tl_phase = self.tld_info.phase
+
+        if speed_obs.tl_phase == TrafficLightPhase.RED:
+            halt_dist = min(speed_obs.dist_next_obstacle_m, self.tld_info.distance)
+            speed_obs.dist_next_obstacle_m = halt_dist
+            speed_obs.object_speed_ms = 0
+
+        # TODO: handle yellow traffic lights here ...
+
+        # TODO: @Pavlo, apply distance to curve and max vurve speed here ...
+
+        # print(f'Speed_obs {speed_obs}')
+        return speed_obs
+        
 
     def update_tld_info(self, tld_info: TrafficLightInfo):
         self.tld_info = tld_info
@@ -167,11 +161,11 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         spd_obs = SpeedObservation()
         objects = self.objects.copy()
         vehicle_pos = self.vehicle.pos
-        cached_local_route = np.concatenate([[vehicle_pos], self.cached_local_route])
+        # cached_local_route = np.concatenate([[vehicle_pos], self.cached_local_route])
         for _, obj in objects.items():
             last_obj_pos = obj.trajectory[-1]
             distances = []
-            for point in cached_local_route:
+            for point in self.cached_local_route:
                 # ToDo: Do this for every predicted position of the object
                 distance = dist(last_obj_pos, point)
                 distances.append(distance)
