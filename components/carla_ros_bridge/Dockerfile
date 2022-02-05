@@ -38,8 +38,8 @@ RUN apt-get update && apt-get install -y python3-pip wget git python-is-python3 
 SHELL ["/bin/bash", "-c"]
 WORKDIR /opt/carla-ros-bridge/src
 ARG ROS_BRIDGE_GITHUB_URL=https://github.com/carla-simulator/ros-bridge
-RUN git clone --recurse-submodules $ROS_BRIDGE_GITHUB_URL . && \
-    git checkout 0.9.10.1 && source /opt/ros/noetic/setup.bash && \
+RUN git clone --recurse-submodules $ROS_BRIDGE_GITHUB_URL . && git checkout 0.9.10.1 && \
+    source /opt/ros/noetic/setup.bash && \
     catkin_init_workspace && cd .. && catkin_make install
 WORKDIR /
 ENV PYTHONPATH=$PYTHONPATH:/opt/carla-ros-bridge/install/lib/python3/dist-packages
@@ -63,6 +63,7 @@ ENV CARLA_SIM_HOST=localhost
 ENV CARLA_SIM_WAIT_SECS=15
 ENV SCENARIO_RUNNER_PATH=/opt/scenario_runner
 
+COPY ./pid_settings.yaml /opt/carla-ros-bridge/install/share/carla_ackermann_control/config/settings.yaml
 COPY ./augmented_rviz.rviz /config/rviz_carla_config.rviz
 ENV CARLA_RVIZ_CONFIG=/config/rviz_carla_config.rviz
 COPY ./sensors.json /config/sensors.json
@@ -70,5 +71,6 @@ ENV EGO_VEHICLE_SENSORS=/config/sensors.json
 
 COPY ./rosbridge_with_rviz_scenario.launch /rosbridge_with_rviz_scenario.launch
 COPY ./ros_entrypoint.sh /ros_entrypoint.sh
+
 ENTRYPOINT [ "/ros_entrypoint.sh" ]
 CMD ["/rosbridge_with_rviz_scenario.launch", "--wait"]
