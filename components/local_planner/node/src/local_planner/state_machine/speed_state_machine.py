@@ -44,7 +44,7 @@ class SpeedStateMachine:
     vehicle: Vehicle
     current_state: SpeedState = SpeedState.ACCEL
     target_speed_mps: float = 0
-    legal_speed_limit_mps: float = 50 / 3.6
+    legal_speed_limit_mps: float = 30 / 3.6
     speed_offset_up_mps: float = 5.0 / 3.6
     speed_offset_down_mps: float = 3.0 / 3.6
     count: int = 0
@@ -78,9 +78,6 @@ class SpeedStateMachine:
     def _is_in_speed_tolerance(self, speed_limit: float):
         speed_diff = self.vehicle.actual_velocity_mps - speed_limit
         return -self.speed_offset_down_mps <= speed_diff <= self.speed_offset_up_mps
-
-    def _is_moving_object(self, obj_speed_mps: float):
-        return obj_speed_mps > 10 / 3.6
 
     def _handle_keep(self, obs: SpeedObservation):
         needs_brake, target_speed = self._is_brake_required(obs)
