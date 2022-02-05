@@ -3,13 +3,13 @@ and other driving metadata into actionable driving signals"""
 
 from typing import Tuple, List
 from dataclasses import dataclass, field
-from math import atan, radians as deg2rad
+from math import atan, radians as deg2rad, dist
 
 import numpy as np
 
 from local_planner.core import Vehicle
 from local_planner.core.geometry import \
-    points_to_vector, norm_angle, vector_to_dir
+    points_to_vector, norm_angle, vector_len, vector_to_dir
 
 
 @dataclass
@@ -53,7 +53,7 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         vehicle follow the suggested ideal route"""
         # generate logs for each driving signal tick
         steering_angle = self._compute_steering_angle()
-        targetspeed =  self.target_velocity_mps if self.route_waypoints else 0.0
+        targetspeed =  self.target_velocity_mps # if self.route_waypoints else 0.0
         signal = DrivingSignal(steering_angle, targetspeed)
         if self._can_steer():
             print(f"{self.vehicle.time},{self.vehicle.pos[0]},{self.vehicle.pos[1]},{self.vehicle.orientation_rad},{self.vehicle.actual_velocity_mps},{targetspeed},{steering_angle}")
@@ -66,13 +66,13 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         # use direct steering towards next waypoint for driving curves
         self.vehicle.steer_towards(self._get_aim_point())
 
-        # correct steering by stanley method for rather straight passages
-        if abs(self.vehicle.steering_angle) > deg2rad(20):
-            return self.vehicle.steering_angle
+        # # correct steering by stanley method for rather straight passages
+        # if abs(self.vehicle.steering_angle) > deg2rad(20):
+        #     return self.vehicle.steering_angle
 
-        steering_angle_stanley = self._stanley_steering()
-        # print(f'using stanley override: {self.vehicle.steering_angle} -> {steering_angle_stanley}')
-        self.vehicle.set_steering_angle(steering_angle_stanley)
+        # steering_angle_stanley = self._stanley_steering()
+        # # print(f'stanley override: {self.vehicle.steering_angle} -> {steering_angle_stanley}')
+        # self.vehicle.set_steering_angle(steering_angle_stanley)
         return self.vehicle.steering_angle
 
     def _can_steer(self):
@@ -83,8 +83,8 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
     def _get_aim_point(self) -> Tuple[float, float]:
         # route waypoints contain at least one point behind the car
         #   -> 1st / 2nd route waypoint are not reliable aim points
-        if len(self.route_waypoints) > 2:
-            return self.route_waypoints[2]
+        if len(self.route_waypoints) > 5:
+            return next(wp for wp in self.route_waypoints[1:] if dist(wp, self.vehicle.pos) > 5)
         return self.route_waypoints[1]
         # TODO: what happens if the route contains less than 2 waypoints?
 
@@ -110,7 +110,7 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         prev_to_next = points_to_vector(prev_wp, next_wp)
         prev_to_vehicle = points_to_vector(prev_wp, pos)
         cross_prod = -np.cross(prev_to_next, prev_to_vehicle)
-        traj_len = np.linalg.norm(prev_to_next)
+        traj_len = vector_len(prev_to_next)
         e_t = cross_prod / traj_len
 
         arg = (k * e_t) / (k_s + velocity)
