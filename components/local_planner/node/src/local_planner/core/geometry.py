@@ -96,10 +96,7 @@ def angle_direction(waypoints : List[Tuple[float, float]]) -> float:
     # TODO: this logic seems to be very fragile
     #       -> rather normalize the coords with rotate_vector()
     if abs(waypoints[0][0]) - abs(waypoints[1][0]) > 1:
-        for point in range(len(waypoints)): 
-            waypoints[point] = list(waypoints[point])
-            waypoints[point][0], waypoints[point][1] = waypoints[point][1], waypoints[point][0]
-            waypoints[point] = tuple(waypoints[point])
+        waypoints = [(wp[1], wp[0]) for wp in waypoints]
 
     # search for triangle
     triangle = [waypoints[0], waypoints[-1]]
@@ -107,23 +104,24 @@ def angle_direction(waypoints : List[Tuple[float, float]]) -> float:
         if abs(abs(waypoints[0][0]) - abs(waypoints[i][0])) > 2:
             triangle.insert(1, waypoints[i])
             break
+
     if len(triangle) == 3:
         print("triangle : ", triangle)
         angle_between_vec = angle_triangle(triangle[0], triangle[1], triangle[2])
         return angle_between_vec
-    else:
-        #  no triangle and henc no angle to compute
-        return 0.0
+
+    #  no triangle and henc no angle to compute
+    return 0.0
 
 
-def angle_between_vectors(vec_1: Tuple[float, float], 
+def angle_between_vectors(vec_1: Tuple[float, float],
                           vec_2: Tuple[float, float]) -> float:
     """Find angle between two vectors"""
     rel_dir = vector_to_dir(vec_1) - vector_to_dir(vec_2)
     return norm_angle(rel_dir)
 
 
-def angle_triangle(p_a: Tuple[float, float], 
+def angle_triangle(p_a: Tuple[float, float],
                    p_b: Tuple[float, float],
                    p_c: Tuple[float, float]) -> float:
     """Find angle between the vectors a -> b, a -> c"""

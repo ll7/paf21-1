@@ -7,11 +7,13 @@ from math import dist as euclid_dist
 
 @dataclass
 class CurveObservation:
-    dist_until_curve: float=float('inf')
-    max_speed: float=float('inf')
+    """Representing the next curve ahead"""
+    dist_until_curve: float=1000
+    max_speed: float=500
 
 
 class CurveDetection:
+    # pylint: disable=too-few-public-methods
     """Representing a strategy for detecting curves ahead
     by evaluating route waypoints"""
 
@@ -23,6 +25,7 @@ class CurveDetection:
         if not curve_bounds:
             return CurveObservation()
 
+        curve_bounds: Tuple[int, int]
         curve_start_id, curve_end_id = curve_bounds
         wps_until_curve = route_wps[:curve_start_id]
         wps_curve = route_wps[curve_start_id:curve_end_id]
@@ -39,11 +42,11 @@ class CurveDetection:
     def _find_next_curve_bounds(wps: List[Tuple[float, float]]) -> Tuple[int, int] or None:
         # scan route waypoints for the next curve ahead
         # -> return the start / end index of the curve (or some default values if there's no curve)
-        return None
         # TODO: @Pavlo, implement logic here ...
+        pass
 
     @staticmethod
     def _curve_target_speed(wps_curve: List[Tuple[float, float]]) -> float:
         # determine the max. speed possible to take the given curve
-        pass
         # TODO: @Pavlo, implement logic here ...
+        pass

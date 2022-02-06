@@ -14,6 +14,7 @@ from local_planner.core import Vehicle
 
 
 def load_spawn_positions() -> List[Tuple[float, float]]:
+    """Retrieve a list of possible spawn positions"""
     return [(335.489990234375, -273.7433166503906), (299.3999938964844, -133.2400360107422),
         (299.3999938964844, -129.75), (299.3999938964844, -59.33003616333008),
         (299.3999938964844, -55.84000015258789), (272.2900085449219, -59.33003616333008),
@@ -148,7 +149,7 @@ def load_spawn_positions() -> List[Tuple[float, float]]:
 class InfiniteDrivingService():
     """Representing a proxy for requesting navigation services."""
     vehicle: Vehicle
-    update_route: Callable
+    update_route: Callable[[List[Tuple[float, float]]], None]
     destinations: List[Tuple[float, float]] = None
     current_dest: Tuple[float, float] = None
 
@@ -177,10 +178,12 @@ class InfiniteDrivingService():
             orientation = self.vehicle.orientation_rad
             self.current_dest = choice(list_except(self.destinations, self.current_dest))
 
-            route = self._request_new_route(start_pos, self.current_dest, orientation)
+            route = InfiniteDrivingService._request_new_route(
+                start_pos, self.current_dest, orientation)
             self.update_route(route)
 
-    def _request_new_route(self, start_pos: Tuple[float, float], end_pos: Tuple[float, float],
+    @staticmethod
+    def _request_new_route(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
                            orientation_rad: float) -> List[Tuple[float, float]]:
 
         service_name = 'navigate'
@@ -199,6 +202,6 @@ class InfiniteDrivingService():
                 waypoints = [(wp['x'], wp['y']) for wp in json_list]
                 return waypoints
 
-            except rospy.ServiceException as e:
-                print(f"Service call failed: {e}")
+            except rospy.ServiceException as error:
+                print(f"Service call failed: {error}")
                 sleep(1)
