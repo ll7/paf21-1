@@ -16,6 +16,10 @@ def load_town_03():
     xodr_map = XODRConverter.read_xodr(xodr_path)
     return xodr_map
 
+def load_town_04():
+    xodr_path = "/app/res/xodr/Town04.xodr"
+    xodr_map = XODRConverter.read_xodr(xodr_path)
+    return xodr_map
 
 def test_path_finding():
     xodr_map = load_town_01()
@@ -27,19 +31,31 @@ def test_path_finding():
                     '2_1_1', '2_0_1', '61_1_1', '61_0_1', '1_1_1', '1_0_1', '27_1_1', '27_0_1',
                     '16_0_-1', '16_1_-1', '253_0_-1', '253_1_-1', '10_1_1', '-2_0_0']
 
+#
+# def test_path_finding_multilane_town_3():
+#     xodr_map = load_town_03()
+#     start = (13.72380256652832, -18.817155838012695)
+#     end = (-88.3062744140625, -21.53060531616211)
+#     path = GlobalPlanner.get_shortest_path(start, end, xodr_map)
+#
+#     print(path)
+#     assert False
+#     # assert path == ['-1_0_0', '15_0_1', '13_0_-1', '13_1_-1', '3_1_1', '3_0_1', '117_1_1', '117_0_1',
+#     #                 '2_1_1', '2_0_1', '61_1_1', '61_0_1', '1_1_1', '1_0_1', '27_1_1', '27_0_1',
+#     #                 '16_0_-1', '16_1_-1', '253_0_-1', '253_1_-1', '10_1_1', '-2_0_0']
+#
 
-def test_path_finding_multilane():
-    xodr_map = load_town_03()
-    start = (1.5599901676177979, -149.83001708984375)
-    end = (322.09625244140625, -55.15309143066406)
-    path = GlobalPlanner.get_shortest_path(start, end, xodr_map)
+
+def test_path_finding_multilane_town_4():
+    xodr_map = load_town_04()
+
+    start = (262.7838134765625, 118.74906158447266)
+    end  = (16.040634155273438, 170.54249572753906)
+
+    path = GlobalPlanner.generate_waypoints(start, end, 0.0, xodr_map)
 
     # print(path)
     assert False
-
-    # assert path == ['-1_0_0', '15_0_1', '13_0_-1', '13_1_-1', '3_1_1', '3_0_1', '117_1_1', '117_0_1',
-    #                 '2_1_1', '2_0_1', '61_1_1', '61_0_1', '1_1_1', '1_0_1', '27_1_1', '27_0_1',
-    #                 '16_0_-1', '16_1_-1', '253_0_-1', '253_1_-1', '10_1_1', '-2_0_0']
 
 
 def test_route_metadata():
@@ -64,7 +80,7 @@ def test_route_metadata():
     # all relevant traffic lights found
     exp_tl_pos = [(77.15649762782473, 0.04155127482227584),
                   (142.7986057071138, 0.045752231493989014),
-                  (323.4807371879971, 0.011754717028978167), 
+                  (323.4807371879971, 0.011754717028978167),
                   (336.87300605856103, -44.56103465562376),
                   (169.19245819220555, -57.49040013751494)]
     assert [tl.pos for tl in metadata.traffic_lights_ahead] == exp_tl_pos
