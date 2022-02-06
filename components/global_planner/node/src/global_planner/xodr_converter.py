@@ -4,7 +4,6 @@ from math import sin, cos
 from enum import IntEnum
 from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
-from pathlib import Path
 
 from xml.etree import ElementTree as eTree
 from xml.etree.ElementTree import Element
@@ -169,6 +168,11 @@ class Road:
         self.traffic_lights = Road._get_traffic_lights(road_xml, self.road_start, self.road_end)
 
     @property
+    def has_driving_lanes(self) -> bool:
+        """Determines whether the road contains lanes to drive on"""
+        return len(self.left_ids) + len(self.right_ids) > 0
+
+    @property
     def road_start(self) -> Tuple[float, float]:
         """The start of the first road geometry"""
         return self.geometries[0].start_point
@@ -209,11 +213,14 @@ class Road:
             if lane_sec.find(direction) is None:
                 continue
             for lane in lane_sec.find(direction).findall('lane'):
-                if lane.get('type') != 'driving':
+                if lane.get('type') not in ['driving', 'bidirectional']:
                     continue
-
                 return_ids[i].append(int(lane.get('id')))
-        return return_ids
+
+        # sort the right / left ids outgoing from road center
+        left_ids, right_ids = return_ids
+        left_ids, right_ids = list(sorted(left_ids)), list(reversed(sorted(right_ids)))
+        return left_ids, right_ids
 
     @staticmethod
     def _get_road_width(road: Element) -> float:
@@ -457,7 +464,7 @@ class XODRConverter:
     """A xodr converter based on xodr files."""
 
     @staticmethod
-    def read_xodr(filepath: Path) -> XodrMap:
+    def read_xodr(filepath: str) -> XodrMap:
         """Read the xodr file from the file path."""
         root = eTree.parse(filepath).getroot()
 
