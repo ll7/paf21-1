@@ -104,7 +104,7 @@ class LinkType(IntEnum):
 @dataclass
 class RoadLink:
     """Represents a link between two roads"""
-    road_link_id: int
+    road_id: int
     type: str
     contact_point: str
     link_type: LinkType
@@ -129,7 +129,7 @@ class RoadLink:
         return 0 if self.link_type == LinkType.PRE else 1
 
     def __init__(self, road_link_xml: Element, link_type: LinkType):
-        self.road_link_id = int(road_link_xml.get('elementId'))
+        self.road_id = int(road_link_xml.get('elementId'))
         self.type = road_link_xml.get('elementType')
         self.contact_point = road_link_xml.get('contactPoint')
         self.link_type = link_type
@@ -160,7 +160,7 @@ class Road:
         self.pre = None if link.find('predecessor') is None \
             else RoadLink(link.find('predecessor'), LinkType.PRE)
 
-        self.left_ids, self.right_ids = Road._get_lane_id(road_xml)
+        self.left_ids, self.right_ids = Road._get_lane_ids(road_xml)
         self.line_type = Road._get_line_type(road_xml)
         self.geometries = Road._get_geometry(road_xml)
         self.road_width = Road._get_road_width(road_xml)
@@ -203,7 +203,7 @@ class Road:
         return lane_sec.find('center').find('lane').find('roadMark').get('type')
 
     @staticmethod
-    def _get_lane_id(road: Element) -> List[List[int]]:
+    def _get_lane_ids(road: Element) -> Tuple[List[int], List[int]]:
         """Get the lane id."""
         directions = ['left', 'right']
         return_ids = [[], []]
@@ -233,7 +233,7 @@ class Road:
             if lane_sec.find(direction) is None:
                 continue
             for lane in lane_sec.find(direction).findall('lane'):
-                if lane.get('type') != 'driving':
+                if lane.get('type') not in ['driving', 'bidirectional']:
                     continue
                 return float(lane.find('width').get('a'))
         return default_road_width
@@ -361,11 +361,11 @@ class XodrMap:
     _roads_dict: Dict[int, Road] = None
 
     def __post_init__(self):
-        if self.matrix is None:
-            self.matrix = self._create_links()
         if self.lane_lets is None:
             self.lane_lets = []
-        self._roads_dict = { road.road_id:road for road in self.lane_lets }
+        self._roads_dict = {road.road_id: road for road in self.lane_lets}
+        if self.matrix is None:
+            self.matrix = self._create_links()
 
     def road_by_id(self, road_id: int) -> Road:
         """Look up a road by id"""
@@ -405,7 +405,7 @@ class XodrMap:
         return []
 
     def _apply_junction_connection(self, road: Road, link: RoadLink, matrix: np.ndarray):
-        for connection in self._junc_ids_entries(link.road_link_id):
+        for connection in self._junc_ids_entries(link.road_id):
             if connection.incoming_road != road.road_id:
                 continue
 
@@ -421,29 +421,52 @@ class XodrMap:
                 matrix[index_incoming][index_connecting] = 1e-6
 
     def _apply_road_connection(self, road: Road, link: RoadLink, matrix: np.ndarray):
-        for lane_link in road.right_ids:
-            index_link, index_road = self._get_connected_lane_ids(lane_link, link, road.road_id)
+        # for lane_link in road.right_ids:
+        conn_road = self.road_by_id(link.road_id)
+        conn_ids = conn_road.right_ids if link.sign == 1 else conn_road.left_ids
+        index_links = self._get_connected_lane_ids(road.road_id, road.right_ids, link, conn_ids)
+        for index_link, index_road in index_links:
             if link.link_type == LinkType.PRE:
                 matrix[index_link][index_road] = 1e-6
             else:
                 matrix[index_road][index_link] = 1e-6
 
-        for lane_link in road.left_ids:
-            index_link, index_road = self._get_connected_lane_ids(lane_link, link, road.road_id)
+        # for lane_link in road.left_ids:
+        conn_ids = conn_road.left_ids if link.sign == 1 else conn_road.right_ids
+        index_links = self._get_connected_lane_ids(road.road_id, road.left_ids, link, conn_ids)
+        for index_link, index_road in index_links:
             if link.link_type == LinkType.PRE:
                 matrix[index_road][index_link] = 1e-6
             else:
                 matrix[index_link][index_road] = 1e-6
 
-    def _get_connected_lane_ids(self, lane_link_id: int, link: RoadLink, road_id: int):
+    def _get_connected_lane_ids(self, road_id: int, lane_link_ids: List[int], link: RoadLink,
+                                conn_lane_link_ids: List[int]) -> List[Tuple[int, int]]:
         # TODO: support multi-lane navigation
-        key = create_key(link.road_link_id, link.contact_link, link.sign * lane_link_id)
-        if key == '54_0_-2':
-            print(road_id, lane_link_id, link)
-        index_link = self.mapping[key]
-        key = create_key(road_id, link.contact_road, lane_link_id)
-        index_road = self.mapping[key]
-        return index_link, index_road
+        index_links = []
+        if not conn_lane_link_ids or not lane_link_ids:
+            return index_links
+
+        diff = len(conn_lane_link_ids) - len(lane_link_ids)
+        if diff > 0:
+            if len(lane_link_ids) == 0:
+                print(f'link {road_id} to {link.road_id} has no driving lanes. should never happen')
+                print(f'{lane_link_ids}, {conn_lane_link_ids}')
+            fill_ids = [lane_link_ids[-1] for _ in range(abs(diff))]
+            lane_link_ids.extend(fill_ids)
+        elif diff < 0:
+            if len(conn_lane_link_ids) == 0:
+                print(f'link {road_id} to {link.road_id} has no driving lanes. should never happen')
+                print(f'{lane_link_ids}, {conn_lane_link_ids}')
+            fill_ids = [conn_lane_link_ids[-1] for _ in range(abs(diff))]
+            conn_lane_link_ids.extend(fill_ids)
+
+        for lane_link, conn_link in zip(lane_link_ids, conn_lane_link_ids):
+            key_conn = create_key(link.road_id, link.contact_link, conn_link)
+            key_road = create_key(road_id, link.contact_road, lane_link)
+            index_links.append((self.mapping[key_conn], self.mapping[key_road]))
+
+        return index_links
 
     def _link_pre_suc(self, matrix: np.ndarray):
         """Link the predecessor and successor in the weighted matrix."""
@@ -470,7 +493,15 @@ class XODRConverter:
 
         # parse all roads
         lane_lets = [Road(road) for road in root.findall('road')]
-        lane_lets = [road for road in lane_lets if len(road.left_ids + road.right_ids)]
+        lane_lets = [road for road in lane_lets if road.has_driving_lanes]
+
+        # TODO: check if those lanelets are relevant to driving
+        road_ids = set([r.road_id for r in lane_lets])
+        for road in lane_lets:
+            if road.suc.road_id not in road_ids:
+                road.suc = None
+            if road.pre.road_id not in road_ids:
+                road.pre = None
 
         # create the road mapping
         mapping = XODRConverter._create_road_mapping(lane_lets)
