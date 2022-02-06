@@ -1,5 +1,4 @@
 from math import dist
-from pathlib import Path
 
 from global_planner.route_annotation import RouteAnnotation
 from global_planner.global_route_planner import GlobalPlanner
@@ -7,13 +6,13 @@ from global_planner.xodr_converter import XODRConverter
 
 
 def load_town_01():
-    xodr_path = Path("/app/res/xodr/Town01.xodr")
-    xodr_map = XODRConverter.read_xodr(xodr_path)
-    return xodr_map
+   xodr_path = "/app/res/xodr/Town01.xodr"
+   xodr_map = XODRConverter.read_xodr(xodr_path)
+   return xodr_map
 
 
 def load_town_03():
-    xodr_path = Path("/app/res/xodr/Town03.xodr")
+    xodr_path = "/app/res/xodr/Town03.xodr"
     xodr_map = XODRConverter.read_xodr(xodr_path)
     return xodr_map
 

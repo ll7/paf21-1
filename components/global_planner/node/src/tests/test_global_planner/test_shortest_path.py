@@ -1,10 +1,9 @@
-from pathlib import Path
 import numpy as np
 from global_planner.global_route_planner import ShortestPath, RoadDetection
 from global_planner.xodr_converter import XODRConverter
 
 
-xodr_path = Path("/app/res/xodr/Town01.xodr")
+xodr_path = "/app/res/xodr/Town01.xodr"
 xodr_map = XODRConverter.read_xodr(xodr_path)
 
 

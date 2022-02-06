@@ -16,7 +16,7 @@ from global_planner.xodr_converter import XODRConverter
 class GlobalPlannerNode:
     """A class representing a ROS node that's planning a global route."""
     vehicle_name: str
-    path = Path("/app/res/xodr/Town01.xodr")
+    map_path = "/app/res/xodr/Town04.xodr"
 
     def run_node(self):
         """Launch the ROS node to receive the map, the start and
@@ -26,7 +26,7 @@ class GlobalPlannerNode:
         rospy.spin()
 
     def _handle_navigation_request(self, nav_request):
-        xodr_map = XODRConverter.read_xodr(self.path)
+        xodr_map = XODRConverter.read_xodr(self.map_path)
         global_route = GlobalPlanner.generate_waypoints(
             (nav_request.start_x, nav_request.start_y),
             (nav_request.end_x, nav_request.end_y),
