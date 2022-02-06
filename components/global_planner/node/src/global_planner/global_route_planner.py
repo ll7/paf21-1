@@ -173,9 +173,6 @@ class AdjMatrixPrep:
         key = create_key(road, end, link)
         if key in mapping:
             return mapping[key]
-        key = create_key(road, end, -link)
-        if key in mapping:
-            return mapping[key]
         raise AttributeError
 
 
