@@ -34,7 +34,7 @@ def test_path_finding_multilane():
     end = (322.09625244140625, -55.15309143066406)
     path = GlobalPlanner.get_shortest_path(start, end, xodr_map)
 
-    print(path)
+    # print(path)
     assert False
 
     # assert path == ['-1_0_0', '15_0_1', '13_0_-1', '13_1_-1', '3_1_1', '3_0_1', '117_1_1', '117_0_1',

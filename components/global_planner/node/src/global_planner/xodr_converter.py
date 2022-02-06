@@ -84,7 +84,7 @@ class TrafficSign(TrafficSignal):
         # LadderCrosswalk
         # StopLine
         # SolidSingleWhite
-        print("parsing unknown object: ", self.name)
+        # print("parsing unknown object: ", self.name)
         return None
 
     @property

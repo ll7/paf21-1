@@ -188,6 +188,7 @@ class GlobalPlanner:
         """Generate route waypoints for the given start / end positions using the map"""
         path = GlobalPlanner.get_shortest_path(start_pos, end_pos, xodr_map)
         route_waypoints = GlobalPlanner._preplan_route(start_pos, end_pos, path, xodr_map)
+        print("wps:", route_waypoints)
         interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
         route_metadata = RouteAnnotation.preprocess_route_metadata(start_pos, path, xodr_map)
         ann_route = RouteAnnotation.annotate_waypoints(interpol_route, route_metadata)
