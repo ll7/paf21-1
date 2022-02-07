@@ -30,11 +30,10 @@ class ObjectTracker:
         nearest_dist = self.max_distance
 
         for obj_info in self.object_infos:
-            obj_id, obj_class, obj_pos = obj_info
-            distance = euclid_dist(point, obj_pos)
-            if distance < nearest_dist and obj_class == object_class:
+            distance = euclid_dist(point, obj_info.rel_position)
+            if distance < nearest_dist and obj_info.obj_class == object_class:
                 same_object_detected = True
-                nearest_point_id = obj_id
+                nearest_point_id = obj_info.identifier
                 nearest_dist = distance
 
         if same_object_detected is False:
