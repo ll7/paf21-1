@@ -22,86 +22,75 @@ class ObjectDetector:
             config = yaml.safe_load(file)
             self.veh_mask: Tuple[int, int, int] = config['vehicle_mask']
             self.ped_mask: Tuple[int, int, int] = config['pedestrian_mask']
+            self.MAX_RANGE: float = config['max_range']
             image_meta: Tuple[int, int, int] = config['image_meta']
         self.counter: int = 0
-        self.MAX_RANGE: float = 1000.0
         self.inv_camera_matrix = ObjectDetector._create_inverse_camera_matrix(image_meta)
         self.points_2d: np.ndarray = ObjectDetector._get_2d_coordinates(image_meta)
         self.obj_tracker: ObjectTracker = ObjectTracker()
 
     def detect_object(self, semantic_img: np.ndarray, depth_img: np.ndarray) -> List[ObjectInfo]:
         """Detect objects in the semantic image and return the distance."""
-        # cv2.imshow('semantic', semantic_img)
-        # cv2.waitKey(0)
-        mask = self._get_object_mask(semantic_img)
-        flat_indices, flat_depth_img = self._get_indices(depth_img, mask)
-        points_3d = self._depth_to_local_point_cloud(flat_indices, flat_depth_img)
-        # ObjectDetector.show_point_cloud(points_3d)
-        print(f'Norm Points {len(points_3d)}')
+        mask = ObjectDetector._get_object_mask(semantic_img, self.veh_mask)
+        depth_img = ObjectDetector._apply_mask(depth_img, mask, self.MAX_RANGE)
+        centroids, classes = ObjectDetector._cluster_depth_image(depth_img, mask, 'vehicle',
+                                                                 semantic_img)
+
+        depth_img_flat = np.reshape(depth_img, -1)
+        # indices_flat = ObjectDetector._filter_image(depth_img_flat, self.MAX_RANGE)
+        indices_flat = ObjectDetector._flat_indices(centroids, depth_img.shape[1])
+        centroids_3d = self._depth2local_point_cloud(depth_img_flat, indices_flat)
+        # ObjectDetector.show_point_cloud(centroids_3d)
+        print(f'#Centroids 3d: {len(centroids_3d)}')
         self.counter += 1
 
-        centroids, classes = ObjectDetector._cluster_point_cloud(points_3d)
-        ObjectDetector.show_point_cloud(points_3d, centroids)
+        # cluster with point cloud and DBSCAN
+        # centroids, classes = ObjectDetector._cluster_point_cloud(points_3d, squeeze_factor=4.0)
+        # ObjectDetector.show_point_cloud(points_3d, centroids)
 
-        obj_infos = self.obj_tracker.update(centroids, classes)
+        obj_infos = self.obj_tracker.update(centroids_3d, classes)
         return obj_infos
 
-    @staticmethod
-    def show_point_cloud(points, centroids=None):
-        x = points[:, 0]
-        y = points[:, 1]
-        z = points[:, 2]
-        fig = plt.figure(figsize=(8, 8))
-        ax = fig.add_subplot(projection='3d')
-        ax.scatter(x, y, z)
-        if centroids is not None:
-            centroids = np.array(centroids)
-            x = centroids[:, 0]
-            y = centroids[:, 1]
-            z = np.zeros_like(x)
-            ax.scatter(x, y, z)
-        plt.show()
+    def _depth2local_point_cloud(self, img_flatted: np.ndarray, idx_flat: np.ndarray) -> np.ndarray:
+        """Convert a depth-map to a 2D array containing the 3D position (relative) of each pixel."""
+        points_3d = np.dot(self.inv_camera_matrix, self.points_2d[:, idx_flat])
+        points_3d *= img_flatted[idx_flat]
 
-    def _get_object_mask(self, semantic_image: np.ndarray) -> np.ndarray:
+        # scale x and reorder to (x, y, z)
+        points_3d[0, :] *= -1
+        return np.transpose(points_3d[[0, 2, 1], :])
+
+    @staticmethod
+    def _get_object_mask(semantic_image: np.ndarray, mask: Tuple[int, int, int]) -> np.ndarray:
         """Find the object patches from the semantic image."""
-        mask = np.array(self.veh_mask)
+        mask = np.array(mask)
         masked_image = cv2.inRange(semantic_image, mask, mask)
         # if self.counter % 10 == 0 and self.counter < 10000:
         #     cv2.imwrite(f'/app/logs/masked_image_{self.counter}.png', masked_image)
         return masked_image
 
-    def _depth_to_local_point_cloud(self, indices: np.ndarray,
-                                    norm_depth: np.ndarray) -> np.ndarray:
-        """
-        Convert a depth-map to a 2D array containing the
-        3D position (relative to the camera) of each pixel.
-        """
-        points_3d = np.dot(self.inv_camera_matrix, self.points_2d[:, indices]) * norm_depth[indices]
-        points_3d *= self.MAX_RANGE
+    @staticmethod
+    def _filter_image(image: np.ndarray, max_value: float) -> np.ndarray:
+        """Filter the indices of the image by threshold"""
+        threshold = max_value * 0.8
+        indices = np.where(image <= threshold)[0]
+        return indices
 
-        # reorder and scale array in (x, y, z)
-        norm_vector = np.array([-1, 1, 1])
-        points_3d = points_3d[[0, 2, 1], :] * norm_vector[:, np.newaxis]
+    @staticmethod
+    def _flat_indices(centroids: List[Tuple[int, int]], width: int) -> np.ndarray:
+        return np.array([c[0] + c[1] * width for c in centroids])
 
-        return np.transpose(points_3d)
-
-    def _get_indices(self, depth_image: np.ndarray,
-                     mask: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    @staticmethod
+    def _apply_mask(image: np.ndarray, mask: np.ndarray, max_value: float) -> np.ndarray:
         mask = mask.astype(dtype=bool)
-        # apply mask
-        depth_image = depth_image * mask
-        depth_image[mask == 0] = self.MAX_RANGE
-
-        image_height, image_width = depth_image.shape
-        norm_depth = np.reshape(depth_image, image_width * image_height)
-
-        threshold = self.MAX_RANGE * 0.8
-        indices = np.where(norm_depth <= threshold)[0]
-        return indices, norm_depth
+        image = image * mask
+        # set the pixels that are not in the mask to the maximum value
+        image[mask == 0] = max_value
+        return image
 
     @staticmethod
     def _get_2d_coordinates(image_meta: Tuple[int, int, int]) -> np.ndarray:
-        """Create 2d pixel coordinates."""
+        """Create 2d pixel coordinates (u, v, w)."""
         image_width, image_height, _ = image_meta
         pixel_length = image_width * image_height
         u_coord = np.zeros((image_height, image_width), dtype=np.int16)
@@ -127,17 +116,17 @@ class ObjectDetector:
         return np.linalg.inv(k)
 
     @staticmethod
-    def _cluster_point_cloud(normalized_points) -> Tuple[List[Tuple[float, float]], List[str]]:
+    def _cluster_point_cloud(points_3d: np.ndarray,
+                             squeeze_factor: float) -> Tuple[List[Tuple[float, float]], List[str]]:
         """Cluster points into groups and get bounding rectangle."""
-        if len(normalized_points) > 0:
+        if len(points_3d) > 0:
             # TODO consider clustering with segmentation mask, only the highest point in the z axis
-            squeezing_factor = 1
-            normalized_points[:, 2] /= squeezing_factor
-            labels = DBSCAN(eps=1.5, min_samples=1).fit_predict(normalized_points)
+            points_3d /= squeeze_factor
+            labels = DBSCAN(eps=1.5, min_samples=2).fit_predict(points_3d)
             n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
             print(f"Estimated number of objects: {n_clusters}")
-            normalized_points[:, 2] *= squeezing_factor
-            groups = ObjectDetector._group_up_points(labels, normalized_points, n_clusters)
+            points_3d *= squeeze_factor
+            groups = ObjectDetector._group_up_points(labels, points_3d, n_clusters)
             centroids = []
             classes = []
             for group in groups:
@@ -147,34 +136,71 @@ class ObjectDetector:
         return [], []
 
     @staticmethod
-    def _cluster_depth_image(depth_img: np.ndarray):
-        # create a binary thresholded image
-        g1 = cv2.normalize(depth_img, None, 255, 0, cv2.NORM_L2, cv2.CV_8UC1)
-        # _, binary = cv2.threshold(g1, 1, 255, cv2.THRESH_BINARY_INV)
-        # contours, _ = cv2.findContours(binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        # for contour in contours:
-        #     rect = cv2.minAreaRect(contour)
-        #     box = cv2.boxPoints(rect)
-        #     box = np.int0(box)
-        #     cv2.drawContours(semantic_img, [box], 0, (0, 0, 255), 1)
-        g1[g1 == 0] = 255
-        cv2.imshow('Box', g1)
-        cv2.waitKey(0)
+    def _cluster_depth_image(depth_img: np.ndarray, mask: np.ndarray, obj_type: str, semantic_img):
+        mask_bool = mask.astype(dtype=bool)
+        contours, _ = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+        centroids = []
+        for cnt in contours:
+            cnt = np.squeeze(cnt)
+            rect = cv2.minAreaRect(cnt)
+            if not ObjectDetector.is_valid_rect(mask_bool, rect):
+                continue
+
+            clusters = ObjectDetector._cluster_pixel(depth_img, cnt)
+            list_idx = set(range(len(cnt)))
+            other_object_idx = [i for i in list_idx if not clusters[i]]
+            list_idx = list(list_idx - set(other_object_idx))
+
+            rect = cv2.minAreaRect(cnt[list_idx])
+            centroids.append((int(rect[0][0]), int(rect[0][1])))
+
+            if len(other_object_idx) > 2:
+                rect_other_obj = cv2.minAreaRect(cnt[other_object_idx])
+                # ObjectDetector._draw_rect(rect_other_obj, semantic_img, color=(0, 255, 0))
+                centroids.append((int(rect_other_obj[0][0]), int(rect_other_obj[0][1])))
+
+            # ObjectDetector._draw_rect(rect, semantic_img, image_name='Selected', show=True)
+        classes = [obj_type for i in range(len(centroids))]
+        return centroids, classes
 
     @staticmethod
-    def _cluster_semantic_image(masked_imag, semantic_img):
-
-        contours, _ = cv2.findContours(masked_imag, cv2.RETR_EXTERNAL,
-                                       cv2.CHAIN_APPROX_NONE)
-        for contour in contours:
-            rect = cv2.minAreaRect(contour)
-            box = cv2.boxPoints(rect)
-            box = np.int0(box)
-            cv2.drawContours(semantic_img, [box], 0, (0, 255, 0), 1)
+    def is_valid_rect(mask_bool: np.ndarray,
+                      rect: Tuple[Tuple[float, float], Tuple[float, float], float]) -> bool:
+        center_point, shape, angle = rect
+        is_horizontal = 85 <= angle <= 95 or -10 <= angle <= 10
+        has_minimum_size = shape[0] * shape[1] > 4.0
+        is_mask_pixel = mask_bool[int(center_point[1]), int(center_point[0])]
+        return has_minimum_size and is_horizontal and is_mask_pixel
 
     @staticmethod
-    def _group_up_points(p_labels: int, points: np.ndarray,
-                         n_cluster: int) -> List[np.ndarray]:
+    def _cluster_pixel(depth_img: np.ndarray, contour: np.ndarray) -> np.ndarray:
+        pixel_in_contour = ObjectDetector._get_all_pixel_in_contour(depth_img, contour)
+        # calculate mean and standard deviation for filled contour
+        filled_patch = depth_img[pixel_in_contour[:, 1], pixel_in_contour[:, 0]]
+        mean = np.mean(filled_patch)
+
+        deviation = (depth_img[contour[:, 1], contour[:, 0]] - mean) <= mean
+        return deviation
+
+    @staticmethod
+    def _get_all_pixel_in_contour(depth_img: np.ndarray, contour: np.ndarray) -> np.ndarray:
+        img = np.zeros_like(depth_img)
+        cv2.drawContours(img, [contour], 0, color=255, thickness=-1)
+        pts_y, pts_x = np.where(img == 255)
+        return np.stack((pts_x, pts_y), axis=-1)
+
+    @staticmethod
+    def _draw_rect(rect, image, image_name='', color=(0, 0, 255), show=False):
+        box = cv2.boxPoints(rect)
+        box = np.int0(box)
+        cv2.drawContours(image, [box], 0, color, 1)
+        if show:
+            cv2.imshow(f'{image_name}', image)
+            cv2.waitKey(0)
+
+    @staticmethod
+    def _group_up_points(p_labels: int, points: np.ndarray, n_cluster: int) -> List[np.ndarray]:
         """Group points to cluster."""
         groups = []
         for i in range(n_cluster):
@@ -188,6 +214,23 @@ class ObjectDetector:
         sum_x, sum_y, _ = np.mean(arr, axis=0)
         return sum_x, sum_y
 
+    @staticmethod
+    def show_point_cloud(points: np.ndarray, centroids=None):
+        """Display the point cloud with the centroids."""
+        x = points[:, 0]
+        y = points[:, 1]
+        z = points[:, 2]
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.add_subplot(projection='3d')
+        ax.scatter(x, y, z)
+        if centroids is not None:
+            centroids = np.array(centroids)
+            x = centroids[:, 0]
+            y = centroids[:, 1]
+            z = np.zeros_like(x)
+            ax.scatter(x, y, z)
+        plt.show()
+
 
 if __name__ == '__main__':
     import glob
@@ -195,7 +238,7 @@ if __name__ == '__main__':
     config_pth = 'detection_config.yml'
     obj_detector = ObjectDetector(config_pth)
 
-    for j in range(600, 710, 10):
+    for j in range(630, 680, 10):
         paths = glob.glob(f'logs/depth_img_{j}.png')
         paths2 = glob.glob(f'logs/semantic_img_{j}.png')
 
@@ -206,21 +249,9 @@ if __name__ == '__main__':
         # cv2.imshow('semantic', semantic)
         # cv2.waitKey(0)
 
-        R = depth[:, :, 0].astype(np.float)
-        G = depth[:, :, 1].astype(np.float)
-        B = depth[:, :, 2].astype(np.float)
+        R = depth[:, :, 0].astype(float)
+        G = depth[:, :, 1].astype(float)
+        B = depth[:, :, 2].astype(float)
 
         depth_conv = (R + G * 256 + B * 256 * 256) / (256 * 256 * 256 - 1) * 1000
         obj_detector.detect_object(semantic, depth_conv)
-
-    # contours, _ = cv2.findContours(masked_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    #
-    # for cnt in contours:
-    #     x, y, w, h = cv2.boundingRect(cnt)
-    #     cv2.rectangle(masked_image, (x, y), (x + w, y + h), (0, 255, 0), 1)
-    #
-    # cv2.imshow('boxes', masked_image)
-    # cv2.waitKey(0)
-
-    # indices1 = np.where(depth_image <= 0.8)
-    # indices2 = [x * 300 + y for x, y in zip(indices1[0], indices1[1])]
