@@ -1,5 +1,6 @@
 # object detector
 image_meta: [300, 200, 120]   # width, height, fov
+max_range: 1000.0
 vehicle_mask: [142, 0, 0]
 pedestrian_mask: [60, 20, 220]
 # traffic light detector
