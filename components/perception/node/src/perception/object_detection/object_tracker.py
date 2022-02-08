@@ -4,6 +4,8 @@ from typing import Tuple, List
 from math import dist as euclid_dist
 
 # from perception.object_detection.object_info import ObjectInfo
+import numpy as np
+
 from object_info import ObjectInfo
 
 
@@ -13,11 +15,11 @@ class ObjectTracker:
         self.id_count = 0
         self.max_distance = 5.0
 
-    def update(self, points: List[Tuple[float, float]],
-               object_classes: List[str]) -> List[ObjectInfo]:
+    def update(self, points: np.ndarray, object_classes: List[str]) -> List[ObjectInfo]:
         """Update the object infos for the list of points."""
         obj_infos = []
         for point, object_class in zip(points, object_classes):
+            point = (point[0], point[1])
             obj_infos.append(self._find_nearest_object(point, object_class))
 
         self.object_infos = obj_infos
