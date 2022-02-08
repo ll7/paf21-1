@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from enum import IntEnum
+import numpy as np
 from local_planner.core import Vehicle
 
 
@@ -35,7 +36,9 @@ class SpeedObservation:
     dist_next_traffic_light_m: float = 999
     dist_next_obstacle_m: float = 999
     detected_speed_limit: int = None
-    obj_speed_ms: float = float('inf')
+    obj_speed_ms: float = 500
+    dist_next_curve: float = 999
+    curve_target_speed: float = 500
 
 
 @dataclass
@@ -56,6 +59,9 @@ class SpeedStateMachine:
         if obs.detected_speed_limit is not None:
             self.legal_speed_limit_mps = obs.detected_speed_limit / 3.6
 
+        if not self.vehicle.is_ready:
+            return
+
         # TODO: fix issue with traffic lights being considered when car spawns in fron of red lights
         #       even though the traffic lights are still far away such that the car should approach
 
@@ -70,13 +76,15 @@ class SpeedStateMachine:
             raise ValueError(f'Unsupported speed state {self.current_state}!')
 
         # if self.count % 10 == 0:
-        #     print(f'speed state: {self.current_state}, target speed: {self.target_speed_mps:.2f},',
-        #         f'legal speed: {self.legal_speed_limit_mps:.2f}, obs speed {obs.obj_speed_ms:.2f},'
-        #         f'actual speed: {self.vehicle.actual_velocity_mps:.2f}')
+        #     print(f'speed state: {self.current_state},',
+        #           f'target speed: {self.target_speed_mps:.2f},',
+        #           f'legal speed: {self.legal_speed_limit_mps:.2f},',
+        #           f'obs speed {obs.obj_speed_ms:.2f},'
+        #           f'actual speed: {self.vehicle.actual_velocity_mps:.2f}')
         # self.count += 1
 
     def _is_in_speed_tolerance(self, speed_limit: float):
-        speed_diff = self.vehicle.actual_velocity_mps - speed_limit
+        speed_diff = self.vehicle.velocity_mps - speed_limit
         return -self.speed_offset_down_mps <= speed_diff <= self.speed_offset_up_mps
 
     def _handle_keep(self, obs: SpeedObservation):
@@ -131,11 +139,15 @@ class SpeedStateMachine:
                          if obs.tl_phase == TrafficLightPhase.RED else float('inf')
 
         obj_wait_time_s = self._time_until_brake(obs.dist_next_obstacle_m, obs.obj_speed_ms)
+        curve_wait_time_s = self._time_until_brake(obs.dist_next_curve, obs.curve_target_speed)
 
-        crit_wait_time_s = min(tl_wait_time_s, obj_wait_time_s)
-        target_speed = 0 if tl_wait_time_s < obj_wait_time_s else obs.obj_speed_ms
+        wait_times = [tl_wait_time_s, obj_wait_time_s, curve_wait_time_s]
+        target_speeds = [0.0, obs.obj_speed_ms, obs.curve_target_speed]
 
-        needs_brake = crit_wait_time_s <= self.vehicle.vehicle_reaction_time_s
+        crit_id = np.argmin(wait_times)
+        crit_wait_time_s, target_speed = wait_times[crit_id], target_speeds[crit_id]
+
+        needs_brake = crit_wait_time_s <= self.vehicle.meta.vehicle_reaction_time_s
         return needs_brake, target_speed
 
     def _time_until_brake(self, distance_m: float, target_velocity: float = 0) -> float:
@@ -143,23 +155,23 @@ class SpeedStateMachine:
         In case this function returns a negative value, it means that it's already
         too late to brake, so you need to launch an emergency protocol"""
 
-        accel_mps2 = self.vehicle.base_brake_mps2
+        accel_mps2 = self.vehicle.meta.base_brake_mps2
 
         if distance_m < 0:
             raise ValueError('Negative distance is not allowed')
-        if self.vehicle.actual_velocity_mps < 0 or target_velocity < 0:
+        if self.vehicle.velocity_mps < 0 or target_velocity < 0:
             raise ValueError('Negative velocity is not allowed')
         if accel_mps2 >= 0:
             raise ValueError('Positive acceleration won\'t brake')
 
-        maneuver_time_s = (target_velocity - self.vehicle.actual_velocity_mps) / accel_mps2
-        braking_dist = self.vehicle.actual_velocity_mps * maneuver_time_s + \
+        maneuver_time_s = (target_velocity - self.vehicle.velocity_mps) / accel_mps2
+        braking_dist = self.vehicle.velocity_mps * maneuver_time_s + \
                        accel_mps2 * maneuver_time_s ** 2 / 2
 
         object_offset = 7
         linear_dist = distance_m - object_offset - braking_dist
-        time_until_brake = linear_dist / self.vehicle.actual_velocity_mps \
-                           if self.vehicle.actual_velocity_mps > 0 else 999
+        time_until_brake = linear_dist / self.vehicle.velocity_mps \
+                           if self.vehicle.velocity_mps > 0 else 999
         return time_until_brake
 
     def get_target_speed(self) -> float:

@@ -9,7 +9,8 @@ import numpy as np
 from local_planner.vehicle_control import DrivingController
 from local_planner.core.vehicle import Vehicle
 from local_planner.core.geometry import angle_between_vectors, points_to_vector
-from local_planner.state_machine import SpeedObservation, TrafficLightInfo, TrafficLightPhase
+from local_planner.state_machine import SpeedObservation, TrafficLightInfo
+from local_planner.vehicle_control import CurveDetection
 
 
 @dataclass
@@ -36,6 +37,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
     objects: Dict[int, ObjectInfo] = field(default_factory=dict)
     old_timestamp: float = 0.1
     tld_info: TrafficLightInfo = TrafficLightInfo()
+    curve_detection: CurveDetection = CurveDetection()
 
     def update_global_route(self, waypoints: List[Tuple[float, float]]):
         """Update the global route to follow"""
@@ -62,9 +64,9 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         if vehicle_not_ready:
             self.cached_local_route = []
             return []
-        else:
-            self.cached_local_route = self._compute_local_route()
-            return self.cached_local_route
+
+        self.cached_local_route = self._compute_local_route()
+        return self.cached_local_route
 
     def _compute_local_route(self) -> List[Tuple[float, float]]:
 
@@ -99,7 +101,10 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         bound = min(self.prev_wp_id + self.lenght_route, len(route))
         return route[self.prev_wp_id:bound]
 
-    def get_speed_observation(self) -> SpeedObservation:
+    @property
+    def latest_speed_observation(self) -> SpeedObservation:
+        """Retrieve the lastest speed observation"""
+
         if not self.cached_local_route:
             return SpeedObservation()
 
@@ -110,11 +115,14 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
 
         # TODO: handle yellow traffic lights here ...
 
-        # TODO: @Pavlo, apply distance to curve and max vurve speed here ...
+        curve_obs = self.curve_detection.find_next_curve(self.cached_local_route)
+        speed_obs.dist_next_curve = curve_obs.dist_until_curve
+        speed_obs.curve_target_speed = curve_obs.max_speed
 
         return speed_obs
 
     def update_tld_info(self, tld_info: TrafficLightInfo):
+        """Update latest information on the traffic lights ahead"""
         self.tld_info = tld_info
 
     def update_objects(self, object_list: List[Dict]):
