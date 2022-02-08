@@ -1,14 +1,11 @@
 
-# Traffic Light Detection
+# Perception
 
 ## About
-This ROS node processes camera data from the CARLA simulator to detect traffic lights.
+This ROS node processes camera data from the CARLA simulator to detect traffic lights and objects like cars and persons.
 
-## Build Node + Run Tests
+Wiki: [Perception](https://github.com/ll7/paf21-1/wiki/Perception)
 
-```sh
-docker build . -t "traffic_light_detection"
-```
 
 ## TensorFlow Training
 The traffic light detection uses a small convolutional neural network (~1k weights).
