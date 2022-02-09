@@ -9,8 +9,6 @@ from matplotlib.pyplot import figure, show
 
 from perception.object_detection.object_info import ObjectInfo
 from perception.object_detection.object_tracker import ObjectTracker
-# from object_info import ObjectInfo
-# from object_tracker import ObjectTracker
 
 
 class ObjectDetector:
@@ -20,7 +18,7 @@ class ObjectDetector:
             config = yaml.safe_load(file)
             self.veh_mask: Tuple[int, int, int] = config['vehicle_mask']
             self.ped_mask: Tuple[int, int, int] = config['pedestrian_mask']
-            self.MAX_RANGE: float = config['max_range']
+            self.max_range: float = config['max_range']
             image_meta: Tuple[int, int, int] = config['image_meta']
         self.counter: int = 0
         self.inv_camera_matrix = ObjectDetector._create_inverse_camera_matrix(image_meta)
@@ -42,7 +40,7 @@ class ObjectDetector:
         centroids = centroids_veh + centroids_ped
         classes = class_veh + class_ped
 
-        depth_img = ObjectDetector._apply_mask(depth_img, [mask_veh, mask_ped], self.MAX_RANGE)
+        depth_img = ObjectDetector._apply_mask(depth_img, [mask_veh, mask_ped], self.max_range)
         depth_img_flat = np.reshape(depth_img, -1)
         indices_flat = ObjectDetector._flat_indices(centroids, depth_img.shape[1])
         centroids_3d = self._depth2local_point_cloud(depth_img_flat, indices_flat)
@@ -171,12 +169,9 @@ class ObjectDetector:
     @staticmethod
     def show_point_cloud(points: np.ndarray):
         """Display the point cloud with the centroids."""
-        x = points[:, 0]
-        y = points[:, 1]
-        z = points[:, 2]
         fig = figure(figsize=(8, 8))
-        ax = fig.add_subplot(projection='3d')
-        ax.scatter(x, y, z)
+        axis = fig.add_subplot(projection='3d')
+        axis.scatter(points)
         show()
 
     @staticmethod
