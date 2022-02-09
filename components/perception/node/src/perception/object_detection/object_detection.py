@@ -5,12 +5,12 @@ import yaml
 
 from cv2 import cv2
 import numpy as np
+from matplotlib.pyplot import figure, show
 
-# from perception.object_detection.object_info import ObjectInfo
-# from perception.object_detection.object_tracker import ObjectTracker
-from object_info import ObjectInfo
-from object_tracker import ObjectTracker
-import matplotlib.pyplot as plt
+from perception.object_detection.object_info import ObjectInfo
+from perception.object_detection.object_tracker import ObjectTracker
+# from object_info import ObjectInfo
+# from object_tracker import ObjectTracker
 
 
 class ObjectDetector:
@@ -174,43 +174,43 @@ class ObjectDetector:
         x = points[:, 0]
         y = points[:, 1]
         z = points[:, 2]
-        fig = plt.figure(figsize=(8, 8))
+        fig = figure(figsize=(8, 8))
         ax = fig.add_subplot(projection='3d')
         ax.scatter(x, y, z)
-        plt.show()
+        show()
 
     @staticmethod
-    def _draw_rect(rect, image, image_name='', color=(0, 0, 255), show=False):
+    def _draw_rect(rect, image, image_name='', color=(0, 0, 255), show_img=False):
         box = cv2.boxPoints(rect)
         box = np.int0(box)
         cv2.drawContours(image, [box], 0, color, 1)
-        if show:
+        if show_img:
             cv2.imshow(f'{image_name}', image)
             cv2.waitKey(0)
 
 
-if __name__ == '__main__':
-    import glob
-    import time
-
-    config_pth = 'detection_config.yml'
-    obj_detector = ObjectDetector(config_pth)
-
-    for j in range(10, 60, 10):
-        paths = glob.glob(f'logs/depth_img_{j}.png')
-        paths2 = glob.glob(f'logs/semantic_img_{j}.png')
-        print(paths2)
-
-        depth = cv2.imread(paths[0])
-        semantic = cv2.imread(paths2[0])
-
-        # convert to depth image
-        R = depth[:, :, 0].astype(float)
-        G = depth[:, :, 1].astype(float)
-        B = depth[:, :, 2].astype(float)
-        depth_conv = (R + G * 256 + B * 256 * 256) / (256 * 256 * 256 - 1) * 1000
-
-        start = time.perf_counter_ns()
-        c1 = obj_detector.detect_object(semantic, depth_conv)
-        end = time.perf_counter_ns()
-        print(f'Cluster Depth time: {end - start}')
+# if __name__ == '__main__':
+#     import glob
+#     import time
+#
+#     config_pth = 'detection_config.yml'
+#     obj_detector = ObjectDetector(config_pth)
+#
+#     for j in range(10, 60, 10):
+#         paths = glob.glob(f'logs/depth_img_{j}.png')
+#         paths2 = glob.glob(f'logs/semantic_img_{j}.png')
+#         print(paths2)
+#
+#         depth = cv2.imread(paths[0])
+#         semantic = cv2.imread(paths2[0])
+#
+#         # convert to depth image
+#         R = depth[:, :, 0].astype(float)
+#         G = depth[:, :, 1].astype(float)
+#         B = depth[:, :, 2].astype(float)
+#         depth_conv = (R + G * 256 + B * 256 * 256) / (256 * 256 * 256 - 1) * 1000
+#
+#         start = time.perf_counter_ns()
+#         c1 = obj_detector.detect_object(semantic, depth_conv)
+#         end = time.perf_counter_ns()
+#         print(f'Cluster Depth time: {end - start}')
