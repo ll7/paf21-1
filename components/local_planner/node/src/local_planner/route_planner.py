@@ -7,7 +7,8 @@ import numpy as np
 
 from local_planner.vehicle_control import DrivingController
 from local_planner.core.vehicle import Vehicle
-from local_planner.core.geometry import angle_between_vectors, points_to_vector
+from local_planner.core.geometry import angle_between_vectors, points_to_vector, \
+    norm_angle, rotate_vector
 from local_planner.state_machine import SpeedObservation, TrafficLightInfo
 from local_planner.vehicle_control import CurveDetection
 
@@ -22,7 +23,8 @@ class ObjectInfo:
 
 
 @dataclass
-class TrajectoryPlanner:  # pylint: disable=too-many-locals
+class TrajectoryPlanner:
+    # pylint: disable=too-many-locals
     # pylint: disable=too-many-instance-attributes
     """A class that keeps all the necessary information needed by all the modules,
     this class should be expanded if needed"""
@@ -32,15 +34,14 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
     next_wp_id: int = -1
     prev_wp_id: int = -1
     cached_local_route: List[Tuple[float, float]] = field(default_factory=list)
-    lenght_route: int = 50
+    length_route: int = 50
+    delta_time: float = 0.1
     objects: Dict[int, ObjectInfo] = field(default_factory=dict)
-    old_timestamp: float = 0.1
     tld_info: TrafficLightInfo = TrafficLightInfo()
     curve_detection: CurveDetection = CurveDetection()
 
     def update_global_route(self, waypoints: List[Tuple[float, float]]):
         """Update the global route to follow"""
-
         print(f"update global route ({len(waypoints)} points): {waypoints}")
         print("time,veh_x,vehicle_y,vehicle_orient,vehicle_vel,signal_vel,signal_steer")
 
@@ -52,7 +53,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         else:
             self.next_wp_id = 1
             self.prev_wp_id = 0
-            bound = min(self.prev_wp_id + self.lenght_route, len(self.global_route))
+            bound = min(self.prev_wp_id + self.length_route, len(self.global_route))
             self.cached_local_route = self.global_route[self.prev_wp_id:bound]
 
     def calculate_trajectory(self) -> List[Tuple[float, float]]:
@@ -68,7 +69,6 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         return self.cached_local_route
 
     def _compute_local_route(self) -> List[Tuple[float, float]]:
-
         # cache the route to avoid concurrency bugs because
         # the route might be overwritten by the navigation task
         route = self.global_route
@@ -97,13 +97,12 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
             self.prev_wp_id += 1
             # print(f'reached route wp {next_wp}, angle={abs(angle)}')
 
-        bound = min(self.prev_wp_id + self.lenght_route, len(route))
+        bound = min(self.prev_wp_id + self.length_route, len(route))
         return route[self.prev_wp_id:bound]
 
     @property
     def latest_speed_observation(self) -> SpeedObservation:
         """Retrieve the lastest speed observation"""
-
         if not self.cached_local_route:
             return SpeedObservation()
 
@@ -127,50 +126,36 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
     def update_objects(self, object_list: List[Dict]):
         """Refresh the objects that were detected by the perception"""
         keys = []
-        # time_difference = self.vehicle.time - self.old_timestamp
-        time_difference = 0.1
-        if time_difference > 0:
-            for obj in object_list:
-                new_pos = self.convert_relative_to_world(obj['rel_position'])
-                keys.append(obj['identifier'])
-                if obj['identifier'] in self.objects:
-                    last_pos = self.objects[obj['identifier']].trajectory[-1]
-                    self.objects[obj['identifier']].trajectory.append(new_pos)
-                    self.objects[obj['identifier']].velocity = dist(new_pos, last_pos) \
-                                                               / time_difference
-                    #   rel_dist = dist(self.vehicle.pos, new_pos)
-                    #   rel_dist = rel_dist - dist(self.vehicle.pos, last_pos)
-                    #   rel_velocity = rel_dist / time_difference
-                    # abs_velocity = self.vehicle.actual_velocity_mps + rel_velocity
-                    # print(f'global vel {self.objects[obj["identifier"]].velocity},'
-                    #      f' {time_difference}, {obj["identifier"]}')
-                else:
-                    self.objects[obj['identifier']] = ObjectInfo(identifier=obj['identifier'],
-                                                                 obj_class=obj['obj_class'],
-                                                                 trajectory=[new_pos])
-            self.objects = {k: self.objects[k] for k in keys}
-            self.old_timestamp = self.vehicle.time
+        for obj in object_list:
+            obj_id = obj['identifier']
+            keys.append(obj_id)
+
+            new_abs_pos = self.convert_relative_to_world(obj['rel_position'])
+            if obj_id in self.objects:
+                last_abs_pos = self.objects[obj_id].trajectory[-1]
+                self.objects[obj_id].trajectory.append(new_abs_pos)
+                self.objects[obj_id].velocity = dist(new_abs_pos, last_abs_pos) / self.delta_time
+            else:
+                self.objects[obj['identifier']] = ObjectInfo(identifier=obj['identifier'],
+                                                             obj_class=obj['obj_class'],
+                                                             trajectory=[new_abs_pos])
+        self.objects = {k: self.objects[k] for k in keys}
 
     def convert_relative_to_world(self, coordinate: Tuple[float, float]) -> Tuple[float, float]:
         """Converts relative coordinates to world coordinates"""
-        # TODO: use geometry.rotate_vector() instead!!!
-        theta = self.vehicle.orientation_rad - np.pi / 2
-        t_vector = np.array(self.vehicle.pos)
-        rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)],
-                                    [np.sin(theta), np.cos(theta)]])
-        coordinate = np.matmul(rotation_matrix, coordinate) + t_vector
-        return coordinate[0], coordinate[1]
+        theta = norm_angle(self.vehicle.orientation_rad - np.pi / 2)
+        offset = self.vehicle.pos
+        coordinate = rotate_vector(coordinate, theta)
+        return coordinate[0]+offset[0], coordinate[1]+offset[1]
 
     def detect_vehicle_in_lane(self) -> SpeedObservation:
         """Detect a vehicle in the same direction."""
-
-        # cache the route and objects to avoid concurrency bugs
+        # cache the route, objects and position to avoid concurrency bugs
+        vehicle_pos = self.vehicle.pos
         route = self.cached_local_route
         objects = self.objects.copy()
 
         spd_obs = SpeedObservation()
-        vehicle_pos = self.vehicle.pos
-
         for _, obj in objects.items():
             last_obj_pos = obj.trajectory[-1]
             distances = []
