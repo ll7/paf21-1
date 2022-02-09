@@ -14,7 +14,7 @@ from local_planner.route_planner import TrajectoryPlanner
 from local_planner.ros_msg_adapter import RosMessagesAdapter
 from local_planner.core import Vehicle
 from local_planner.vehicle_control import DrivingController
-from local_planner.state_machine import SpeedStateMachine, SpeedObservation
+from local_planner.state_machine import SpeedStateMachine
 
 
 @dataclass
@@ -48,14 +48,20 @@ class LocalPlannerNode:
 
         nav_thread = Thread(target=self.nav_service.run_infinite_driving)
         nav_thread.start()
+        # i: int = 0
 
         while not rospy.is_shutdown():
             local_route = self.route_planner.calculate_trajectory()
-            self.speed_state_machine.update_state(self.route_planner.get_speed_observation())
+            # i = i + 1
+            # print("step")
+            # print(i)
+            self.speed_state_machine.update_state(self.route_planner.latest_speed_observation)
             velocity = self.speed_state_machine.get_target_speed()
             self.driving_control.update_route(local_route)
             self.driving_control.update_target_velocity(velocity)
             driving_signal = self.driving_control.next_signal()
+            # print("driving signal")
+            # print(driving_signal)
             msg = RosMessagesAdapter.signal_to_message(driving_signal)
             self.driving_signal_publisher.publish(msg)
             rate.sleep()
@@ -83,16 +89,16 @@ class LocalPlannerNode:
     def _init_vehicle_orientation_subscriber(self):
         in_topic = f"/carla/{self.vehicle.name}/imu/imu1"
         msg_to_orientation = RosMessagesAdapter.message_to_orientation
-        callback = lambda msg: self.driving_control.update_vehicle_orientation(
+        callback = lambda msg: self.vehicle.update_vehicle_orientation(
             msg_to_orientation(msg))
         rospy.Subscriber(in_topic, ImuMsg, callback)
 
     def _init_vehicle_position_subscriber(self):
         in_topic = f"/carla/{self.vehicle.name}/odometry"
         msg_to_position = RosMessagesAdapter.message_to_vehicle_position
-        msg_to_velocity = RosMessagesAdapter.message_to_vehicle_velocity
-        callback = lambda msg: self.driving_control.update_vehicle_state(
-            msg_to_position(msg), msg_to_velocity(msg))
+        msg_to_velocity_and_time = RosMessagesAdapter.message_to_vehicle_velocity_and_timestamp
+        callback = lambda msg: self.vehicle.update_vehicle_state(
+            msg_to_position(msg), msg_to_velocity_and_time(msg))
         rospy.Subscriber(in_topic, OdometryMsg, callback)
 
     def _init_driving_signal_publisher(self):
@@ -106,7 +112,7 @@ def main():
 
     vehicle_name = "ego_vehicle"
     vehicle = Vehicle(vehicle_name)
-    publish_rate_hz = 10
+    publish_rate_hz = 100
     node = LocalPlannerNode(vehicle, publish_rate_hz)
     node.run_node()
 
