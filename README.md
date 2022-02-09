@@ -28,11 +28,10 @@ is not bound to a single map that was learnt by heart.
    [tutorial](https://github.com/ll7/paf21-1/wiki/Development-Machine-Setup-(NVIDIA-Docker)).
    It assists you at installing Docker with GPU support.
 2. Clone this GitHub repository, e.g. use '*git clone https://github.com/ll7/paf21-1*'
-3. Next, build all components required to run self-driving car scenarios, see [docs](./components/README.md).
-4. Finally, go to one of the scenarios (e.g. the [default scenario](./scenarios/default_scenario))
-   and launch it with docker-compose.
+3. Next, build all components required and run default scenario with "./launch.sh", 
+4. See [docs](./components/README.md) if you are interested how to build manually. 
 
-Running steps 2-4 could look something like this (see the README files for further information):
+Running steps 2-3 could look something like this (see the README files for further information):
 
 ```sh
 # clone the GitHub repo
@@ -63,8 +62,11 @@ the exact same scenario over and over again on various PCs.
 
 See the [wiki](https://github.com/ll7/paf21-1/wiki/Technical-Architecture-Approach) for further information.
 
-## AI Training
-TODO: add some information on how to train the AI components
+### Imgs
+Contains all images and models we used to develop  
 
-## License
-TODO: think of an appropriate license, e.g. MIT license
+### launch.sh 
+Executable for build and run our project. 
+
+### shutdown.sh
+Executable to shut down all docker container and save all logs. 

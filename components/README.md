@@ -38,11 +38,11 @@ The CARLA simulation involves following components:
 - **CARLA ROS bridge**: interfaces for information exchange between CARLA and ROS
   - **Scenario Runner**: launches and monitors well-defined scenarios
   - **CARLA RVIZ**: spectates the remote-controlled car and its sensors / actuators
-
+  
 ## Driving Components (ROS)
 The components for driving are the following:
-- **Global Planner**: serves navigation tasks based on map data
-- **Perception**: preprocesses sensor data into high-level driving information
+- **Global Planner**: serves navigation tasks based on map data [Details](https://github.com/ll7/paf21-1/wiki/Global-Planner)
+- **Perception**: preprocesses sensor data into high-level driving information [Details](https://github.com/ll7/paf21-1/wiki/Perception)
   - **Traffic Light Detection**: evaluates traffic lights captured by cameras
-- **Local Planner**: serves local decision-making tasks and amplifies the route based on sensor data
+- **Local Planner**: serves local decision-making tasks and amplifies the route based on sensor data [Details](https://github.com/ll7/paf21-1/wiki/Local-Planner)
   - **Vehicle Controller**: transforms the planned trajectory into actionable remote-control signals
