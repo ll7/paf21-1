@@ -1,7 +1,6 @@
 """A route planner based on map and sensor data"""
 
-import math
-from math import dist
+from math import dist, pi
 from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
 import numpy as np
@@ -89,7 +88,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
             vec_car = points_to_vector(self.vehicle.pos, next_wp)
             angle = angle_between_vectors(vec_route, vec_car)
 
-            is_wp_in_front_of_car = abs(angle) < 0.5 * math.pi
+            is_wp_in_front_of_car = abs(angle) < 0.5 * pi
             is_last_wp_of_route = self.next_wp_id == len(route) - 1
             if is_wp_in_front_of_car or is_last_wp_of_route:
                 break
