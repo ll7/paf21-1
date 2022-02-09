@@ -3,13 +3,13 @@
 from typing import Tuple, List
 from math import dist as euclid_dist
 
-# from perception.object_detection.object_info import ObjectInfo
 import numpy as np
 
-from object_info import ObjectInfo
+from perception.object_detection.object_info import ObjectInfo
 
 
 class ObjectTracker:
+    """Represents an object tracker that works on the basis of the euclidean distance."""
     def __init__(self):
         self.object_infos: List[ObjectInfo] = []
         self.id_count = 0
@@ -20,12 +20,12 @@ class ObjectTracker:
         obj_infos = []
         for point, object_class in zip(points, object_classes):
             point = (point[0], point[1])
-            obj_infos.append(self._find_nearest_object(point, object_class))
+            obj_infos.append(self.find_nearest_object(point, object_class))
 
         self.object_infos = obj_infos
         return obj_infos
 
-    def _find_nearest_object(self, point: Tuple[float, float], object_class: str) -> ObjectInfo:
+    def find_nearest_object(self, point: Tuple[float, float], object_class: str) -> ObjectInfo:
         """Return the object info of the nearest saved centroid."""
         same_object_detected = False
         nearest_point_id = -1
