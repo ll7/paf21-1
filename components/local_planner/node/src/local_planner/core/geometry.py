@@ -91,7 +91,7 @@ def approx_curvature_radius(p_start: Tuple[float, float],
 
 
 def find_curvature(waypoints : List[Tuple[float, float]]) -> List[Tuple[float, float]]:
-    """Find the curvature using assumptions that it has triangle shape"""
+    """Find the curvature using assumptions that it has triangular shape"""
 
     # if we move on x-axis, mirror the points
     inverted = False
@@ -102,7 +102,7 @@ def find_curvature(waypoints : List[Tuple[float, float]]) -> List[Tuple[float, f
     # search for the start of  the curvature 
     triangle = [waypoints[0]]
     for i in range(len(waypoints) - 1):
-        if abs(abs(waypoints[0][0]) - abs(waypoints[i][0])) > 2:
+        if abs(abs(waypoints[0][0]) - abs(waypoints[i][0])) > 1:
             triangle.insert(1, waypoints[i])
             break
 

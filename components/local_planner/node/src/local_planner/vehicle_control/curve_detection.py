@@ -43,6 +43,7 @@ class CurveDetection:
         """Scans the route waypoints for the next curve ahead and return the start / end index of the curve 
             (or None if there's no curve)"""
         
+        print("Wapoints : ", wps)
         curvature = geometry.find_curvature(wps)
         #print("curvature : ", curvature)
         if len(curvature) == 3:
@@ -55,7 +56,7 @@ class CurveDetection:
     def _curve_target_speed(wps_curve: List[Tuple[float, float]]) -> float:
         """ Determine the max. speed possible to take the given curve"""
         print('Len of Curve : {}, curve speed: {}'.format(len(wps_curve), sqrt(len(wps_curve))))
-        if sqrt(len(wps_curve)) >= 5:
+        if sqrt(len(wps_curve)) >= 10:
             return sqrt(len(wps_curve))
         else:
-            return 3
+            return 4
