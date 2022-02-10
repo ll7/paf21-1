@@ -2,8 +2,8 @@
 
 from dataclasses import dataclass
 from typing import List, Tuple
-from math import dist as euclid_dist
-
+from math import dist as euclid_dist, sqrt
+from local_planner.core import geometry
 
 @dataclass
 class CurveObservation:
@@ -40,13 +40,22 @@ class CurveDetection:
 
     @staticmethod
     def _find_next_curve_bounds(wps: List[Tuple[float, float]]) -> Tuple[int, int] or None:
-        # scan route waypoints for the next curve ahead
-        # -> return the start / end index of the curve (or some default values if there's no curve)
-        # TODO: @Pavlo, implement logic here ...
-        pass
+        """Scans the route waypoints for the next curve ahead and return the start / end index of the curve 
+            (or None if there's no curve)"""
+        
+        curvature = geometry.find_curvature(wps)
+        #print("curvature : ", curvature)
+        if len(curvature) == 3:
+            print("Curvature detected. Returning start and end coords : ",  wps.index(curvature[1]),  wps.index(curvature[2]))
+            return (wps.index(curvature[1]),  wps.index(curvature[2]))
+        else:
+            return None
 
     @staticmethod
     def _curve_target_speed(wps_curve: List[Tuple[float, float]]) -> float:
-        # determine the max. speed possible to take the given curve
-        # TODO: @Pavlo, implement logic here ...
-        pass
+        """ Determine the max. speed possible to take the given curve"""
+        print('Len of Curve : {}, curve speed: {}'.format(len(wps_curve), sqrt(len(wps_curve))))
+        if sqrt(len(wps_curve)) >= 5:
+            return sqrt(len(wps_curve))
+        else:
+            return 3

@@ -56,7 +56,6 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         targetspeed =  self.target_velocity_mps # if self.route_waypoints else 0.0
         signal = DrivingSignal(steering_angle, targetspeed)
         if self.vehicle.is_ready:
-            print((f"{self.vehicle.time},{self.vehicle.pos[0]},{self.vehicle.pos[1]},"
-                  f"{self.vehicle.orientation_rad},{self.vehicle.velocity_mps},"
-                  f"{targetspeed},{steering_angle}"))
+            print("Signal. Time : {}, pos[1]: {}, orientation_rad: {}, velocity: {}, targetspeed: {}, steering_angle: {}".
+            format(self.vehicle.time,self.vehicle.pos[1], self.vehicle.orientation_rad, self.vehicle.velocity_mps,targetspeed,steering_angle))
         return signal
