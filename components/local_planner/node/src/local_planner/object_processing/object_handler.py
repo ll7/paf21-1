@@ -1,9 +1,10 @@
 """Represents a handler for the detected objects."""
 
-from math import dist, pi
+from math import pi, sqrt
 from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
 
+import numpy as np
 from local_planner.object_processing.object_meta import ObjectMeta
 from local_planner.core.geometry import norm_angle, rotate_vector
 from local_planner.state_machine import SpeedObservation, ManeuverObservation
@@ -16,6 +17,7 @@ class ObjectHandler:
     delta_time: float = 0.1
     vehicle_pos: Tuple[float, float] = None
     vehicle_rad: float = 0.0
+    num_predict: int = int(2.0 / delta_time)
 
     def get_speed_observation(self, local_route: List[Tuple[float, float]]) -> SpeedObservation:
         """Retrieve the speed observation."""
@@ -43,36 +45,40 @@ class ObjectHandler:
 
     def _detect_vehicle_in_lane(self, local_route: List[Tuple[float, float]]) -> SpeedObservation:
         """Detect a vehicle in the same direction."""
-        # cache the route to avoid concurrency bugs
+        # cache the objects to avoid concurrency bugs
         objects = self.objects.copy()
 
         spd_obs = SpeedObservation()
-        for _, obj in objects.items():
-            last_obj_pos = obj.trajectory[-1]
-            distances = []
+        for obj_id, obj in objects.items():
+            obj_positions = [obj.trajectory[-1]]
+            obj_positions += objects[obj_id].kalman_filter.predict_points(self.num_predict)
+
             for point in local_route:
-                # ToDo: Do this for every predicted position of the object
-                distance = dist(last_obj_pos, point)
-                distances.append(distance)
-                if distance > 2.0:
+                distance = ObjectHandler._closest_point(point, obj_positions, threshold=2.0)
+                if distance is None:
                     continue
 
                 # only apply the most relevant object
-                distance = dist(self.vehicle_pos, last_obj_pos)
+                distance = ObjectHandler._cumulated_dist(self.vehicle_pos, point)
                 if distance < spd_obs.dist_next_obstacle_m:
                     spd_obs.is_trajectory_free = False
                     spd_obs.dist_next_obstacle_m = distance
                     spd_obs.obj_speed_ms = obj.velocity
-
         return spd_obs
 
-    def _predict_obj_movement(self, obj_id: int, predict_sec: float) -> List[Tuple[float, float]]:
-        """Predict the object movement for a given time horizon."""
-        iterations = int(predict_sec / self.delta_time)
-        predicted = [self.objects[obj_id].kalman_filter.last_prediction]
-        for i in range(iterations):
-            predicted.append(self.objects[obj_id].kalman_filter.predict(predicted[i]))
-        return predicted
+    @staticmethod
+    def _closest_point(point, points, threshold):
+        threshold = threshold ** 2
+        # calculate square distance
+        distances = np.sum((np.asarray(points) - np.array(point))**2, axis=1)
+        for distance in distances:
+            if distance <= threshold:
+                return sqrt(distance)
+        return None
+
+    @staticmethod
+    def _cumulated_dist(veh_pos: Tuple[float, float], route_pos: Tuple[float, float]):
+        return abs(veh_pos[0] - route_pos[0]) + abs(veh_pos[1] - route_pos[1])
 
     def _convert_relative_to_world(self, coordinate: Tuple[float, float]) -> Tuple[float, float]:
         """Converts relative coordinates to world coordinates"""
