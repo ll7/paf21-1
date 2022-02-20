@@ -14,11 +14,11 @@ class ObjectMeta:
     obj_class: str
     trajectory: List[Tuple[float, float]]
     velocity: float = 0.0
-    kalman_filter: KalmanFilter = KalmanFilter(delta_time=0.1)
+    kalman_filter: KalmanFilter = KalmanFilter()
 
     def update_object_meta(self, position: Tuple[float, float], delta_time: float):
         """Update the object meta with a new position"""
         last_position = self.trajectory[-1]
         self.trajectory.append(position)
         self.velocity = dist(position, last_position) / delta_time
-        self.kalman_filter.predict(position)
+        self.kalman_filter.correct(position)
