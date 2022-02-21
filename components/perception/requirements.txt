@@ -8,3 +8,4 @@ tensorflow_datasets==4.4.0
 # scikit-learn
 # tqdm
 matplotlib
+jenkspy
