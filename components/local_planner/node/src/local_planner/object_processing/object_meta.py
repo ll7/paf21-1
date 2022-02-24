@@ -20,5 +20,7 @@ class ObjectMeta:
         """Update the object meta with a new position"""
         last_position = self.trajectory[-1]
         self.trajectory.append(position)
+        if len(self.trajectory) > 10:
+            self.trajectory = self.trajectory[-10:]
         self.velocity = dist(position, last_position) / delta_time
         self.kalman_filter.correct(position)
