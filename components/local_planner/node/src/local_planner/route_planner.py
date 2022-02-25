@@ -43,7 +43,7 @@ class TrajectoryPlanner:  # pylint: disable=too-many-locals
         """Update the global route to follow"""
 
         print(f"update global route ({len(waypoints)} points): {waypoints}")
-        print("time,veh_x,vehicle_y,vehicle_orient,vehicle_vel,signal_vel,signal_steer")
+        # print("time,veh_x,vehicle_y,vehicle_orient,vehicle_vel,signal_vel,signal_steer")
 
         self.global_route = waypoints
         if len(self.global_route) < 2:
