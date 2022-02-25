@@ -94,48 +94,9 @@ def approx_curvature_radius(p_start: Tuple[float, float],
     tri_area = ((p_middle[0] - p_start[0]) * (p_end[1] - p_start[1]) - \
                 (p_end[0] - p_start[0]) * (p_middle[1] - p_start[1])) / 2.0
 
-    menger = (4 * tri_area) / (tri_len_a * tri_len_b * tri_len_c)
+    menger = (4 * tri_area) / (tri_len_a * tri_len_b * tri_len_c + epsilon)
     radius = abs(1.0 / (menger + epsilon))
     return radius
-
-
-def find_curvature(waypoints : List[Tuple[float, float]]) -> List[Tuple[float, float]]:
-    """Find the curvature using assumptions that it has triangular shape"""
-
-    # if we move on x-axis, mirror the points
-    inverted = False
-    if abs(abs(waypoints[0][0]) - abs(waypoints[1][0])) > 1:
-        waypoints = [(wp[1], wp[0]) for wp in waypoints]
-        inverted = True
-
-    # search for the start of  the curvature 
-    triangle = [waypoints[0]]
-    for i in range(len(waypoints) - 1):
-        if abs(abs(waypoints[0][0]) - abs(waypoints[i][0])) > 1:
-            triangle.insert(1, waypoints[i])
-            break
-
-    # if it's curvature, then determine triangle / search for the end of the curvature 
-    if len(triangle) == 2:
-        curve_start_ind = waypoints.index(triangle[1])
-        for i in range(curve_start_ind, len(waypoints) - 2):
-            if abs( abs(waypoints[curve_start_ind] [1]) - abs(waypoints[i+1][1]) ) > 2:
-                triangle.insert(2, waypoints[i+1])
-                break
-    
-    if inverted:
-        triangle = [(tr[1], tr[0]) for tr in triangle]
-
-    return triangle
-
-def angle_direction(waypoints : List[Tuple[float, float]]) -> float:
-    """Find the angle direction using waypoints"""
-    triangle = find_curvature(waypoints)
-    if len(triangle) == 3:
-        angle_between_vec = angle_triangle(triangle[0], triangle[1], triangle[2])
-        return angle_between_vec
-    else:
-        return 0.0
 
 
 def angle_between_vectors(vec_1: Tuple[float, float],
@@ -153,3 +114,41 @@ def angle_triangle(p_a: Tuple[float, float],
     vec_ac = points_to_vector(p_a, p_c)
     return angle_between_vectors(vec_ab, vec_ac)
 
+
+# def find_curvature(waypoints : List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+#     """Find the curvature using assumptions that it has triangular shape"""
+
+#     # if we move on x-axis, mirror the points
+#     inverted = False
+#     if abs(abs(waypoints[0][0]) - abs(waypoints[1][0])) > 1:
+#         waypoints = [(wp[1], wp[0]) for wp in waypoints]
+#         inverted = True
+
+#     # search for the start of  the curvature 
+#     triangle = [waypoints[0]]
+#     for i in range(len(waypoints) - 1):
+#         if abs(abs(waypoints[0][0]) - abs(waypoints[i][0])) > 1:
+#             triangle.insert(1, waypoints[i])
+#             break
+
+#     # if it's curvature, then determine triangle / search for the end of the curvature 
+#     if len(triangle) == 2:
+#         curve_start_ind = waypoints.index(triangle[1])
+#         for i in range(curve_start_ind, len(waypoints) - 2):
+#             if abs( abs(waypoints[curve_start_ind] [1]) - abs(waypoints[i+1][1]) ) > 2:
+#                 triangle.insert(2, waypoints[i+1])
+#                 break
+    
+#     if inverted:
+#         triangle = [(tr[1], tr[0]) for tr in triangle]
+
+#     return triangle
+
+# def angle_direction(waypoints : List[Tuple[float, float]]) -> float:
+#     """Find the angle direction using waypoints"""
+#     triangle = find_curvature(waypoints)
+#     if len(triangle) == 3:
+#         angle_between_vec = angle_triangle(triangle[0], triangle[1], triangle[2])
+#         return angle_between_vec
+#     else:
+#         return 0.0
