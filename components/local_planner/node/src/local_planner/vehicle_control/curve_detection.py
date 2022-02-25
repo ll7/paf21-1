@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import List, Tuple
 from math import dist as euclid_dist, sqrt
-from local_planner.core import geometry
+from local_planner.core.geometry import approx_curvature_radius
 
 @dataclass
 class CurveObservation:
@@ -40,23 +40,32 @@ class CurveDetection:
 
     @staticmethod
     def _find_next_curve_bounds(wps: List[Tuple[float, float]]) -> Tuple[int, int] or None:
-        """Scans the route waypoints for the next curve ahead and return the start / end index of the curve 
-            (or None if there's no curve)"""
-        
-        print("Wapoints : ", wps)
-        curvature = geometry.find_curvature(wps)
-        #print("curvature : ", curvature)
-        if len(curvature) == 3:
-            print("Curvature detected. Returning start and end coords : ",  wps.index(curvature[1]),  wps.index(curvature[2]))
-            return (wps.index(curvature[1]),  wps.index(curvature[2]))
-        else:
+        """Scans the route waypoints for the next curve ahead and return
+        the start / end index of the curve (or None if there's no curve)"""
+
+        radius_threshold = 50
+
+        if len(wps) < 7:
             return None
+
+        ids = range(len(wps) - 7)
+        radiuses = iter(map(lambda i: (approx_curvature_radius(wps[i], wps[i+3], wps[i+6]), i), ids))
+        start_id = next(filter(lambda r: r[0] < radius_threshold, radiuses), None)
+        end_id = next(filter(lambda r: r[0] > radius_threshold, radiuses), None)
+
+        return (start_id[1], end_id[1]) if start_id and end_id else None
 
     @staticmethod
     def _curve_target_speed(wps_curve: List[Tuple[float, float]]) -> float:
-        """ Determine the max. speed possible to take the given curve"""
-        print('Len of Curve : {}, curve speed: {}'.format(len(wps_curve), sqrt(len(wps_curve))))
-        if sqrt(len(wps_curve)) >= 10:
-            return sqrt(len(wps_curve))
-        else:
-            return 4
+        """ Determine the max. speed possible to drive the given curvature
+        using a formula that approximates the car's friction given the radius."""
+
+        friction_coeff = 0.8
+        gravity_accel = 9.81
+
+        p1, p2, p3 = wps_curve[0], wps_curve[len(wps_curve) // 2], wps_curve[-1]
+        radius = approx_curvature_radius(p1, p2, p3)
+        max_speed = sqrt(friction_coeff * gravity_accel * radius)
+
+        print(f"radius: {radius}, max speed: {max_speed}")
+        return max_speed
