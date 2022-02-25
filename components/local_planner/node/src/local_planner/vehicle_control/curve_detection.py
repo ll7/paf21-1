@@ -53,6 +53,9 @@ class CurveDetection:
         start_id = next(filter(lambda r: r[0] < radius_threshold, radiuses), None)
         end_id = next(filter(lambda r: r[0] > radius_threshold, radiuses), None)
 
+        if start_id and end_id:
+            print(f'curve detected: {wps[start_id[1]:end_id[1]+1]}')
+
         return (start_id[1], end_id[1]) if start_id and end_id else None
 
     @staticmethod
