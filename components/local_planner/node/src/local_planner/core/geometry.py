@@ -2,6 +2,7 @@
 
 from math import dist as euclid_dist, atan2, pi, sqrt, sin, cos
 from typing import Tuple, List
+import numpy as np
 
 
 def points_to_vector(p_1: Tuple[float, float], p_2: Tuple[float, float]) -> Tuple[float, float]:
@@ -63,6 +64,14 @@ def rotate_vector(vector: Tuple[float, float], angle_rad: float) -> Tuple[float,
     """Rotate the given vector by an angle"""
     return (cos(angle_rad) * vector[0] - sin(angle_rad) * vector[1],
             sin(angle_rad) * vector[0] + cos(angle_rad) * vector[1])
+
+
+def rotate_vectors(vectors: np.ndarray, angle_rad: float) -> np.ndarray:
+    """Rotate a set of vectors by a given angle (in radians).
+    The vectors are expected to be of shape (num_vectors, 2)."""
+    lin_transform = np.array([[cos(angle_rad), sin(angle_rad)],
+                              [-sin(angle_rad), cos(angle_rad)]])
+    return np.matmul(vectors, lin_transform)
 
 
 def unit_vector(orient_rad: float) -> Tuple[float, float]:
