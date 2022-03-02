@@ -48,20 +48,14 @@ class LocalPlannerNode:
 
         nav_thread = Thread(target=self.nav_service.run_infinite_driving)
         nav_thread.start()
-        # i: int = 0
 
         while not rospy.is_shutdown():
             local_route = self.route_planner.calculate_trajectory()
-            # i = i + 1
-            # print("step")
-            # print(i)
             self.speed_state_machine.update_state(self.route_planner.latest_speed_observation)
             velocity = self.speed_state_machine.get_target_speed()
             self.driving_control.update_route(local_route)
             self.driving_control.update_target_velocity(velocity)
             driving_signal = self.driving_control.next_signal()
-            # print("driving signal")
-            # print(driving_signal)
             msg = RosMessagesAdapter.signal_to_message(driving_signal)
             self.driving_signal_publisher.publish(msg)
             rate.sleep()
@@ -112,7 +106,7 @@ def main():
 
     vehicle_name = "ego_vehicle"
     vehicle = Vehicle(vehicle_name)
-    publish_rate_hz = 100
+    publish_rate_hz = 10
     node = LocalPlannerNode(vehicle, publish_rate_hz)
     node.run_node()
 

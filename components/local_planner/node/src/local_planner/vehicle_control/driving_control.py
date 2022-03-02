@@ -53,9 +53,10 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         vehicle follow the suggested ideal route"""
         # generate logs for each driving signal tick
         steering_angle = self.steer_control.compute_steering_angle(self.route_waypoints)
-        targetspeed =  self.target_velocity_mps # if self.route_waypoints else 0.0
-        signal = DrivingSignal(steering_angle, targetspeed)
+        target_speed = self.target_velocity_mps     # if self.route_waypoints else 0.0
+        signal = DrivingSignal(steering_angle, target_speed)
         if self.vehicle.is_ready:
-            print("Signal. Time : {}, pos[1]: {}, orientation_rad: {}, velocity: {}, targetspeed: {}, steering_angle: {}".
-            format(self.vehicle.time,self.vehicle.pos[1], self.vehicle.orientation_rad, self.vehicle.velocity_mps,targetspeed,steering_angle))
+            print((f"{self.vehicle.time},{self.vehicle.pos[0]},{self.vehicle.pos[1]},"
+                   f"{self.vehicle.orientation_rad},{self.vehicle.velocity_mps},"
+                   f"{target_speed},{steering_angle}"))
         return signal

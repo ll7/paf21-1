@@ -13,7 +13,7 @@ from sensor_msgs.msg import Imu as ImuMsg
 
 from local_planner.state_machine import TrafficLightInfo, TrafficLightPhase
 from local_planner.vehicle_control import DrivingSignal
-from local_planner.route_planner import ObjectInfo
+from local_planner.object_processing import ObjectMeta
 
 
 class RosMessagesAdapter:
@@ -27,7 +27,7 @@ class RosMessagesAdapter:
         return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
 
     @staticmethod
-    def json_message_to_object_info(msg: StringMsg) -> List[ObjectInfo]:
+    def json_message_to_object_info(msg: StringMsg) -> List[ObjectMeta]:
         """Convert a ROS message into a list of ObjectInfo"""
         obj = json.loads(msg.data)
         # print("object", obj)

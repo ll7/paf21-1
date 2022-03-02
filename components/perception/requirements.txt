@@ -5,6 +5,7 @@ opencv-python
 numpy==1.21.4
 tensorflow==2.7.0
 tensorflow_datasets==4.4.0
-scikit-learn
+# scikit-learn
 # tqdm
-# matplotlib
+matplotlib
+jenkspy

@@ -15,7 +15,7 @@ class ManeuverState(IntEnum):
 
 
 @dataclass
-class ManeuverObservation():
+class ManeuverObservation:
     """Represents context information used for maneuver state transitions."""
     actual_track: int = 1
     left_lane_free: bool = False
@@ -35,7 +35,6 @@ class ManeuverStateMachine:
     vehicle: Vehicle
     states: List[ManeuverState] = field(default_factory=lambda: list(ManeuverState))
     current_state: ManeuverState = ManeuverState.KEEP_LANE
-
 
     # hyper-params controlling the state machine's behavior (potentially trainable)
     distance_no_more_overtake_m: float = 100
