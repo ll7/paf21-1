@@ -5,6 +5,7 @@ from typing import List, Tuple
 from math import dist as euclid_dist, sqrt
 from local_planner.core.geometry import approx_curvature_radius
 
+
 @dataclass
 class CurveObservation:
     """Representing the next curve ahead"""
@@ -30,6 +31,9 @@ class CurveDetection:
         wps_until_curve = route_wps[:curve_start_id]
         wps_curve = route_wps[curve_start_id:curve_end_id]
 
+        print(f'num_points until curve: {len(wps_until_curve)}')
+        print(f'num_points of curve: {len(wps_curve)}')
+
         dist_until_curve = CurveDetection._route_dist(wps_until_curve)
         max_curve_speed = CurveDetection._curve_target_speed(wps_curve)
         return CurveObservation(dist_until_curve, max_curve_speed)
@@ -43,6 +47,7 @@ class CurveDetection:
         """Scans the route waypoints for the next curve ahead and return
         the start / end index of the curve (or None if there's no curve)"""
 
+        # this radius threshold is equal to a 90 deg curve that's ~80 meters long
         radius_threshold = 50
 
         if len(wps) < 7:
@@ -63,7 +68,7 @@ class CurveDetection:
         """ Determine the max. speed possible to drive the given curvature
         using a formula that approximates the car's friction given the radius."""
 
-        friction_coeff = 0.8
+        friction_coeff = 0.6
         gravity_accel = 9.81
 
         p1, p2, p3 = wps_curve[0], wps_curve[len(wps_curve) // 2], wps_curve[-1]
