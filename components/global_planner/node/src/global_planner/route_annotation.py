@@ -94,13 +94,14 @@ class RouteAnnotation:
         """Evaluate the path selected by the navigation algorithm
         regarding route metadata to annotate."""
 
-        path_sections: List[PathSection] = RouteAnnotation._norm_path(path, xodr_map.road_by_id)
+        road_by_id = lambda id: xodr_map.roads_by_id[id]
+        path_sections: List[PathSection] = RouteAnnotation._norm_path(path, road_by_id)
         traffic_lights: List[TrafficLight] = []
         speed_signs: List[TrafficSign] = []
         inital_speed = 50.0
 
         for i, section in enumerate(path_sections):
-            road = xodr_map.road_by_id(section.road_id)
+            road = xodr_map.roads_by_id[section.road_id]
 
             sec_traffic_lights = RouteAnnotation._filter_items(road.traffic_lights, section)
             sec_speed_signs = RouteAnnotation._filter_items(road.speed_signs, section)
@@ -134,7 +135,7 @@ class RouteAnnotation:
         return items
 
     @staticmethod
-    def _norm_path(path: List[str], road_by_id: Callable) -> List[PathSection]:
+    def _norm_path(path: List[str], road_by_id: Callable[[int], Road]) -> List[PathSection]:
         """Remove duplicates from the path and convert
         the path strings into a normalized structure"""
 
@@ -157,7 +158,7 @@ class RouteAnnotation:
 
             is_entering_new_section = road_id != last_road_id
             if is_entering_new_section:
-                road: Road = road_by_id(road_id)
+                road = road_by_id(road_id)
                 drive_reverse = is_road_end
                 norm_lane_id = abs(lane_id)
                 poss_lanes = RouteAnnotation._get_poss_lanes(road, drive_reverse)

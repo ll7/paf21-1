@@ -81,7 +81,7 @@ class RoadDetection:
                                xodr_map: XodrMap) -> List[Tuple[int, bool, Road]]:
         """Find the neighboring road sections related to the given position on the map"""
         neighbors = []
-        for road in xodr_map.lane_lets:
+        for road in xodr_map.roads_by_id.values():
             for index, geo in enumerate(road.geometries):
                 max_road_width = max(len(road.right_ids), len(road.left_ids)) * road.road_width
                 poly, poly2 = RoadDetection._create_polygons(geo, max_road_width)
@@ -206,18 +206,18 @@ class GlobalPlanner:
             is_final_section = road_id2 == -2
 
             if drive_road_from_start_to_end:
-                road_1 = xodr_map.road_by_id(road_id1)
+                road_1 = xodr_map.roads_by_id[road_id1]
                 interm_wps = GlobalPlanner._get_intermed_section_waypoints(sec_1, road_1)
                 route_waypoints += interm_wps
 
             elif is_initial_section:
                 route_waypoints.append(start_pos)
-                road = xodr_map.road_by_id(road_id2)
+                road = xodr_map.roads_by_id[road_id2]
                 displaced_points = GlobalPlanner._displace_points(road, sec_2, is_final=False)
                 route_waypoints.append(displaced_points)
 
             elif is_final_section:
-                road = xodr_map.road_by_id(road_id1)
+                road = xodr_map.roads_by_id[road_id1]
                 displaced_points = GlobalPlanner._displace_points(road, sec_1, is_final=True)
                 route_waypoints.append(displaced_points)
                 route_waypoints.append(end_pos)

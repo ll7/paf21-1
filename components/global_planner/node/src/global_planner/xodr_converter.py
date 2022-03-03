@@ -354,22 +354,16 @@ class Junction:
 @dataclass
 class XodrMap:
     """Represents the data of a xodr map."""
-    lane_lets: List[Road]
-    junctions: List[Junction]
+    roads_by_id: Dict[int, Road]
+    junctions_by_id: Dict[int, Junction]
     mapping: Dict[str, int]
     matrix: np.ndarray = None
-    _roads_dict: Dict[int, Road] = None
 
     def __post_init__(self):
-        if self.lane_lets is None:
-            self.lane_lets = []
-        self._roads_dict = {road.road_id: road for road in self.lane_lets}
+        if self.roads_by_id is None:
+            self.roads_by_id = {}
         if self.matrix is None:
             self.matrix = self._create_links()
-
-    def road_by_id(self, road_id: int) -> Road:
-        """Look up a road by id"""
-        return self._roads_dict[road_id]
 
     def _create_links(self):
         """Link geometry, predecessor and successor in the weighted matrix."""
@@ -382,10 +376,9 @@ class XodrMap:
 
     def _link_roads(self, matrix):
         """Link the geometries between each other."""
-        for road in self.lane_lets:
-            length = 0
-            for geometry in road.geometries:
-                length += geometry.length
+        for road_id in self.roads_by_id:
+            road = self.roads_by_id[road_id]
+            length = sum([g.length for g in road.geometries])
 
             for link in road.left_ids:
                 index_start = self.mapping[create_key(road.road_id, 0, link)]
@@ -397,18 +390,16 @@ class XodrMap:
                 index_end = self.mapping[create_key(road.road_id, 1, link)]
                 matrix[index_start][index_end] = length
 
-    def _junc_ids_entries(self, junction_id: int) -> List[Connection]:
-        """Get the list of indices to the corresponding junction id."""
-        for junction in self.junctions:
-            if junction.junction_id == junction_id:
-                return junction.connections
-        return []
-
     def _apply_junction_connection(self, road: Road, link: RoadLink, matrix: np.ndarray):
-        for connection in self._junc_ids_entries(link.road_id):
-            if connection.incoming_road != road.road_id:
-                continue
 
+        # TODO: map entering road sections to the rightmost lanes
+        #       e.g. when entering a highway, lane 1 should not map to the overtaking lane 1
+
+        connections = self.junctions_by_id[link.road_id].connections \
+            if link.road_id in self.junctions_by_id else []
+        connections = [c for c in connections if c.incoming_road != road.road_id]
+
+        for connection in connections:
             contact_incoming = 0 if link.link_type == LinkType.PRE else 1
             contact_connecting = 0 if connection.contact_point == 'start' else 1
 
@@ -422,7 +413,7 @@ class XodrMap:
 
     def _apply_road_connection(self, road: Road, link: RoadLink, matrix: np.ndarray):
         # for lane_link in road.right_ids:
-        conn_road = self.road_by_id(link.road_id)
+        conn_road = self.roads_by_id[link.road_id]
         conn_ids = conn_road.right_ids if link.sign == 1 else conn_road.left_ids
         index_links = self._get_connected_lane_ids(road.road_id, road.right_ids, link, conn_ids)
         for index_link, index_road in index_links:
@@ -470,7 +461,8 @@ class XodrMap:
 
     def _link_pre_suc(self, matrix: np.ndarray):
         """Link the predecessor and successor in the weighted matrix."""
-        for road in self.lane_lets:
+        for road_id in self.roads_by_id:
+            road = self.roads_by_id[road_id]
             links = [road.pre, road.suc]
             for link in links:
                 if link is None:
@@ -492,24 +484,26 @@ class XODRConverter:
         root = eTree.parse(filepath).getroot()
 
         # parse all roads
-        lane_lets = [Road(road) for road in root.findall('road')]
-        lane_lets = [road for road in lane_lets if road.has_driving_lanes]
+        lanelets = [Road(road) for road in root.findall('road')]
+        lanelets = [road for road in lanelets if road.has_driving_lanes]
 
         # TODO: check if those lanelets are relevant to driving
-        road_ids = set([r.road_id for r in lane_lets])
-        for road in lane_lets:
+        road_ids = set([r.road_id for r in lanelets])
+        for road in lanelets:
             if road.suc.road_id not in road_ids:
                 road.suc = None
             if road.pre.road_id not in road_ids:
                 road.pre = None
 
         # create the road mapping
-        mapping = XODRConverter._create_road_mapping(lane_lets)
+        mapping = XODRConverter._create_road_mapping(lanelets)
 
-        road_ids = [road.road_id for road in lane_lets]
+        road_ids = [road.road_id for road in lanelets]
         junctions = [Junction(j_xml, mapping, road_ids) for j_xml in root.findall('junction')]
 
-        return XodrMap(lane_lets, junctions, mapping)
+        lanelets = {r.road_id: r for r in lanelets}
+        junctions = {j.junction_id:j for j in junctions}
+        return XodrMap(lanelets, junctions, mapping)
 
     @staticmethod
     def _create_road_mapping(lane_lets: List[Road]) -> Dict[str, int]:
