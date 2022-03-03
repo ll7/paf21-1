@@ -65,6 +65,35 @@ class ObjectHandler:
                     spd_obs.obj_speed_ms = obj.velocity
         return spd_obs
 
+    def plan_route_around_objects(self, local_route: List[Tuple[float, float]]):
+        #calculates a route at the left side of the obstacle
+        objects = self.objects.copy()
+        new_route = []
+        for obj_id, obj in objects.items():
+            obj_positions = [obj.trajectory[-1]]
+            if len(obj.trajectory) > 4:
+                obj_positions += objects[obj_id].kalman_filter.predict_points(self.num_predict)
+
+            for point in local_route:
+                distance = ObjectHandler._closest_point(point, obj_positions, threshold=2)
+
+                if distance is None:
+                    continue
+                else:
+                    point = None
+
+    @staticmethod
+    def find_blocked_points(route, points, threshold):
+        threshold = threshold ** 2
+        # calculate square distance
+        ids = []
+        id = 0
+        for point in route:
+            for object in points:
+                distance = np.sum((np.array(point) - np.array(object)) ** 2)
+                if distance <= threshold:
+                    ids.append(id)
+
     @staticmethod
     def _closest_point(point, points, threshold):
         threshold = threshold ** 2

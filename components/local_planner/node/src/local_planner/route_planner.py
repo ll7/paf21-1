@@ -87,7 +87,11 @@ class TrajectoryPlanner:
             # print(f'reached route wp {next_wp}, angle={abs(angle)}')
 
         bound = min(self.prev_wp_id + self.length_route, len(route))
-        return route[self.prev_wp_id:bound]
+        temp_route = route[self.prev_wp_id:bound]
+        self.check_overtake(temp_route)
+        return temp_route
+
+    def check_overtake(self, route):
 
     @property
     def latest_speed_observation(self) -> SpeedObservation:
