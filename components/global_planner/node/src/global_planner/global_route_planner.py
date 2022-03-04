@@ -108,7 +108,7 @@ class RoadDetection:
             # put the bounds together to retrieve polygon boxes
             # note: for a road with only one geometry this defaults to a rectangle
             polygon_right = Polygon(right_bounds + list(reversed(middle)))
-            polygon_all = Polygon(right_bounds + list(reversed(middle)))
+            polygon_all = Polygon(right_bounds + list(reversed(left_bounds)))
 
             is_within_outer = polygon_all.contains(Point(pos))
             if not is_within_outer:
