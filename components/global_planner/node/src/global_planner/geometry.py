@@ -1,7 +1,7 @@
 """A module providing vector and bounding box functionality"""
 
 from typing import Tuple, List
-from math import sin, cos, pi, sqrt
+from math import sin, cos, pi, sqrt, atan2
 
 
 def points_to_vector(p_1: Tuple[float, float], p_2: Tuple[float, float]) -> Tuple[float, float]:
@@ -38,7 +38,28 @@ def scale_vector(vector: Tuple[float, float], new_len: float) -> Tuple[float, fl
     return scaled_vector
 
 
-def orthogonal_offset(start_point: Tuple[float, float], end_point: Tuple[float, float],
+def unit_vector(angle_rad: float) -> Tuple[float, float]:
+    """Retrieve the unit vector representing the given direction."""
+    return (cos(angle_rad), sin(angle_rad))
+
+
+def unit_vector(vector: Tuple[float, float]) -> Tuple[float, float]:
+    """Retrieve the unit vector pointing to the same direction as the given vector."""
+    return scale_vector(vector, 1)
+
+
+def vec2dir(start: Tuple[float, float], end: Tuple[float, float]) -> float:
+    """Retrieve the given vector's direction in radians."""
+    vec_dir = sub_vector(end, start)
+    return atan2(vec_dir[1], vec_dir[0])
+
+
+def vec2dir(vector: Tuple[float, float]) -> float:
+    """Retrieve the given vector's direction in radians."""
+    return atan2(vector[1], vector[0])
+
+
+def orth_offset_right(start_point: Tuple[float, float], end_point: Tuple[float, float],
                       offset: float) -> Tuple[float, float]:
     """Calculate the orthogonal offset according the road width in right direction"""
     vector = points_to_vector(start_point, end_point)
@@ -46,10 +67,16 @@ def orthogonal_offset(start_point: Tuple[float, float], end_point: Tuple[float, 
     return rotate_vector(scaled_vector, -pi / 2)
 
 
+def orth_offset_left(start_point: Tuple[float, float], end_point: Tuple[float, float],
+                      offset: float) -> Tuple[float, float]:
+    """Calculate the orthogonal offset according the road width in left direction"""
+    return sub_vector((0, 0), orth_offset_right(start_point, end_point, offset))
+
+
 def bounding_box(start_point: Tuple[float, float], end_point: Tuple[float, float],
                  road_width: float) -> List[Tuple[float, float]]:
     """Calculate a bounding box around the start and end point with a given offset to the side."""
-    offset = orthogonal_offset(start_point, end_point, road_width)
+    offset = orth_offset_right(start_point, end_point, road_width)
 
     # using the point symmetry (relative to origin) to build the points in 180 degree offset
     return [add_vector(start_point, offset),

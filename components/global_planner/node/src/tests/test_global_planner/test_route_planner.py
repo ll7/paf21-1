@@ -16,10 +16,12 @@ def load_town_03():
     xodr_map = XODRConverter.read_xodr(xodr_path)
     return xodr_map
 
+
 def load_town_04():
     xodr_path = "/app/res/xodr/Town04.xodr"
     xodr_map = XODRConverter.read_xodr(xodr_path)
     return xodr_map
+
 
 def test_path_finding():
     xodr_map = load_town_01()
@@ -31,31 +33,29 @@ def test_path_finding():
                     '2_1_1', '2_0_1', '61_1_1', '61_0_1', '1_1_1', '1_0_1', '27_1_1', '27_0_1',
                     '16_0_-1', '16_1_-1', '253_0_-1', '253_1_-1', '10_1_1', '-2_0_0']
 
-#
+
 # def test_path_finding_multilane_town_3():
 #     xodr_map = load_town_03()
 #     start = (13.72380256652832, -18.817155838012695)
 #     end = (-88.3062744140625, -21.53060531616211)
 #     path = GlobalPlanner.get_shortest_path(start, end, xodr_map)
-#
+
 #     print(path)
 #     assert False
 #     # assert path == ['-1_0_0', '15_0_1', '13_0_-1', '13_1_-1', '3_1_1', '3_0_1', '117_1_1', '117_0_1',
 #     #                 '2_1_1', '2_0_1', '61_1_1', '61_0_1', '1_1_1', '1_0_1', '27_1_1', '27_0_1',
 #     #                 '16_0_-1', '16_1_-1', '253_0_-1', '253_1_-1', '10_1_1', '-2_0_0']
-#
 
 
-def test_path_finding_multilane_town_4():
-    xodr_map = load_town_04()
+# def test_path_finding_multilane_town_4():
+#     xodr_map = load_town_04()
 
-    start = (262.7838134765625, 118.74906158447266)
-    end  = (16.040634155273438, 170.54249572753906)
+#     start = (262.7838134765625, 118.74906158447266)
+#     end  = (16.040634155273438, 170.54249572753906)
 
-    path = GlobalPlanner.generate_waypoints(start, end, 0.0, xodr_map)
-
-    # print(path)
-    assert False
+#     path = GlobalPlanner.get_shortest_path(start, end, xodr_map)
+#     print(path)
+#     assert False
 
 
 def test_route_metadata():

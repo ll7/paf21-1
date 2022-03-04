@@ -1,6 +1,5 @@
 """A xodr converter based on xodr files."""
 from abc import ABC
-from math import sin, cos
 from enum import IntEnum
 from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
@@ -9,7 +8,8 @@ from xml.etree import ElementTree as eTree
 from xml.etree.ElementTree import Element
 import numpy as np
 
-from global_planner.geometry import points_to_vector, vector_len, scale_vector, add_vector
+from global_planner.geometry import unit_vector, points_to_vector, \
+    vector_len, scale_vector, add_vector, vec2dir
 
 
 def create_key(road: int, pos: int, link: int) -> str:
@@ -32,6 +32,11 @@ class Geometry:
     end_point: Tuple[float, float]
     length: float
 
+    @property
+    def direction(self):
+        """The direction the geometry is pointing towards."""
+        return vec2dir(self.start_point, self.end_point)
+
 
 class TrafficSignType(IntEnum):
     """Representing a traffic sign type"""
@@ -53,6 +58,8 @@ class TrafficSignal(ABC):
         self.name = node_xml.get('name')
         self.is_right_side = float(node_xml.get('t')) > 0
         dist_from_start = float(node_xml.get('s'))
+
+        # TODO: use geometries for distance calculations
         dist_from_end = vector_len(points_to_vector(road_start, road_end)) - dist_from_start
 
         self.pos = global_pos(road_start, road_end, dist_from_start)
@@ -295,8 +302,8 @@ class Road:
     @staticmethod
     def _calculate_end_point(start_point: Tuple[float, float], angle: float,
                              length: float) -> Tuple[float, float]:
-        return start_point[0] + cos(angle) * length, \
-               start_point[1] + sin(angle) * length
+        diff_vec = scale_vector(unit_vector(angle), length)
+        return add_vector(start_point, diff_vec)
 
 
 @dataclass
@@ -440,15 +447,15 @@ class XodrMap:
 
         diff = len(conn_lane_link_ids) - len(lane_link_ids)
         if diff > 0:
-            if len(lane_link_ids) == 0:
-                print(f'link {road_id} to {link.road_id} has no driving lanes. should never happen')
-                print(f'{lane_link_ids}, {conn_lane_link_ids}')
+            # if len(lane_link_ids) == 0:
+            #     print(f'link {road_id} to {link.road_id} has no driving lanes. should never happen')
+            #     print(f'{lane_link_ids}, {conn_lane_link_ids}')
             fill_ids = [lane_link_ids[-1] for _ in range(abs(diff))]
             lane_link_ids.extend(fill_ids)
         elif diff < 0:
-            if len(conn_lane_link_ids) == 0:
-                print(f'link {road_id} to {link.road_id} has no driving lanes. should never happen')
-                print(f'{lane_link_ids}, {conn_lane_link_ids}')
+            # if len(conn_lane_link_ids) == 0:
+            #     print(f'link {road_id} to {link.road_id} has no driving lanes. should never happen')
+            #     print(f'{lane_link_ids}, {conn_lane_link_ids}')
             fill_ids = [conn_lane_link_ids[-1] for _ in range(abs(diff))]
             conn_lane_link_ids.extend(fill_ids)
 

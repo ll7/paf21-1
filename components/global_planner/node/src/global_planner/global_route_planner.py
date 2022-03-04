@@ -1,7 +1,7 @@
 """A global route planner based on map and hmi data."""
 
 from dataclasses import dataclass
-from math import floor, dist as euclid_dist
+from math import floor, dist as euclid_dist, pi
 from typing import Tuple, List
 
 import numpy as np
@@ -9,7 +9,8 @@ from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
 from global_planner.xodr_converter import XodrMap, Geometry, Road, create_key
-from global_planner.geometry import bounding_box
+from global_planner.geometry import add_vector, bounding_box, orth_offset_right, orth_offset_left, \
+    points_to_vector, scale_vector, unit_vector, vec2dir
 from global_planner.route_interpolation import RouteInterpolation
 from global_planner.route_annotation import AnnRouteWaypoint, RouteAnnotation
 
@@ -81,25 +82,69 @@ class RoadDetection:
                                xodr_map: XodrMap) -> List[Tuple[int, bool, Road]]:
         """Find the neighboring road sections related to the given position on the map"""
         neighbors = []
+
+        # TODO: figure out something more intelligent than looping over all roads
+        #       e.g. only check nearby roads (euclid distance) or perform some hashing, etc.
         for road in xodr_map.roads_by_id.values():
-            for index, geo in enumerate(road.geometries):
-                max_road_width = max(len(road.right_ids), len(road.left_ids)) * road.road_width
-                poly, poly2 = RoadDetection._create_polygons(geo, max_road_width)
-                is_within_outer = poly.contains(Point(pos))
 
-                if not is_within_outer:
-                    continue
+            if not road.geometries:
+                print('road without geometries, this should never happen!')
+                continue
 
-                is_right_road_side = poly2.contains(Point(pos))
-                is_not_on_onesided_lane_right = is_right_road_side and not road.right_ids
-                is_not_on_onesided_lane_left = not is_right_road_side and not road.left_ids
+            # compute offset vectors for curved roads
+            offsets_vectors = RoadDetection._compute_offset_vectors(road)
 
-                if is_not_on_onesided_lane_right or is_not_on_onesided_lane_left:
-                    continue
+            # compute right / left bounds of the polygon
+            right_bounds = [add_vector(geo.start_point, offsets_vectors[id][0])
+                            for id, geo in enumerate(road.geometries)]
+            left_bounds = [add_vector(geo.start_point, offsets_vectors[id][1])
+                           for id, geo in enumerate(road.geometries)]
+            right_bounds.append(add_vector(road.geometries[-1].end_point, offsets_vectors[-1][0]))
+            left_bounds.append(add_vector(road.geometries[-1].end_point, offsets_vectors[-1][1]))
+            middle = [geo.start_point for geo in road.geometries] + [road.geometries[-1].end_point]
 
-                neighbors.append((index, is_right_road_side, road))
-                print(f'Find roads {road.road_id} for point {pos}')
+            # TODO: refine this logic to retrieve the polygons for each lane -> identify lane_id
+
+            # put the bounds together to retrieve polygon boxes
+            # note: for a road with only one geometry this defaults to a rectangle
+            polygon_right = Polygon(right_bounds + list(reversed(middle)))
+            polygon_all = Polygon(right_bounds + list(reversed(middle)))
+
+            is_within_outer = polygon_all.contains(Point(pos))
+            if not is_within_outer:
+                continue
+
+            is_right_road_side = polygon_right.contains(Point(pos))
+            is_not_on_onesided_lane_right = is_right_road_side and not road.right_ids
+            is_not_on_onesided_lane_left = not is_right_road_side and not road.left_ids
+
+            if is_not_on_onesided_lane_right or is_not_on_onesided_lane_left:
+                continue
+
         return neighbors
+
+    @staticmethod
+    def _compute_offset_vectors(road: Road):
+        # compute intermediate offset vectors for curved road sections
+        offsets_vectors = []
+        if len(road.geometries) > 1:
+            geo_pairs = zip(road.geometries[:-1], road.geometries[1:])
+            offsets_vectors = [RoadDetection._compute_offset_vectors(p[0], p[1], road)
+                                for p in geo_pairs]
+
+        # compute offset vectors for first / last geometry
+        width = road.road_width
+        start_0, end_0 = road.geometries[0].start_point, road.geometries[0].end_point
+        start_n, end_n = road.geometries[-1].start_point, road.geometries[-1].end_point
+        offsets_start = (orth_offset_right(start_0, end_0, len(road.right_ids) * width),
+                            orth_offset_left(start_0, end_0, len(road.left_ids) * width))
+        offsets_end = (orth_offset_right(start_n, end_n, len(road.right_ids) * width),
+                        orth_offset_left(start_n, end_n, len(road.left_ids) * width))
+
+        # put everything together
+        offsets_vectors.insert(0, offsets_start)
+        offsets_vectors.append(offsets_end)
+        return offsets_vectors
 
     @staticmethod
     def _create_polygons(geometry: Geometry, road_width: float) -> Tuple[Polygon, Polygon]:
@@ -109,8 +154,51 @@ class RoadDetection:
         points = bounding_box(start_point, end_point, road_width)
         point_1, point_2, point_3, point_4 = points
 
+        # create the polygon containing both sides
+        # and the polygon containing only the right side
         return (Polygon([point_1, point_2, point_3, point_4]),
                 Polygon([start_point, point_1, point_4, end_point]))
+
+    @staticmethod
+    def _compute_offset_vectors(geo_0: Geometry, geo_1: Geometry, road: Road) \
+                                    -> Tuple[Tuple[float, float], Tuple[float, float]]:
+        road_width = road.road_width
+        num_lanes_right = len(road.right_ids)
+        num_lanes_left = len(road.left_ids)
+
+        # directions of vectors, geo_0 pointing forward, geo_1 pointing backward
+        dir_0 = vec2dir(points_to_vector(geo_0.start_point, geo_0.end_point))
+        dir_1 = vec2dir(points_to_vector(geo_1.start_point, geo_0.end_point))
+
+        # halving line between vectors for right / left side
+        diff_angle = (dir_1 - dir_0) % (2 * pi)
+        offset_right = diff_angle / 2
+        offset_left = ((diff_angle - 2 * pi) % (2 * pi)) / 2
+        # TODO: check if this works stable for all directions
+
+        vec_right = scale_vector(unit_vector(dir_0 + offset_right), road_width * num_lanes_right)
+        vec_left = scale_vector(unit_vector(dir_0 + offset_left), road_width * num_lanes_left)
+
+        return vec_right, vec_left
+
+    @staticmethod
+    def _create_curved_polygons(geo_0: Geometry, geo_1: Geometry, road_width: float,
+                                num_lanes_right: int, num_lanes_left: int) -> Tuple[Polygon, Polygon]:
+        """Function to create a curved polygon between two geometries."""
+
+        
+
+
+
+        # start_point, end_point = geometry.start_point, geometry.end_point
+
+        # points = bounding_box(start_point, end_point, road_width)
+        # point_1, point_2, point_3, point_4 = points
+
+        # # create the polygon containing both sides
+        # # and the polygon containing only the right side
+        # return (Polygon([point_1, point_2, point_3, point_4]),
+        #         Polygon([start_point, point_1, point_4, end_point]))
 
 
 class AdjMatrixPrep:
