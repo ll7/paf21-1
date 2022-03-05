@@ -33,6 +33,8 @@ def rotate_vector(vector: Tuple[float, float], angle_rad: float) -> Tuple[float,
 def scale_vector(vector: Tuple[float, float], new_len: float) -> Tuple[float, float]:
     """Amplify the length of the given vector"""
     old_len = vector_len(vector)
+    if old_len == 0:
+        return (0, 0)
     scaled_vector = (vector[0] * new_len / old_len,
                      vector[1] * new_len / old_len)
     return scaled_vector
@@ -43,20 +45,10 @@ def unit_vector(angle_rad: float) -> Tuple[float, float]:
     return (cos(angle_rad), sin(angle_rad))
 
 
-def unit_vector(vector: Tuple[float, float]) -> Tuple[float, float]:
-    """Retrieve the unit vector pointing to the same direction as the given vector."""
-    return scale_vector(vector, 1)
-
-
 def vec2dir(start: Tuple[float, float], end: Tuple[float, float]) -> float:
     """Retrieve the given vector's direction in radians."""
     vec_dir = sub_vector(end, start)
     return atan2(vec_dir[1], vec_dir[0])
-
-
-def vec2dir(vector: Tuple[float, float]) -> float:
-    """Retrieve the given vector's direction in radians."""
-    return atan2(vector[1], vector[0])
 
 
 def orth_offset_right(start_point: Tuple[float, float], end_point: Tuple[float, float],
