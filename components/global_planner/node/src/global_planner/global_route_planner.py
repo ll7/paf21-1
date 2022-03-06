@@ -102,12 +102,6 @@ class RoadDetection:
                 continue
             is_right_road_side = contains_right
 
-            # TODO: figure out which edge cases this logic filters and comment it here ...
-            is_not_on_onesided_lane_right = is_right_road_side and not road.right_ids
-            is_not_on_onesided_lane_left = not is_right_road_side and not road.left_ids
-            if is_not_on_onesided_lane_right or is_not_on_onesided_lane_left:
-                continue
-
             neighbors.append((None, is_right_road_side, road))
 
         return neighbors
