@@ -62,6 +62,7 @@ class DrivingController: # pylint: disable=too-many-instance-attributes
         self.vehicle.actual_velocity_mps, time = velocity
         self.vehicle.time = time
         self.vehicle.pos = position
+        print(f'step {time}: vehicle at {self.vehicle.pos} moving with {velocity[0]} m/s')
 
     def update_vehicle_orientation(self, orientation: float):
         """Update the vehicle's current orientation"""

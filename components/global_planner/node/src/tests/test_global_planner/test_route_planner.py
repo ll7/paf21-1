@@ -67,37 +67,58 @@ def test_route_metadata():
     assert metadata.initial_speed == 90.0
 
 
-# def test_route_interpolation():
-#     xodr_map = load_town_01()
-#     start = (1.5599901676177979, -149.83001708984375)
-#     end = (322.09625244140625, -55.15309143066406)
-#     route = GlobalPlanner.generate_waypoints(start, end, 0, xodr_map)
+def test_route_interpolation():
+    xodr_map = load_town_01()
+    start = (1.5599901676177979, -149.83001708984375)
+    end = (322.09625244140625, -55.15309143066406)
+    route = GlobalPlanner.generate_waypoints(start, end, 0, xodr_map)
 
-#     # the route contains at least 2 waypoints and the x/y coords have reasonable values
-#     assert len(route) > 2
-#     assert all(map(lambda wp: wp.pos[0] != 0 and wp.pos[1] != 0, route))
+    # the route contains at least 2 waypoints and the x/y coords have reasonable values
+    assert len(route) > 2
+    assert all(map(lambda wp: wp.pos[0] != 0 and wp.pos[1] != 0, route))
 
-#     # succeeding points are interpolated within max. 4 meters of distance
-#     neighbors = [(route[i], route[i+1]) for i in range(len(route)-1)]
-#     assert all(map(lambda n: dist(n[0].pos, n[1].pos) < 4.0, neighbors))
+    # succeeding points are interpolated within max. 4 meters of distance
+    neighbors = [(route[i], route[i+1]) for i in range(len(route)-1)]
+    assert all(map(lambda n: dist(n[0].pos, n[1].pos) < 4.0, neighbors))
 
 
-# def test_route_annotations():
-#     xodr_map = load_town_01()
-#     start = (1.5599901676177979, -149.83001708984375)
-#     end = (322.09625244140625, -55.15309143066406)
-#     route = GlobalPlanner.generate_waypoints(start, end, 0, xodr_map)
+def test_route_annotations():
+    xodr_map = load_town_01()
+    start = (1.5599901676177979, -149.83001708984375)
+    end = (322.09625244140625, -55.15309143066406)
+    route = GlobalPlanner.generate_waypoints(start, end, 0, xodr_map)
 
-#     # the speed signs are interpreted correctly
-#     speed_zones = []
-#     for wp in route:
-#         if not wp.legal_speed in speed_zones:
-#             speed_zones.append(wp.legal_speed)
-#     assert speed_zones == [90.0, 30.0, 50.0]
+    # the speed signs are interpreted correctly
+    speed_zones = []
+    for wp in route:
+        if not wp.legal_speed in speed_zones:
+            speed_zones.append(wp.legal_speed)
+    assert speed_zones == [90.0, 30.0, 50.0]
 
-#     # the distance to traffic lights is constantly decreasing until the next reset
-#     neighbors = [(route[i], route[i+1]) for i in range(len(route)-1)]
-#     assert all(map(lambda n: n[0].dist_next_tl > n[1].dist_next_tl - 0.2 or n[0].dist_next_tl < 10, neighbors))
+    # the distance to traffic lights is constantly decreasing until the next reset
+    neighbors = [(route[i], route[i+1]) for i in range(len(route)-1)]
+    assert all(map(lambda n: n[0].dist_next_tl > n[1].dist_next_tl - 0.2 or n[0].dist_next_tl < 10, neighbors))
+
+# ============================================================
+
+# def test_path_finding_multilane_highway_town_4():
+#     xodr_map = load_town_04()
+#     start = (262.7838134765625, 118.74906158447266)
+#     end  = (16.040634155273438, 170.54249572753906)
+
+#     path = GlobalPlanner.get_shortest_path(start, end, xodr_map)
+#     print(path)
+#     assert False
+
+
+def test_path_finding_multilane_highway_town_4():
+    xodr_map = load_town_04()
+    start = (406.0252685546875, 124.70137786865234)
+    end  = (16.040634155273438, 170.54249572753906)
+
+    path = GlobalPlanner.get_shortest_path(start, end, xodr_map)
+    print(path)
+    assert False
 
 # ============================================================
 
@@ -112,14 +133,3 @@ def test_route_metadata():
 #     # assert path == ['-1_0_0', '15_0_1', '13_0_-1', '13_1_-1', '3_1_1', '3_0_1', '117_1_1', '117_0_1',
 #     #                 '2_1_1', '2_0_1', '61_1_1', '61_0_1', '1_1_1', '1_0_1', '27_1_1', '27_0_1',
 #     #                 '16_0_-1', '16_1_-1', '253_0_-1', '253_1_-1', '10_1_1', '-2_0_0']
-
-
-# def test_path_finding_multilane_town_4():
-#     xodr_map = load_town_04()
-
-#     start = (262.7838134765625, 118.74906158447266)
-#     end  = (16.040634155273438, 170.54249572753906)
-
-#     path = GlobalPlanner.get_shortest_path(start, end, xodr_map)
-#     print(path)
-#     assert False

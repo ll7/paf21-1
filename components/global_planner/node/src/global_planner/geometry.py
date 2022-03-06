@@ -68,6 +68,9 @@ def orth_offset_left(start_point: Tuple[float, float], end_point: Tuple[float, f
 def bounding_box(start_point: Tuple[float, float], end_point: Tuple[float, float],
                  road_width: float) -> List[Tuple[float, float]]:
     """Calculate a bounding box around the start and end point with a given offset to the side."""
+
+    # TODO: replace rectangular bounding boxes with polygons to handle curves currectly
+
     offset = orth_offset_right(start_point, end_point, road_width)
 
     # using the point symmetry (relative to origin) to build the points in 180 degree offset

@@ -193,6 +193,9 @@ class AdjMatrixPrep:
         end_neighbors = RoadDetection.find_neighbor_sections(end_pos, xodr_map)
         AdjMatrixPrep._insert_matrix_edges(xodr_map, end_pos, end_neighbors, is_start=False)
 
+        if not start_neighbors or not end_neighbors:
+            print('start / end section not found:', start_neighbors, end_neighbors)
+
     @staticmethod
     def _append_start_and_end(matrix: np.ndarray, mapping: Dict[str, int]):
         num_nodes = matrix.shape[0] + 2
@@ -248,6 +251,13 @@ class GlobalPlanner:
                            orientation_rad: float, xodr_map: XodrMap) -> List[AnnRouteWaypoint]:
         """Generate route waypoints for the given start / end positions using the map"""
         path = GlobalPlanner.get_shortest_path(start_pos, end_pos, xodr_map)
+
+        if len(path) < 1:
+            road_start = RoadDetection.find_neighbor_sections(start_pos, xodr_map)
+            road_end = RoadDetection.find_neighbor_sections(start_pos, xodr_map)
+            raise ValueError(f'start / end of route not found! \
+                Starts with {road_start} and ends with {road_end}.')
+
         route_waypoints = GlobalPlanner._preplan_route(start_pos, end_pos, path, xodr_map)
         print("wps:", route_waypoints)
         interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
@@ -314,6 +324,7 @@ class GlobalPlanner:
     @staticmethod
     def _displace_points(road: Road, sec: str, is_final: bool):
         moving_towards_end = int(sec.split('_')[1])
+        # TODO: this logic is not suitable for curved roads
         end_geo = road.geometries[-1] if moving_towards_end else road.geometries[0]
         points = bounding_box(end_geo.start_point, end_geo.end_point, road.road_width / 2)
         if is_final:
