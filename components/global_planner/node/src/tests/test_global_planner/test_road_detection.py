@@ -78,9 +78,17 @@ def test_find_neighbor_sections_5():
     assert 334 in road_ids and 355 in road_ids and 333 not in road_ids
 
 
-# def test_find_neighbor_sections_town04_highway_1():
-#     point = (111.14681243896484, -27.708600997924805)
-#     neighbors = RoadDetection.find_neighbor_sections(point, load_town_04())
-#     road_ids = [n[2].road_id for n in neighbors]
-#     assert road_ids == [1092] # TODO: validate whether road 1092 is actually correct
-#     # TODO: add some variation to ensure that all lanes of the highway are correctly detected
+def test_find_neighbor_sections_town04_highway_1():
+    point = (406.0252685546875, 124.70137786865234)
+    xodr_map = load_town_04()
+    neighbors = RoadDetection.find_neighbor_sections(point, xodr_map)
+    road_ids = [n[2].road_id for n in neighbors]
+    print(xodr_map.roads_by_id[36].right_ids, xodr_map.roads_by_id[36].left_ids)
+    assert road_ids == [36]
+
+
+def test_find_neighbor_sections_town04_highway_2():
+    point = (16.040634155273438, 170.54249572753906)
+    neighbors = RoadDetection.find_neighbor_sections(point, load_town_04())
+    road_ids = [n[2].road_id for n in neighbors]
+    assert road_ids == [912]
