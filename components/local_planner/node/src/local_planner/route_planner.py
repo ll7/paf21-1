@@ -99,9 +99,6 @@ class TrajectoryPlanner:
         speed_obs = self.obj_handler.get_speed_observation(self.cached_local_route)
         speed_obs.tl_phase = self.tld_info.phase
         speed_obs.dist_next_traffic_light_m = self.tld_info.distance
-
-        # TODO: handle yellow traffic lights here ...
-
         curve_obs = self.curve_detection.find_next_curve(self.cached_local_route)
         speed_obs.dist_next_curve = curve_obs.dist_until_curve
         speed_obs.curve_target_speed = curve_obs.max_speed
