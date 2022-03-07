@@ -1,53 +1,160 @@
-"""A module that detects traffic lights"""
-
-from typing import Tuple, List
-from math import pi, tan, dist
+"""A module that detects objects"""
+from typing import Dict, Tuple, List
+from math import pi, tan
 import yaml
 
-from sklearn.cluster import DBSCAN
 from cv2 import cv2
 import numpy as np
 
-from perception.base_detector import BaseDetector
-from perception.object_detection.obj_info import ObjectInfo
+from jenkspy import jenks_breaks
+from perception.object_detection.object_info import ObjectInfo
+from perception.object_detection.object_tracker import ObjectTracker
 
 
-class ObjectDetector(BaseDetector):
-    """A module that detects anything."""
-    def __init__(self, config_path: str, object_type: str):
-        super().__init__()
-        self.config = config_path
+class ObjectDetector:
+    """A module that detects vehicles and pedestrians."""
+    def __init__(self, config_path: str):
         with open(config_path, encoding='utf-8') as file:
             config = yaml.safe_load(file)
-            self.mask: Tuple[int, int, int] = config[object_type + '_mask']
-            self.image_meta: Tuple[int, int, int] = config['image_meta']
-        self.object_type: str = object_type
-        self.counter: int = 1
-        self.last_obj_infos: List[ObjectInfo] = []
-        self.object_counter: int = 0
-        self.k = ObjectDetector.create_inverse_camera_matrix(self.image_meta)
+            self.mask_dict: Dict[str, Tuple[int, int, int]] = {
+                'vehicle': config['vehicle_mask'],
+                'pedestrian': config['pedestrian_mask']
+            }
+            self.max_range: float = config['max_range']
+            image_meta: Tuple[int, int, int] = config['image_meta']
+        self.counter: int = 0
+        self.inv_camera_matrix = ObjectDetector._create_inverse_camera_matrix(image_meta)
+        self.x_scale_factor = 1.0
+        self.points_2d: np.ndarray = ObjectDetector._get_2d_coordinates(image_meta)
+        self.obj_tracker: ObjectTracker = ObjectTracker()
 
     def detect_object(self, semantic_img: np.ndarray, depth_img: np.ndarray) -> List[ObjectInfo]:
         """Detect objects in the semantic image and return the distance."""
-        mask = self.get_object_mask(semantic_img)
-        depth_img = depth_img * mask
-        depth_img[depth_img == 0] = 1000
-        normalized_points = self.depth_to_local_point_cloud(depth_img)
         self.counter += 1
-        centroids = ObjectDetector.cluster_point_cloud(normalized_points)
-        obj_infos = self.create_object_infos(centroids)
+        centroids = []
+        classes = []
+        joined_mask = np.zeros_like(depth_img).astype(dtype=bool)
+
+        for obj_name, obj_mask in self.mask_dict.items():
+            mask = ObjectDetector._get_object_mask(semantic_img, obj_mask)
+            obj_centroids = ObjectDetector._cluster_depth_image(depth_img, mask)
+            classes += [obj_name for _ in range(len(obj_centroids))]
+            centroids += obj_centroids
+            joined_mask |= mask.astype(dtype=bool)
+
+        depth_img = ObjectDetector._apply_mask(depth_img, joined_mask, self.max_range)
+        depth_img_flat = np.reshape(depth_img, -1)
+        indices_flat = ObjectDetector._flat_indices(centroids, depth_img.shape[1])
+        centroids_3d = self._depth2local_point_cloud(depth_img_flat, indices_flat)
+        obj_infos = self.obj_tracker.update(centroids_3d, classes)
         return obj_infos
 
-    def depth_to_local_point_cloud(self, depth_image: np.ndarray) -> np.ndarray:
-        """
-        Convert an image containing CARLA encoded depth-map to a 2D array containing
-        the 3D position (relative to the camera) of each pixel.
-        """
-        far = 1000  # meters
-        depth_image = depth_image / far
-        image_height, image_width = depth_image.shape
+    def _depth2local_point_cloud(self, img_flatted: np.ndarray, idx_flat: np.ndarray) -> np.ndarray:
+        """Convert a depth-map to a 2D array containing the 3D position (relative) of each pixel."""
+        if len(idx_flat) == 0:
+            return np.zeros(0)
+        points_3d = np.dot(self.inv_camera_matrix, self.points_2d[:, idx_flat])
+        points_3d *= img_flatted[idx_flat]
+        # scale x and reorder to (x, y, z)
+        points_3d[0, :] /= -self.x_scale_factor
+        return np.transpose(points_3d[[0, 2, 1], :])
 
-        # 2d pixel coordinates
+    @staticmethod
+    def _cluster_depth_image(depth_img: np.ndarray, mask: np.ndarray) -> List[Tuple[int, int]]:
+        center_points: List[Tuple[int, int]] = []
+        mask_bool = mask.astype(dtype=bool)
+        # only contours in the first hierarchy
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for cnt in contours:
+            cnt = np.squeeze(cnt, axis=1)
+            has_min_pixels, pixels = ObjectDetector._get_pixel_in_contour(mask_bool, cnt)
+            if not has_min_pixels:
+                continue
+            clusters = ObjectDetector._cluster_contour(depth_img, pixels, cnt)
+            for cluster in clusters:
+                center = ObjectDetector._get_rect_center(cluster)
+                if center is None:
+                    continue
+                center_points.append(center)
+        return center_points
+
+    @staticmethod
+    def _get_rect_center(cnt: np.ndarray) -> Tuple[int, int] or None:
+        rect = cv2.boundingRect(cnt)
+        has_minimum_size = ObjectDetector._has_min_num_pixels(rect[2] * rect[3])
+        col, row, width, height = rect
+        center = (int(col + width / 2), int(row + height / 2))
+        return center if has_minimum_size else None
+
+    @staticmethod
+    def _cluster_contour(depth_img: np.ndarray, pixels: np.ndarray,
+                         contour: np.ndarray, max_std=10.0) -> List[np.ndarray]:
+        # calculate the variance for the filled contour
+        variance = np.var(depth_img[pixels[:, 0], pixels[:, 1]])
+        if variance < max_std**2:
+            # all pixel in contour belong to one class
+            return [contour]
+
+        contour_depth: np.ndarray = depth_img[contour[:, 1], contour[:, 0]]
+        # find and delete outliers in the contour
+        outliers = ObjectDetector._find_outliers(contour_depth)
+        contour_depth = np.delete(contour_depth, outliers, axis=0)
+        contour = np.delete(contour, outliers, axis=0)
+        # cluster using the jenks natural breaks algorithm
+        breaks = jenks_breaks(contour_depth, nb_class=2)
+
+        equal_break_values = breaks[0] == breaks[1]
+        low_distance = breaks[2] - breaks[1] < max_std
+        if equal_break_values and low_distance:
+            return [contour]
+
+        cluster = contour_depth <= breaks[1]
+        return [contour[cluster], contour[np.invert(cluster)]]
+
+    @staticmethod
+    def _find_outliers(contour_depth):
+        mean = np.mean(contour_depth)
+        std = np.std(contour_depth)
+        distance_from_mean = abs(contour_depth - mean)
+        return np.where(distance_from_mean > 2 * std)
+
+    @staticmethod
+    def _get_pixel_in_contour(mask: np.ndarray, cnt: np.ndarray) -> Tuple[bool, np.ndarray]:
+        """Get all pixels in the contour and mask."""
+        img = np.zeros_like(mask, dtype=float)
+        cv2.fillPoly(img, [cnt], color=255)
+        img = img.astype(dtype=bool)
+        img = np.logical_and(img, mask)
+        row, col = np.where(img == 1)
+        has_min_num_pixels = ObjectDetector._has_min_num_pixels(len(row))
+        return has_min_num_pixels, np.stack((row, col), axis=-1)
+
+    @staticmethod
+    def _get_object_mask(semantic_image: np.ndarray, mask: Tuple[int, int, int]) -> np.ndarray:
+        """Find the object patches from the semantic image."""
+        mask = np.array(mask)
+        return cv2.inRange(semantic_image, mask, mask)
+
+    @staticmethod
+    def _flat_indices(centroids: List[Tuple[int, int]], width: int) -> np.ndarray:
+        return np.array([int(row * width + col) for col, row in centroids])
+
+    @staticmethod
+    def _apply_mask(image: np.ndarray, mask: np.ndarray, max_value: float) -> np.ndarray:
+        image = image * mask
+        # set the pixels that are not in the mask to the maximum value
+        image[mask == 0] = max_value
+        return image
+
+    @staticmethod
+    def _has_min_num_pixels(num_pixels: int) -> bool:
+        min_num_pixels = 8.0
+        return num_pixels >= min_num_pixels
+
+    @staticmethod
+    def _get_2d_coordinates(image_meta: Tuple[int, int, int]) -> np.ndarray:
+        """Create 2d pixel coordinates (u, v, w)."""
+        image_width, image_height, _ = image_meta
         pixel_length = image_width * image_height
         u_coord = np.zeros((image_height, image_width), dtype=np.int16)
         v_coord = np.zeros((image_height, image_width), dtype=np.int16)
@@ -57,41 +164,12 @@ class ObjectDetector(BaseDetector):
             v_coord[i, :] = image_height - (i + 1)
         u_coord = u_coord.reshape(pixel_length)
         v_coord = v_coord.reshape(pixel_length)
+        w_coord = np.ones_like(u_coord)
 
-        normalized_depth = np.reshape(depth_image, pixel_length)
-
-        # Search for sky pixels (where the depth is 1.0) to delete them
-        max_depth_indexes = np.where(normalized_depth >= 0.8)
-        normalized_depth = np.delete(normalized_depth, max_depth_indexes)
-        u_coord = np.delete(u_coord, max_depth_indexes)
-        v_coord = np.delete(v_coord, max_depth_indexes)
-
-        p2d = np.array([u_coord, v_coord, np.ones_like(u_coord)])
-        p3d = np.dot(self.k, p2d) * normalized_depth * far
-
-        # Formatting the output to: [[X1,Y1,Z1],[X2,Y2,Z2], ... [Xn,Yn,Zn]
-        return np.transpose(p3d)
-
-    def get_object_mask(self, semantic_image: np.ndarray) -> np.ndarray:
-        """Find the object patches from the semantic image."""
-        mask = np.array(self.mask)
-        masked_image = cv2.inRange(semantic_image, mask, mask)
-        # if self.counter % 10 == 0 and self.counter < 10000:
-        #    cv2.imwrite(f'/app/logs/masked_image_{self.counter}.png', masked_image)
-        return masked_image / 255
+        return np.stack((u_coord, v_coord, w_coord), axis=0)
 
     @staticmethod
-    def group_up_points(p_labels: int, points: List[Tuple[float, float]],
-                        n_cluster: int) -> List[np.ndarray]:
-        """Group points to cluster."""
-        groups = []
-        for i in range(n_cluster):
-            idx = np.where(p_labels == i)[0]
-            groups.append(np.array(points[idx]))
-        return groups
-
-    @staticmethod
-    def create_inverse_camera_matrix(image_meta: Tuple[int, int, int]) -> np.ndarray:
+    def _create_inverse_camera_matrix(image_meta: Tuple[int, int, int]) -> np.ndarray:
         """Creates inverse k matrix."""
         k = np.identity(3)
         width, height, fov = image_meta
@@ -99,55 +177,3 @@ class ObjectDetector(BaseDetector):
         k[1, 2] = height / 2.0
         k[0, 0] = k[1, 1] = width / (2.0 * tan(fov * pi / 360.0))
         return np.linalg.inv(k)
-
-    @staticmethod
-    def cluster_point_cloud(normalized_points) -> List[Tuple[float, float]]:
-        """Cluster points into groups and get bounding rectangle."""
-        if len(normalized_points) > 0:
-            # TODO consider clustering with segmentation mask, only the highest point in the z axis
-            squeezing_factor = 1
-            normalized_points[:, 1] = normalized_points[:, 2] / squeezing_factor
-            labels = DBSCAN(eps=1.5, min_samples=1).fit_predict(normalized_points)
-            n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-            print(f"Estimated number of objects: {n_clusters_}")
-            normalized_points[:, 2] = normalized_points[:, 2] * squeezing_factor
-            cluster = ObjectDetector.group_up_points(labels, normalized_points, n_clusters_)
-            centroids = []
-            for group in cluster:
-                centroids.append(ObjectDetector.centroid(group))
-
-            return centroids
-        return []
-
-    @staticmethod
-    def centroid(arr: np.ndarray) -> Tuple[float, float]:
-        """Calculate the centroid."""
-        length = arr.shape[0]
-        sum_x = np.sum(arr[:, 0])
-        sum_y = np.sum(arr[:, 2])
-        return sum_x / length, sum_y / length
-
-    def create_object_infos(self, centroids: List[Tuple[float, float]]) -> List[ObjectInfo]:
-        """Create the object infos for the list of centroids."""
-        obj_infos = []
-        for centroid in centroids:
-            obj_infos.append(self.find_nearest_centroid(centroid))
-
-        self.last_obj_infos = obj_infos
-        return obj_infos
-
-    def find_nearest_centroid(self, centroid: Tuple[float, float]) -> ObjectInfo:
-        """Return the object info of the nearest saved centroid."""
-        nearest_centroid = -1
-        nearest_dist = 3.0
-        for obj_info in self.last_obj_infos:
-            distance = dist(centroid, obj_info.rel_position)
-            if distance < nearest_dist:
-                nearest_centroid = obj_info.identifier
-                nearest_dist = distance
-        if nearest_centroid == -1:
-            nearest_centroid = self.object_counter
-            self.object_counter += 1
-
-        return ObjectInfo(identifier=nearest_centroid, obj_class=self.object_type,
-                          rel_position=centroid)
