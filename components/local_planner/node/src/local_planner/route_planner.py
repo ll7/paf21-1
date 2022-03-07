@@ -4,8 +4,8 @@ from math import pi
 from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
 
+from local_planner.core import Vehicle, AnnRouteWaypoint
 from local_planner.vehicle_control import DrivingController
-from local_planner.core.vehicle import Vehicle
 from local_planner.core.geometry import angle_between_vectors, points_to_vector
 from local_planner.state_machine import SpeedObservation, TrafficLightInfo
 from local_planner.vehicle_control import CurveDetection
@@ -25,16 +25,22 @@ class TrajectoryPlanner:
     prev_wp_id: int = -1
     cached_local_route: List[Tuple[float, float]] = field(default_factory=list)
     length_route: int = 50
-    obj_handler: ObjectHandler = ObjectHandler()
+    obj_handler: ObjectHandler = None
     tld_info: TrafficLightInfo = TrafficLightInfo()
     curve_detection: CurveDetection = CurveDetection()
 
-    def update_global_route(self, waypoints: List[Tuple[float, float]]):
+    def __post_init__(self):
+        if not self.obj_handler:
+            self.obj_handler = ObjectHandler(self.vehicle)
+
+    def update_global_route(self, ann_waypoints: List[AnnRouteWaypoint]):
         """Update the global route to follow"""
-        print(f"update global route ({len(waypoints)} points): {waypoints}")
+        # print(f"update global route ({len(ann_waypoints)} points): {ann_waypoints}")
         # print("time,veh_x,vehicle_y,vehicle_orient,vehicle_vel,signal_vel,signal_steer")
 
-        self.global_route = waypoints
+        self.global_route = [wp.pos for wp in ann_waypoints]
+        print(f"update global route ({len(self.global_route)} points): {self.global_route}")
+
         if len(self.global_route) < 2:
             self.next_wp_id = -1
             self.prev_wp_id = -1
@@ -111,4 +117,4 @@ class TrajectoryPlanner:
 
     def update_objects(self, object_list: List[Dict]):
         """Refresh the objects that were detected by the perception"""
-        self.obj_handler.update_objects(object_list, self.vehicle.pos, self.vehicle.orientation_rad)
+        self.obj_handler.update_objects(object_list)

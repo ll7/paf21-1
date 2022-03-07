@@ -10,24 +10,23 @@ from dataclasses import dataclass
 import rospy
 
 from nav_srvs.srv import NavigationRequest
-from local_planner.core import Vehicle
+from local_planner.core import Vehicle, AnnRouteWaypoint
 
 from local_planner.config import town_spawns
 
 
 def load_spawn_positions() -> List[Tuple[float, float]]:
     """Retrieve a list of possible spawn positions"""
-    full_param_name = rospy.search_param('town') 
+    full_param_name = rospy.search_param('town')
     print("Town is : ", rospy.get_param(full_param_name))
-    
-    Spawns = town_spawns.Spawns
-    return Spawns['town_1']
+    return town_spawns.spawns['town_1']
+
 
 @dataclass
 class InfiniteDrivingService():
     """Representing a proxy for requesting navigation services."""
     vehicle: Vehicle
-    update_route: Callable[[List[Tuple[float, float]]], None]
+    update_route: Callable[[List[AnnRouteWaypoint]], None]
     destinations: List[Tuple[float, float]] = None
     current_dest: Tuple[float, float] = None
 
@@ -77,7 +76,14 @@ class InfiniteDrivingService():
                     continue
 
                 json_list = json.loads(response.waypoints_json)
-                waypoints = [(wp['x'], wp['y']) for wp in json_list]
+                waypoints = [
+                    AnnRouteWaypoint(
+                        (wp['x'], wp['y']),
+                        wp['actual_lane'],
+                        wp['possible_lanes'],
+                        wp['legal_speed'], wp['dist_next_tl'],
+                        wp['end_lane_m'])
+                    for wp in json_list]
                 return waypoints
 
             except rospy.ServiceException as error:

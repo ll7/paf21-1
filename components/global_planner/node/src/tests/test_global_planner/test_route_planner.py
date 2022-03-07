@@ -11,6 +11,10 @@ def load_map():
     xodr_map = XODRConverter.read_xodr(xodr_path)
     return xodr_map
 
+# TODO Test following points 
+# Find roads 5 for point (46.14997863769531, -326.9700012207031)
+# Find roads 4 for point (259.39117431640625, -133.23997497558594)
+
 
 def test_path_finding():
     xodr_map = load_map()

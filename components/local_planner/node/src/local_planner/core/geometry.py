@@ -1,7 +1,7 @@
 """This module contains a collection of geometric helper functions"""
 
 from math import dist as euclid_dist, atan2, pi, sqrt, sin, cos
-from typing import Tuple, List
+from typing import Tuple
 import numpy as np
 
 
@@ -124,21 +124,21 @@ def angle_triangle(p_a: Tuple[float, float],
 #         waypoints = [(wp[1], wp[0]) for wp in waypoints]
 #         inverted = True
 
-#     # search for the start of  the curvature 
+#     # search for the start of  the curvature
 #     triangle = [waypoints[0]]
 #     for i in range(len(waypoints) - 1):
 #         if abs(abs(waypoints[0][0]) - abs(waypoints[i][0])) > 1:
 #             triangle.insert(1, waypoints[i])
 #             break
 
-#     # if it's curvature, then determine triangle / search for the end of the curvature 
+#     # if it's curvature, then determine triangle / search for the end of the curvature
 #     if len(triangle) == 2:
 #         curve_start_ind = waypoints.index(triangle[1])
 #         for i in range(curve_start_ind, len(waypoints) - 2):
 #             if abs( abs(waypoints[curve_start_ind] [1]) - abs(waypoints[i+1][1]) ) > 2:
 #                 triangle.insert(2, waypoints[i+1])
 #                 break
-    
+
 #     if inverted:
 #         triangle = [(tr[1], tr[0]) for tr in triangle]
 

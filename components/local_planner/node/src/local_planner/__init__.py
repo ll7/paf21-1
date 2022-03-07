@@ -1,5 +1,5 @@
 """Initializing local_planner module imports"""
-from local_planner.core import Vehicle
+from local_planner.core import Vehicle, AnnRouteWaypoint
 from local_planner.state_machine import SpeedStateMachine, SpeedObservation, TrafficLightPhase
 from local_planner.state_machine import ManeuverStateMachine, ManeuverObservation, ManeuverState
 from local_planner.vehicle_control import DrivingController, DrivingSignal
