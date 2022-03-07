@@ -135,9 +135,22 @@ class SpeedStateMachine:
         self.current_state = SpeedState.ACCEL
 
     def _is_brake_required(self, obs: SpeedObservation):
-        tl_wait_time_s = self._time_until_brake(obs.dist_next_traffic_light_m, 0) \
-                         if obs.tl_phase == TrafficLightPhase.RED else float('inf')
+        # fallback logic for handling yellow like red
+        # ===========================================
+        # phases_brake = [TrafficLightPhase.RED, TrafficLightPhase.YELLOW]
+        # tl_wait_time_s = self._time_until_brake(obs.dist_next_traffic_light_m, 0) \
+        #                  if obs.tl_phase in phases_brake else float('inf')
 
+        # ToDo think about speeding 
+        to_late_to_brake: float = -3.0
+        tl_wait_time_s = float('inf')
+        if obs.tl_phase == TrafficLightPhase.YELLOW:
+            tl_wait_time_s = self._time_until_brake(obs.dist_next_traffic_light_m, 0)
+        elif obs.tl_phase == TrafficLightPhase.RED:
+            tl_wait_time_s = self._time_until_brake(obs.dist_next_traffic_light_m, 0)
+        if tl_wait_time_s < to_late_to_brake:
+            tl_wait_time_s = float('inf')
+            
         obj_wait_time_s = self._time_until_brake(obs.dist_next_obstacle_m, obs.obj_speed_ms)
         curve_wait_time_s = self._time_until_brake(obs.dist_next_curve, obs.curve_target_speed)
 
