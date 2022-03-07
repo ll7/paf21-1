@@ -12,8 +12,18 @@ def load_map():
     return xodr_map
 
 # TODO Test following points 
+
+# Curvature fail???
 # Find roads 5 for point (46.14997863769531, -326.9700012207031)
 # Find roads 4 for point (259.39117431640625, -133.23997497558594)
+
+# No Route?!
+# Find roads 150 for point (338.3089294433594, -324.74908447265625)
+# Find roads 158 for point (338.3089294433594, -324.74908447265625)
+
+# Driving into Wall???
+# Find roads 163 for point (338.3089294433594, -324.74908447265625)
+# Find roads 12 for point (270.94085693359375, -199.05966186523438)
 
 
 def test_path_finding():

@@ -20,10 +20,9 @@ class TrajectoryPlanner:
     this class should be expanded if needed"""
     vehicle: Vehicle
     driving_control: DrivingController = None
-    global_route: List[Tuple[float, float]] = field(default_factory=list)
+    global_route_ann: List[AnnRouteWaypoint] = field(default_factory=list)
     next_wp_id: int = -1
     prev_wp_id: int = -1
-    cached_local_route: List[Tuple[float, float]] = field(default_factory=list)
     length_route: int = 50
     obj_handler: ObjectHandler = None
     tld_info: TrafficLightInfo = TrafficLightInfo()
@@ -33,47 +32,78 @@ class TrajectoryPlanner:
         if not self.obj_handler:
             self.obj_handler = ObjectHandler(self.vehicle)
 
+    @property
+    def global_route(self) -> List[Tuple[float, float]]:
+        """Retrieve the x/y coordinates of the global route"""
+        return [wp.pos for wp in self.global_route_ann]
+
+    @property
+    def cached_local_route(self) -> List[Tuple[float, float]]:
+        """Retrieve the x/y coordinates of the global route"""
+        if self.prev_wp_id < 0 or not self.vehicle.is_ready:
+            return []
+
+        if not self.is_navigation_ready:
+            return self.global_route
+
+        if self.is_last_wp:
+            return self.global_route[-1:]
+
+        bound = min(self.prev_wp_id + self.length_route, len(self.global_route))
+        return self.global_route[self.prev_wp_id:bound]
+
+    @property
+    def cached_local_ann_route(self) -> List[AnnRouteWaypoint]:
+        """Retrieve the cached local route with metadata annotations"""
+        if self.prev_wp_id < 0 or not self.vehicle.is_ready:
+            return []
+
+        if not self.is_navigation_ready:
+            return self.global_route_ann
+
+        if self.is_last_wp:
+            return self.global_route_ann[-1:]
+
+        bound = min(self.prev_wp_id + self.length_route, len(self.global_route))
+        return self.global_route_ann[self.prev_wp_id:bound]
+
+    @property
+    def is_navigation_ready(self) -> bool:
+        """Indicates whether the navigation already provided a route."""
+        return self.global_route_ann and len(self.global_route_ann) >= 2
+
+    @property
+    def is_last_wp(self) -> bool:
+        """Indicates whether the current point is the last point."""
+        return self.next_wp_id == len(self.global_route_ann)
+
     def update_global_route(self, ann_waypoints: List[AnnRouteWaypoint]):
         """Update the global route to follow"""
-        # print(f"update global route ({len(ann_waypoints)} points): {ann_waypoints}")
-        # print("time,veh_x,vehicle_y,vehicle_orient,vehicle_vel,signal_vel,signal_steer")
 
-        self.global_route = [wp.pos for wp in ann_waypoints]
+        self.global_route_ann = ann_waypoints
         print(f"update global route ({len(self.global_route)} points): {self.global_route}")
 
         if len(self.global_route) < 2:
             self.next_wp_id = -1
             self.prev_wp_id = -1
-            self.cached_local_route = []
         else:
             self.next_wp_id = 1
             self.prev_wp_id = 0
-            bound = min(self.prev_wp_id + self.length_route, len(self.global_route))
-            self.cached_local_route = self.global_route[self.prev_wp_id:bound]
 
     def calculate_trajectory(self) -> List[Tuple[float, float]]:
         """Combines trajectory and respective velocity to one data struct"""
-        vehicle_not_ready = not self.vehicle.is_ready
-        # print("vehicle_not_ready: ", vehicle_not_ready,
-        #       " pos: ", self.vehicle.pos, " route: ", self.cached_local_route)
-        if vehicle_not_ready:
-            self.cached_local_route = []
+        if not self.vehicle.is_ready:
             return []
 
-        self.cached_local_route = self._compute_local_route()
-        return self.cached_local_route
-
-    def _compute_local_route(self) -> List[Tuple[float, float]]:
         # cache the route to avoid concurrency bugs because
         # the route might be overwritten by the navigation task
         route = self.global_route
 
-        if len(route) < 2:
+        if not self.is_navigation_ready:
             return route
 
-        is_last_wp = self.next_wp_id == len(route)
-        if is_last_wp:
-            return route[self.prev_wp_id:self.next_wp_id]
+        if self.is_last_wp:
+            return route[-1:]
 
         # delete route waypoints behind car
         while True:
@@ -90,10 +120,8 @@ class TrajectoryPlanner:
 
             self.next_wp_id += 1
             self.prev_wp_id += 1
-            # print(f'reached route wp {next_wp}, angle={abs(angle)}')
 
-        bound = min(self.prev_wp_id + self.length_route, len(route))
-        return route[self.prev_wp_id:bound]
+        return self.cached_local_route
 
     @property
     def latest_speed_observation(self) -> SpeedObservation:
@@ -108,6 +136,7 @@ class TrajectoryPlanner:
         curve_obs = self.curve_detection.find_next_curve(self.cached_local_route)
         speed_obs.dist_next_curve = curve_obs.dist_until_curve
         speed_obs.curve_target_speed = curve_obs.max_speed
+        speed_obs.detected_speed_limit = self.cached_local_ann_route[0].legal_speed
 
         return speed_obs
 
