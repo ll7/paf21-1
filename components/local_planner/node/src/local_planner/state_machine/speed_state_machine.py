@@ -55,14 +55,14 @@ class SpeedStateMachine:
     def update_state(self, obs: SpeedObservation):
         """Update the speed state machine with a new observation"""
         # WARNING: only uncomment when intending to ignore traffic lights
-        obs.tl_phase = TrafficLightPhase.GREEN # TODO: comment this line again
+        # obs.tl_phase = TrafficLightPhase.GREEN
         if obs.detected_speed_limit is not None:
             self.legal_speed_limit_mps = obs.detected_speed_limit / 3.6
 
         if not self.vehicle.is_ready:
             return
 
-        # TODO: fix issue with traffic lights being considered when car spawns in fron of red lights
+        # TODO: fix issue with traffic lights being considered when car spawns in front of red lights
         #       even though the traffic lights are still far away such that the car should approach
 
         # """Update the machine's state given a speed observation."""
@@ -142,14 +142,17 @@ class SpeedStateMachine:
         #                  if obs.tl_phase in phases_brake else float('inf')
 
         # ToDo think about speeding 
-        to_late_to_brake: float = -3.0
+
         tl_wait_time_s = float('inf')
         if obs.tl_phase == TrafficLightPhase.YELLOW:
             tl_wait_time_s = self._time_until_brake(obs.dist_next_traffic_light_m, 0)
+            #if it is yellow and the distance to brake is too short, speed up instead of braking
+            to_late_to_brake: float = -3.0
+            if tl_wait_time_s < to_late_to_brake:
+                tl_wait_time_s = float('inf')
         elif obs.tl_phase == TrafficLightPhase.RED:
             tl_wait_time_s = self._time_until_brake(obs.dist_next_traffic_light_m, 0)
-        if tl_wait_time_s < to_late_to_brake:
-            tl_wait_time_s = float('inf')
+        
             
         obj_wait_time_s = self._time_until_brake(obs.dist_next_obstacle_m, obs.obj_speed_ms)
         curve_wait_time_s = self._time_until_brake(obs.dist_next_curve, obs.curve_target_speed)
