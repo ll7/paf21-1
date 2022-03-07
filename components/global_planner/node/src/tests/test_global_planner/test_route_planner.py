@@ -60,7 +60,7 @@ def test_route_metadata():
                   (336.87300605856103, -44.56103465562376),
                   (169.19245819220555, -57.49040013751494)]
     assert [tl.pos for tl in metadata.traffic_lights_ahead] == exp_tl_pos
-    
+
     # all relevant traffic signs found
     exp_ss_pos = [(-0.014683089359112911, -127.76235955923758)]
     assert [ss.pos for ss in metadata.speed_signs_ahead] == exp_ss_pos
