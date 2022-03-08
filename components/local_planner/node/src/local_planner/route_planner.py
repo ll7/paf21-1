@@ -88,10 +88,12 @@ class TrajectoryPlanner:
 
         bound = min(self.prev_wp_id + self.length_route, len(route))
         temp_route = route[self.prev_wp_id:bound]
-        self.check_overtake(temp_route)
+        temp_route = self.check_overtake(temp_route)
         return temp_route
 
     def check_overtake(self, route):
+        route = self.obj_handler.plan_route_around_objects(route)
+        return route
 
     @property
     def latest_speed_observation(self) -> SpeedObservation:

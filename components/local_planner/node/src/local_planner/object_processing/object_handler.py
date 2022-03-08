@@ -18,7 +18,7 @@ class ObjectHandler:
     vehicle_pos: Tuple[float, float] = None
     vehicle_rad: float = 0.0
     num_predict: int = int(3.0 / delta_time)
-    street_width: float = 3.0
+    street_width: float = 2.0
 
     def get_speed_observation(self, local_route: List[Tuple[float, float]]) -> SpeedObservation:
         """Retrieve the speed observation."""
@@ -48,7 +48,6 @@ class ObjectHandler:
         """Detect a vehicle in the same direction."""
         # cache the objects to avoid concurrency bugs
         objects = self.objects.copy()
-        print(f'Objects: {objects}')
         spd_obs = SpeedObservation()
         for obj_id, obj in objects.items():
             obj_positions = [obj.trajectory[-1]]
@@ -75,20 +74,21 @@ class ObjectHandler:
                 obj_positions += objects[obj_id].kalman_filter.predict_points(self.num_predict)
             blocked_ids = ObjectHandler.find_blocked_points(local_route, obj_positions, threshold=2)
             for block in blocked_ids:
-                moving_vector = ObjectHandler.orthogonal_vector_from_points(local_route[block],
-                                                                            local_route[block+1])
-                local_route[block] = (self.street_width * moving_vector[0],
-                                      self.street_width * moving_vector[1])
+                if block < len(local_route)-1:
+                    moving_vector = ObjectHandler.orth_vector_from_points(local_route[block],
+                                                                          local_route[block+1])
+                    local_route[block] = (self.street_width * moving_vector[0],
+                                          self.street_width * moving_vector[1])
         return local_route
 
     @staticmethod
-    def orthogonal_vector_from_points(point_a, point_b):
+    def orth_vector_from_points(point_a, point_b):
         """calculates orthogonal vector"""
         point_a = np.array(point_a)
         point_b = np.array(point_b)
         vector = point_b - point_a
         unit_vector = vector / np.linalg.norm(vector)
-        orthogonal_vector = [unit_vector[0], -unit_vector[1]]   # cross product with k
+        orthogonal_vector = [unit_vector[1], -unit_vector[0]]   # cross product with k
         return orthogonal_vector
 
     @staticmethod
@@ -105,6 +105,7 @@ class ObjectHandler:
                     ids.append(id)
                     break
             id += 1
+        print('Blocked:', ids)
         return ids
 
     @staticmethod
