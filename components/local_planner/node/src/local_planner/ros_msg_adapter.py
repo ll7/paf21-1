@@ -13,7 +13,7 @@ from sensor_msgs.msg import Imu as ImuMsg
 
 from local_planner.state_machine import TrafficLightInfo, TrafficLightPhase
 from local_planner.vehicle_control import DrivingSignal
-from local_planner.route_planner import ObjectInfo
+from local_planner.object_processing import ObjectMeta
 
 
 class RosMessagesAdapter:
@@ -27,7 +27,7 @@ class RosMessagesAdapter:
         return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
 
     @staticmethod
-    def json_message_to_object_info(msg: StringMsg) -> List[ObjectInfo]:
+    def json_message_to_object_info(msg: StringMsg) -> List[ObjectMeta]:
         """Convert a ROS message into a list of ObjectInfo"""
         obj = json.loads(msg.data)
         # print("object", obj)
@@ -40,10 +40,11 @@ class RosMessagesAdapter:
         return waypoints
 
     @staticmethod
-    def message_to_vehicle_velocity(msg: OdometryMsg):
+    def message_to_vehicle_velocity_and_timestamp(msg: OdometryMsg):
         """converts the odometry message to velocity"""
         time_stamp = msg.header.stamp.secs + msg.header.stamp.nsecs * 1e-9
         array = [msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z]
+        # print("Speed ", np.linalg.norm(array))
         return np.linalg.norm(array), time_stamp
 
     @staticmethod

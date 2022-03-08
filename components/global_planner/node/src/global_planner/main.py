@@ -41,7 +41,8 @@ class GlobalPlannerNode:
                           'actual_lane': wp.actual_lane,
                           'possible_lanes': wp.possible_lanes,
                           'legal_speed': wp.legal_speed,
-                          'dist_next_tl': wp.dist_next_tl} for wp in global_route]
+                          'dist_next_tl': wp.dist_next_tl,
+                          'end_lane_m': wp.end_lane_m} for wp in global_route]
 
         response = NavigationRequestResponse(
             waypoints_json = json.dumps(route_as_json),

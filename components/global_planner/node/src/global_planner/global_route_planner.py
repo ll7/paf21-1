@@ -1,7 +1,8 @@
 """A global route planner based on map and hmi data."""
 
-from math import dist as euclid_dist, pi
-from typing import Tuple, List, Dict
+from dataclasses import dataclass
+from math import floor, dist as euclid_dist, sqrt
+from typing import Tuple, List
 
 import numpy as np
 from shapely.geometry import Point
@@ -379,12 +380,37 @@ class GlobalPlanner:
             raise ValueError(f'start / end of route not found! \
                 Starts with {road_start} and ends with {road_end}.')
 
+        route_metadata = RouteAnnotation.preprocess_route_metadata(start_pos, path, xodr_map)
         route_waypoints = GlobalPlanner._preplan_route(start_pos, end_pos, path, xodr_map)
         print("wps:", route_waypoints)
+
+        # route_waypoints = GlobalPlanner._add_pos_speed_signs(route_waypoints, route_metadata)
         interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
-        route_metadata = RouteAnnotation.preprocess_route_metadata(start_pos, path, xodr_map)
+
         ann_route = RouteAnnotation.annotate_waypoints(interpol_route, route_metadata)
         return ann_route
+
+    # @staticmethod
+    # def _add_pos_speed_signs(route_waypoints: List[Tuple[float, float]],
+    #                          route_metadata) -> List[Tuple[float, float]]:
+    #     #TODO intersec 90 degree implementation + set point in the middle of the street 
+    #     newRoute = []
+    #     for i, route in enumerate(route_waypoints):
+    #         newRoute.append(route)
+    #         if (i < len(route_waypoints)-1):
+    #             for speed in route_metadata.speed_signs_ahead:
+    #                 if(GlobalPlanner.is_between(route, route_waypoints[i+1], speed.pos) and route != route_waypoints[i+1]):
+    #                     # print(speed.pos, route, route_waypoints[i+1])
+    #                     newRoute.append(speed.pos)
+    #     return newRoute
+    # @staticmethod
+    # def distance(a, b):
+    #     return sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
+    #
+    # @staticmethod
+    # def is_between(a, c, b):
+    #     return GlobalPlanner.distance(a, c) + GlobalPlanner.distance(c, b) == GlobalPlanner.distance(a, b)
+
 
     @staticmethod
     def _preplan_route(start_pos: Tuple[float, float], end_pos: Tuple[float, float],

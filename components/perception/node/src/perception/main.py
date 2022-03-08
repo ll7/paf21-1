@@ -26,8 +26,8 @@ class ImagesBuffer:
 
 @dataclass
 class PerceptionNode:
-    """A class representing a ROS node that's processing
-    camera data to detect traffic lights."""
+    """A class representing a ROS node that's processing camera data to detect traffic lights."""
+    # pylint: disable=too-many-instance-attributes
     vehicle_name: str
     publish_rate_in_hz: int
     config_path: str = '/app/src/perception/config/detection_config.yml'
@@ -41,7 +41,7 @@ class PerceptionNode:
 
     def __post_init__(self):
         self.tl_detector = TrafficLightDetector(self.config_path)
-        self.vehicle_detector = ObjectDetector(self.config_path, 'vehicle')
+        self.vehicle_detector = ObjectDetector(self.config_path)
 
     def run_node(self):
         """Launch the ROS node to receive front camera images
@@ -63,7 +63,8 @@ class PerceptionNode:
                     print(f'Traffic light detected: {tld_info}')
                     msg = RosMessagesAdapter.tld_info_to_json_message(tld_info)
                     self.tld_publisher.publish(msg)
-
+                if obj_infos:
+                    print(f'Object detected: {obj_infos}')
                 msg = RosMessagesAdapter.obj_info_to_json_message(obj_infos)
                 self.obj_publisher.publish(msg)
 
