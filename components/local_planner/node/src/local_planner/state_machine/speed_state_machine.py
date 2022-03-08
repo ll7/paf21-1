@@ -37,7 +37,7 @@ class SpeedObservation:
     dist_next_obstacle_m: float = 999
     detected_speed_limit: int = None
     obj_speed_ms: float = 500
-    dist_next_curve: float = 999
+    dist_next_curve: float = 998
     curve_target_speed: float = 500
 
 
@@ -47,7 +47,7 @@ class SpeedStateMachine:
     vehicle: Vehicle
     current_state: SpeedState = SpeedState.ACCEL
     target_speed_mps: float = 0
-    legal_speed_limit_mps: float = 30 / 3.6
+    legal_speed_limit_mps: float = 50 / 3.6
     speed_offset_up_mps: float = 5.0 / 3.6
     speed_offset_down_mps: float = 3.0 / 3.6
     count: int = 0
@@ -62,7 +62,7 @@ class SpeedStateMachine:
         if not self.vehicle.is_ready:
             return
 
-        # TODO: fix issue with traffic lights being considered when car spawns in fron of red lights
+        # TODO: fix issue with traffic lights being considered when car spawns in front of red TLs
         #       even though the traffic lights are still far away such that the car should approach
 
         # """Update the machine's state given a speed observation."""
@@ -75,13 +75,13 @@ class SpeedStateMachine:
         else:
             raise ValueError(f'Unsupported speed state {self.current_state}!')
 
-        # if self.count % 10 == 0:
-        #     print(f'speed state: {self.current_state},',
-        #           f'target speed: {self.target_speed_mps:.2f},',
-        #           f'legal speed: {self.legal_speed_limit_mps:.2f},',
-        #           f'obs speed {obs.obj_speed_ms:.2f},'
-        #           f'actual speed: {self.vehicle.actual_velocity_mps:.2f}')
-        # self.count += 1
+        if self.count % 10 == 0:
+            print(f'speed state: {self.current_state},',
+                  f'target speed: {self.target_speed_mps:.2f},',
+                  f'legal speed: {self.legal_speed_limit_mps:.2f},',
+                  f'obs speed {obs.obj_speed_ms:.2f},'
+                  f'actual speed: {self.vehicle.velocity_mps:.2f}')
+        self.count += 1
 
     def _is_in_speed_tolerance(self, speed_limit: float):
         speed_diff = self.vehicle.velocity_mps - speed_limit
@@ -135,14 +135,29 @@ class SpeedStateMachine:
         self.current_state = SpeedState.ACCEL
 
     def _is_brake_required(self, obs: SpeedObservation):
+        # fallback logic for handling yellow like red
+        # ===========================================
+        phases_brake = [TrafficLightPhase.RED, TrafficLightPhase.YELLOW]
         tl_wait_time_s = self._time_until_brake(obs.dist_next_traffic_light_m, 0) \
-                         if obs.tl_phase == TrafficLightPhase.RED else float('inf')
+                         if obs.tl_phase in phases_brake else 999
+
+        # # ToDo think about speeding
+        # tl_wait_time_s = 999
+        # if obs.tl_phase == TrafficLightPhase.YELLOW:
+        #     tl_wait_time_s = self._time_until_brake(obs.dist_next_traffic_light_m, 0)
+        #     #if it is yellow and the distance to brake is too short, speed up instead of braking
+        #     to_late_to_brake: float = -3.0
+        #     if tl_wait_time_s < to_late_to_brake:
+        #         tl_wait_time_s = 999
+        # elif obs.tl_phase == TrafficLightPhase.RED:
+        #     tl_wait_time_s = self._time_until_brake(obs.dist_next_traffic_light_m, 0)
 
         obj_wait_time_s = self._time_until_brake(obs.dist_next_obstacle_m, obs.obj_speed_ms)
         curve_wait_time_s = self._time_until_brake(obs.dist_next_curve, obs.curve_target_speed)
 
-        wait_times = [tl_wait_time_s, obj_wait_time_s, curve_wait_time_s]
-        target_speeds = [0.0, obs.obj_speed_ms, obs.curve_target_speed]
+        speed_tl = 0 if tl_wait_time_s <= 2 else self.legal_speed_limit_mps
+        wait_times = [curve_wait_time_s, tl_wait_time_s, obj_wait_time_s]
+        target_speeds = [obs.curve_target_speed, speed_tl, obs.obj_speed_ms]
 
         crit_id = np.argmin(wait_times)
         crit_wait_time_s, target_speed = wait_times[crit_id], target_speeds[crit_id]

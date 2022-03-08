@@ -9,10 +9,10 @@ from nav_msgs.msg import Odometry as OdometryMsg
 from ackermann_msgs.msg import AckermannDrive
 from std_msgs.msg import String as StringMsg
 
+from local_planner.core import Vehicle
 from local_planner.navigation import InfiniteDrivingService
 from local_planner.route_planner import TrajectoryPlanner
 from local_planner.ros_msg_adapter import RosMessagesAdapter
-from local_planner.core import Vehicle
 from local_planner.vehicle_control import DrivingController
 from local_planner.state_machine import SpeedStateMachine
 
