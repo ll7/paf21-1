@@ -18,6 +18,7 @@ class ObjectHandler:
     vehicle_pos: Tuple[float, float] = None
     vehicle_rad: float = 0.0
     num_predict: int = int(3.0 / delta_time)
+    street_width: float = 3.0
 
     def get_speed_observation(self, local_route: List[Tuple[float, float]]) -> SpeedObservation:
         """Retrieve the speed observation."""
@@ -66,24 +67,33 @@ class ObjectHandler:
         return spd_obs
 
     def plan_route_around_objects(self, local_route: List[Tuple[float, float]]):
-        #calculates a route at the left side of the obstacle
+        """calculates a route at the left side of the obstacle"""
         objects = self.objects.copy()
-        new_route = []
         for obj_id, obj in objects.items():
             obj_positions = [obj.trajectory[-1]]
             if len(obj.trajectory) > 4:
                 obj_positions += objects[obj_id].kalman_filter.predict_points(self.num_predict)
+            blocked_ids = ObjectHandler.find_blocked_points(local_route, obj_positions, threshold=2)
+            for block in blocked_ids:
+                moving_vector = ObjectHandler.orthogonal_vector_from_points(local_route[block],
+                                                                            local_route[block+1])
+                local_route[block] = (self.street_width * moving_vector[0],
+                                      self.street_width * moving_vector[1])
+        return local_route
 
-            for point in local_route:
-                distance = ObjectHandler._closest_point(point, obj_positions, threshold=2)
-
-                if distance is None:
-                    continue
-                else:
-                    point = None
+    @staticmethod
+    def orthogonal_vector_from_points(point_a, point_b):
+        """calculates orthogonal vector"""
+        point_a = np.array(point_a)
+        point_b = np.array(point_b)
+        vector = point_b - point_a
+        unit_vector = vector / np.linalg.norm(vector)
+        orthogonal_vector = [unit_vector[0], -unit_vector[1]]   # cross product with k
+        return orthogonal_vector
 
     @staticmethod
     def find_blocked_points(route, points, threshold):
+        """finds blocked points and returns their ids"""
         threshold = threshold ** 2
         # calculate square distance
         ids = []
@@ -93,6 +103,9 @@ class ObjectHandler:
                 distance = np.sum((np.array(point) - np.array(object)) ** 2)
                 if distance <= threshold:
                     ids.append(id)
+                    break
+            id += 1
+        return ids
 
     @staticmethod
     def _closest_point(point, points, threshold):
