@@ -82,13 +82,29 @@ def test_find_neighbor_sections_town04_highway_1():
     point = (406.0252685546875, 124.70137786865234)
     xodr_map = load_town_04()
     neighbors = RoadDetection.find_neighbor_sections(point, xodr_map)
+    print(neighbors)
     road_ids = [n[2].road_id for n in neighbors]
     print(xodr_map.roads_by_id[36].right_ids, xodr_map.roads_by_id[36].left_ids)
     assert road_ids == [36]
 
 
 def test_find_neighbor_sections_town04_highway_2():
-    point = (16.040634155273438, 170.54249572753906)
+    point = (7.50634155273438, 130.54249572753906)
     neighbors = RoadDetection.find_neighbor_sections(point, load_town_04())
     road_ids = [n[2].road_id for n in neighbors]
-    assert road_ids == [912]
+    print(road_ids)
+    assert road_ids == [48]
+
+def test_find_neighbor_sections_town04_highway_3():
+    point = (-69.64076232910156, -30.3536376953125)
+    neighbors = RoadDetection.find_neighbor_sections(point, load_town_04())
+    road_ids = [n[2].road_id for n in neighbors]
+    print(road_ids)
+    assert road_ids == [1185]
+
+def test_find_neighbor_sections_town04_highway_4():
+    point = (210.86700439453125, -133.64796447753906)
+    neighbors = RoadDetection.find_neighbor_sections(point, load_town_04())
+    road_ids = [n[2].road_id for n in neighbors]
+    print(road_ids)
+    assert road_ids == [1]
