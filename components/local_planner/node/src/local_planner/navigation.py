@@ -18,8 +18,10 @@ from local_planner.config import town_spawns
 def load_spawn_positions() -> List[Tuple[float, float]]:
     """Retrieve a list of possible spawn positions"""
     full_param_name = rospy.search_param('town')
-    print("Town is : ", rospy.get_param(full_param_name))
-    return town_spawns.spawns['town_1']
+    print(rospy.get_param(full_param_name))
+    active_town = rospy.get_param(full_param_name)['carla']['town']
+    print("Town is : ", active_town)
+    return town_spawns.spawns[active_town]
 
 
 @dataclass

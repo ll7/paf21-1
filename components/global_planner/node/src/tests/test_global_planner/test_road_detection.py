@@ -96,15 +96,30 @@ def test_find_neighbor_sections_town04_highway_2():
     assert road_ids == [48]
 
 def test_find_neighbor_sections_town04_highway_3():
-    point = (-69.64076232910156, -30.3536376953125)
+    point = (-105.50200653076172, -12.80552864074707)
     neighbors = RoadDetection.find_neighbor_sections(point, load_town_04())
     road_ids = [n[2].road_id for n in neighbors]
     print(road_ids)
-    assert road_ids == [1185]
+    assert road_ids == [1184]
 
+ 
 def test_find_neighbor_sections_town04_highway_4():
-    point = (210.86700439453125, -133.64796447753906)
+    point = (-504.7949523925781, -221.73223876953125)
     neighbors = RoadDetection.find_neighbor_sections(point, load_town_04())
     road_ids = [n[2].road_id for n in neighbors]
     print(road_ids)
-    assert road_ids == [1]
+    assert road_ids == [6]
+
+def test_find_neighbor_sections_town04_highway_5():
+    point = (1.5099804401397705, -249.42999267578125)
+    neighbors = RoadDetection.find_neighbor_sections(point, load_town_04())
+    road_ids = [n[2].road_id for n in neighbors]
+    print(road_ids)
+    assert road_ids == [46]
+
+# def test_find_neighbor_sections_town04_highway_6():
+#     point = (92.10997009277344, -275.3381042480469)
+#     neighbors = RoadDetection.find_neighbor_sections(point, load_town_04())
+#     road_ids = [n[2].road_id for n in neighbors]
+#     print(road_ids)
+#     assert road_ids == [1185]
