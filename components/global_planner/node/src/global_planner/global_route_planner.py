@@ -1,7 +1,6 @@
 """A global route planner based on map and hmi data."""
 
-from dataclasses import dataclass
-from math import floor, dist as euclid_dist, sqrt
+from math import dist as euclid_dist
 from typing import Tuple, List
 
 import numpy as np
@@ -186,7 +185,7 @@ class GlobalPlanner:
     def generate_waypoints(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
                            orientation_rad: float, xodr_map: XodrMap) -> List[AnnRouteWaypoint]:
         """Generate route waypoints for the given start / end positions using the map"""
-        path = GlobalPlanner.get_shortest_path(start_pos, end_pos, xodr_map)
+        path = GlobalPlanner._get_shortest_path(start_pos, end_pos, xodr_map)
         route_metadata = RouteAnnotation.preprocess_route_metadata(start_pos, path, xodr_map)
         route_waypoints = GlobalPlanner._preplan_route(start_pos, end_pos, path, xodr_map)
         # route_waypoints = GlobalPlanner._add_pos_speed_signs(route_waypoints, route_metadata)
@@ -204,7 +203,8 @@ class GlobalPlanner:
     #         newRoute.append(route)
     #         if (i < len(route_waypoints)-1):
     #             for speed in route_metadata.speed_signs_ahead:
-    #                 if(GlobalPlanner.is_between(route, route_waypoints[i+1], speed.pos) and route != route_waypoints[i+1]):
+    #                 if(GlobalPlanner.is_between(route, route_waypoints[i+1], speed.pos) 
+    #                    and route != route_waypoints[i+1]):
     #                     # print(speed.pos, route, route_waypoints[i+1])
     #                     newRoute.append(speed.pos)
     #     return newRoute
@@ -265,7 +265,7 @@ class GlobalPlanner:
         return road_waypoints
 
     @staticmethod
-    def get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
+    def _get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
                            xodr_map: XodrMap) -> List[str]:
         AdjMatrixPrep.extend_matrix(start_pos, end_pos, xodr_map)
         start_id, end_id = xodr_map.mapping['-1_0_0'], xodr_map.mapping['-2_0_0']

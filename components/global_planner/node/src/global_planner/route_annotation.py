@@ -181,4 +181,3 @@ class RouteAnnotation:
 
         poss_lanes = list(sorted([id * (1 if drive_reverse else -1) for id in poss_lanes]))
         return poss_lanes
-

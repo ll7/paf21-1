@@ -30,7 +30,7 @@ def test_path_finding():
     xodr_map = load_map()
     start = (1.5599901676177979, -149.83001708984375)
     end = (322.09625244140625, -55.15309143066406)
-    path = GlobalPlanner.get_shortest_path(start, end, xodr_map)
+    path = GlobalPlanner._get_shortest_path(start, end, xodr_map)
 
     assert path == ['-1_0_0', '15_0_1', '13_0_-1', '13_1_-1', '3_1_1', '3_0_1', '117_1_1', '117_0_1',
                     '2_1_1', '2_0_1', '61_1_1', '61_0_1', '1_1_1', '1_0_1', '27_1_1', '27_0_1',

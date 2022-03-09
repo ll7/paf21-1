@@ -50,7 +50,7 @@ class NaiveSteeringController:
 class StanleySteeringController:
     """Representing a steering controller implementing the Stanley method."""
     vehicle: Vehicle
-    k: float=2 # TODO: rename this variable with something meaningful
+    curvature: float=2 
     eps: float=1e-6
 
     def compute_steering_angle(self, route: List[Tuple[float, float]]) -> float:
@@ -81,5 +81,5 @@ class StanleySteeringController:
         traj_len = vector_len(prev_to_next)
         e_t = cross_prod / traj_len
 
-        arg = (self.k * e_t) / (self.eps + self.vehicle.velocity_mps)
+        arg = (self.curvature * e_t) / (self.eps + self.vehicle.velocity_mps)
         return atan(arg)
