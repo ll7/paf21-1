@@ -229,32 +229,32 @@ class RoadDetection:
                                for p in geo_pairs]
 
         # compute offset vectors for first / last geometry
-        width = road.road_width
+        # width = road.road_width
         start_0, end_0 = road.geometries[0].start_point, road.geometries[0].end_point
         start_n, end_n = road.geometries[-1].start_point, road.geometries[-1].end_point
         offsets_start = (orth_offset_left(start_0, end_0, 1),
                          orth_offset_right(start_0, end_0, 1))
         offsets_end = (orth_offset_left(start_n, end_n, 1),
                        orth_offset_right(start_n, end_n, 1))
-
-        # put everything together
         offsets_vectors.insert(0, offsets_start)
         offsets_vectors.append(offsets_end)
 
         # compute right / left bounds of the lane polygons
         middle = [geo.start_point for geo in road.geometries] + [road.geometries[-1].end_point]
         left_bounds, right_bounds = { 0: middle }, { 0: middle }
+
         for lane_id in road.left_ids:
-            bounds = [add_vector(geo.start_point,
-                        scale_vector(offsets_vectors[id][0], abs(lane_id) * road.road_width))
-                      for id, geo in enumerate(road.geometries)]
-            bounds.append(add_vector(road.geometries[-1].end_point, offsets_vectors[-1][0]))
+            scale = abs(lane_id) * road.road_width
+            scaled_offsets = [scale_vector(offsets_vectors[i][0], scale)
+                              for i in range(len(middle))]
+            bounds = [add_vector(m, scaled_offsets[i]) for i, m in enumerate(middle)]
             left_bounds[lane_id] = bounds
+
         for lane_id in road.right_ids:
-            bounds = [add_vector(geo.start_point,
-                        scale_vector(offsets_vectors[id][1], abs(lane_id) * road.road_width))
-                      for id, geo in enumerate(road.geometries)]
-            bounds.append(add_vector(road.geometries[-1].end_point, offsets_vectors[-1][1]))
+            scale = abs(lane_id) * road.road_width
+            scaled_offsets = [scale_vector(offsets_vectors[i][1], scale)
+                              for i in range(len(middle))]
+            bounds = [add_vector(m, scaled_offsets[i]) for i, m in enumerate(middle)]
             right_bounds[lane_id] = bounds
 
         # put the bounds together to retrieve polygon boxes
