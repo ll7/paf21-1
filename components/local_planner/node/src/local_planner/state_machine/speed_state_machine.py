@@ -48,7 +48,7 @@ class SpeedStateMachine:
     current_state: SpeedState = SpeedState.ACCEL
     target_speed_mps: float = 0
     legal_speed_limit_mps: float = 50 / 3.6
-    speed_offset_up_mps: float = 5.0 / 3.6
+    speed_offset_up_mps: float = 0 / 3.6
     speed_offset_down_mps: float = 3.0 / 3.6
     count: int = 0
 
@@ -183,7 +183,7 @@ class SpeedStateMachine:
         braking_dist = self.vehicle.velocity_mps * maneuver_time_s + \
                        accel_mps2 * maneuver_time_s ** 2 / 2
 
-        object_offset = 7
+        object_offset = 5
         linear_dist = distance_m - object_offset - braking_dist
         time_until_brake = linear_dist / self.vehicle.velocity_mps \
                            if self.vehicle.velocity_mps > 0 else 999

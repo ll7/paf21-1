@@ -26,6 +26,7 @@ class TrajectoryPlanner:
     length_route: int = 50
     obj_handler: ObjectHandler = None
     tld_info: TrafficLightInfo = TrafficLightInfo()
+    current_route: List[Tuple[float, float]] = field(default_factory=list)
     curve_detection: CurveDetection = CurveDetection()
 
     def __post_init__(self):
@@ -124,6 +125,7 @@ class TrajectoryPlanner:
         bound = min(self.prev_wp_id + self.length_route, len(route))
         temp_route = route[self.prev_wp_id:bound]
         temp_route = self.check_overtake(temp_route)
+        self.current_route = temp_route
         return temp_route
 
     def check_overtake(self, route):
@@ -133,18 +135,19 @@ class TrajectoryPlanner:
     @property
     def latest_speed_observation(self) -> SpeedObservation:
         """Retrieve the latest speed observation"""
-        if not self.cached_local_route:
-            return SpeedObservation()
 
+        if not self.current_route:
+            return SpeedObservation()
         # fuse object detection with traffic light detection
-        speed_obs = self.obj_handler.get_speed_observation(self.cached_local_route)
+        speed_obs = self.obj_handler.get_speed_observation(self.current_route)
         speed_obs.tl_phase = self.tld_info.phase
-        speed_obs.dist_next_traffic_light_m = self.tld_info.distance
-        curve_obs = self.curve_detection.find_next_curve(self.cached_local_route)
+        #speed_obs.dist_next_traffic_light_m = self.tld_info.distance
+        speed_obs.dist_next_traffic_light_m = 10000
+        curve_obs = self.curve_detection.find_next_curve(self.current_route)
         speed_obs.dist_next_curve = curve_obs.dist_until_curve
         speed_obs.curve_target_speed = curve_obs.max_speed
-        speed_obs.detected_speed_limit = self.cached_local_ann_route[0].legal_speed
-
+        if len(self.cached_local_ann_route) > 0:
+            speed_obs.detected_speed_limit = self.cached_local_ann_route[0].legal_speed
         return speed_obs
 
     def update_tld_info(self, tld_info: TrafficLightInfo):
