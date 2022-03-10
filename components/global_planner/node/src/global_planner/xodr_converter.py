@@ -3,12 +3,13 @@ from abc import ABC
 from enum import IntEnum
 from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
+from math import dist as euclid_dist, sqrt, pi, asin
 
 from xml.etree import ElementTree as eTree
 from xml.etree.ElementTree import Element
 import numpy as np
 
-from global_planner.geometry import unit_vector, points_to_vector, \
+from global_planner.geometry import rotate_vector, unit_vector, points_to_vector, \
     vector_len, scale_vector, add_vector, vec2dir
 
 
@@ -31,6 +32,7 @@ class Geometry:
     start_point: Tuple[float, float]
     end_point: Tuple[float, float]
     length: float
+    offset: float
 
     @property
     def direction(self):
@@ -153,7 +155,8 @@ class Road:
     traffic_signs: List[TrafficSign]
     traffic_lights: List[TrafficLight]
     geometries: List[Geometry]
-    road_width: float
+    # road_width: float
+    lane_widths: Dict[int, float]
     suc: RoadLink = None
     pre: RoadLink = None
 
@@ -170,7 +173,7 @@ class Road:
         self.left_ids, self.right_ids = Road._get_lane_ids(road_xml)
         self.line_type = Road._get_line_type(road_xml)
         self.geometries = Road._get_geometry(road_xml)
-        self.road_width = Road._get_road_width(road_xml)
+        self.lane_widths = Road._get_lane_widths(road_xml)
         self.traffic_signs = Road._get_traffic_signs(road_xml, self.road_start, self.road_end)
         self.traffic_lights = Road._get_traffic_lights(road_xml, self.road_start, self.road_end)
 
@@ -220,7 +223,7 @@ class Road:
             if lane_sec.find(direction) is None:
                 continue
             for lane in lane_sec.find(direction).findall('lane'):
-                if lane.get('type') not in ['driving', 'bidirectional']:
+                if lane.get('type') not in ['driving']:
                     continue
                 return_ids[i].append(int(lane.get('id')))
 
@@ -230,20 +233,21 @@ class Road:
         return left_ids, right_ids
 
     @staticmethod
-    def _get_road_width(road: Element) -> float:
-        """Get the lane id."""
-        default_road_width = 4.0
-        directions = ['left', 'right']
-
+    def _get_lane_widths(road: Element) -> Dict[int, float]:
+        """Get the lane widths as dictionary by lane id."""
+        lane_widths: Dict[int, float] = {}
         lane_sec = road.find('lanes').find('laneSection')
-        for direction in directions:
+
+        for direction in ['left', 'right']:
             if lane_sec.find(direction) is None:
                 continue
-            for lane in lane_sec.find(direction).findall('lane'):
-                if lane.get('type') not in ['driving', 'bidirectional']:
-                    continue
-                return float(lane.find('width').get('a'))
-        return default_road_width
+            lanes = lane_sec.find(direction).findall('lane')
+            for lane in lanes:
+                lane_id = int(lane.get('id'))
+                lane_width = float(lane.find('width').get('a'))
+                lane_widths[lane_id] = lane_width
+
+        return lane_widths
 
     @staticmethod
     def _get_traffic_signs(road: Element, road_start: Tuple[float, float],
@@ -283,21 +287,62 @@ class Road:
         objects = []
         geometries = plan_view.findall('geometry')
 
+        offsets = road.find('lanes').findall('laneOffset')
+        offsets = [float(o.get('a')) for o in offsets]
+
         for i, geo_0 in enumerate(geometries):
-            start_point = (float(geo_0.get('x')), float(geo_0.get('y')))
+            start = (float(geo_0.get('x')), float(geo_0.get('y')))
             length = float(geo_0.get('length'))
             is_last_geometry = i == len(geometries)-1
 
             if is_last_geometry:
                 angle = float(geo_0.get('hdg'))
-                end_point = Road._calculate_end_point(start_point, angle, length)
+                end = Road._calculate_end_point(start, angle, length)
             else:
                 geo_1 = geometries[i+1]
-                end_point = (float(geo_1.get('x')), float(geo_1.get('y')))
+                end = (float(geo_1.get('x')), float(geo_1.get('y')))
 
-            objects.append(Geometry(start_point, end_point, length))
+            arc = [float(node.get('curvature')) for node in geo_0 if node.tag == 'arc']
+            arc_radius = 1 / arc[0] if arc else 0
+            offset = offsets[i] if offsets and i < len(offsets) else 0
+
+            circular_interpolation = arc_radius != 0
+            if not circular_interpolation:
+                objects.append(Geometry(start, end, length, offset))
+                continue
+
+            points = Road._circular_interpolation(start, end, arc_radius)
+            geo_vecs = geo_vecs = zip(points[:-1], points[1:])
+            vec_len = euclid_dist(points[0], points[1])
+            objects.extend([Geometry(start, end, vec_len, offset) for (start, end) in geo_vecs])
 
         return objects
+
+    @staticmethod
+    def _circular_interpolation(start: Tuple[float, float], end: Tuple[float, float],
+                                arc_radius: float) -> List[Tuple[float, float]]:
+
+        sign = -1 if arc_radius < 0 else 1
+        arc_radius = abs(arc_radius)
+
+        # compute the center of the arc circle
+        center_offset = sqrt(pow(arc_radius, 2) - pow(euclid_dist(start, end) / 2, 2))
+        vec = rotate_vector(scale_vector(points_to_vector(start, end), 1), pi/2 * sign)
+        conn_middle = ((start[0] + end[0]) / 2,
+                        (start[1] + end[1]) / 2)
+        circle_center = add_vector(conn_middle, scale_vector(vec, center_offset))
+
+        # partition the arc into steps (-> interpol. geometries)
+        angle = asin((euclid_dist(start, end) / 2) / arc_radius) * 2
+        arc_circumference = arc_radius * angle
+        num_steps = int(arc_circumference / 2.0) + 1
+
+        # compute the interpolated geometries
+        vec_to_p = points_to_vector(circle_center, start)
+        rot_angles = [angle * (i / num_steps) for i in range(num_steps+1)]
+        points = [add_vector(circle_center, rotate_vector(vec_to_p, rot * sign))
+                    for rot in rot_angles]
+        return points
 
     @staticmethod
     def _calculate_end_point(start_point: Tuple[float, float], angle: float,
@@ -388,14 +433,28 @@ class XodrMap:
             length = sum([g.length for g in road.geometries])
 
             for link in road.left_ids:
-                index_start = self.mapping[create_key(road.road_id, 0, link)]
-                index_end = self.mapping[create_key(road.road_id, 1, link)]
-                matrix[index_end][index_start] = length
+                index_start = self.mapping[create_key(road.road_id, 1, link)]
+                index_end = self.mapping[create_key(road.road_id, 0, link)]
+                matrix[index_start][index_end] = length
 
             for link in road.right_ids:
                 index_start = self.mapping[create_key(road.road_id, 0, link)]
                 index_end = self.mapping[create_key(road.road_id, 1, link)]
                 matrix[index_start][index_end] = length
+
+            # connect neighbored lanes of a road at the end (multi-lane support)
+            if len(road.left_ids) > 1:
+                for id_1, id_2 in zip(road.left_ids[:-1], road.left_ids[1:]):
+                    id_1_end = self.mapping[create_key(road.road_id, 0, id_1)]
+                    id_2_end = self.mapping[create_key(road.road_id, 0, id_2)]
+                    matrix[id_1_end][id_2_end] = 5
+                    matrix[id_2_end][id_1_end] = 5
+            if len(road.right_ids) > 1:
+                for id_1, id_2 in zip(road.right_ids[:-1], road.right_ids[1:]):
+                    id_1_end = self.mapping[create_key(road.road_id, 1, id_1)]
+                    id_2_end = self.mapping[create_key(road.road_id, 1, id_2)]
+                    matrix[id_1_end][id_2_end] = 5
+                    matrix[id_2_end][id_1_end] = 5
 
     def _apply_junction_connection(self, road: Road, link: RoadLink, matrix: np.ndarray):
 
