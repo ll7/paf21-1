@@ -14,7 +14,7 @@ from local_planner.navigation import InfiniteDrivingService
 from local_planner.route_planner import TrajectoryPlanner
 from local_planner.ros_msg_adapter import RosMessagesAdapter
 from local_planner.vehicle_control import DrivingController
-from local_planner.state_machine import SpeedStateMachine
+from local_planner.state_machine import SpeedStateMachine, ManeuverStateMachine
 
 
 @dataclass
@@ -28,6 +28,7 @@ class LocalPlannerNode:
     route_planner: TrajectoryPlanner = None
     driving_control: DrivingController = None
     speed_state_machine: SpeedStateMachine = None
+    maneuver_state_machine: ManeuverStateMachine = None
 
     def __post_init__(self):
         if self.route_planner is None:
@@ -36,6 +37,8 @@ class LocalPlannerNode:
             self.driving_control = DrivingController(self.vehicle)
         if self.speed_state_machine is None:
             self.speed_state_machine = SpeedStateMachine(self.vehicle)
+        if self.maneuver_state_machine is None:
+            self.maneuver_state_machine = ManeuverStateMachine(self.vehicle)
         if self.nav_service is None:
             route_callback = self.route_planner.update_global_route
             self.nav_service = InfiniteDrivingService(self.vehicle, route_callback)
