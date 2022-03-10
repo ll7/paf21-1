@@ -31,8 +31,6 @@ class CurveDetection:
         wps_until_curve = route_wps[:curve_start_id]
         wps_curve = route_wps[curve_start_id:curve_end_id]
 
-        print(f'num_points until curve: {len(wps_until_curve)}')
-        print(f'num_points of curve: {len(wps_curve)}')
 
         dist_until_curve = CurveDetection._route_dist(wps_until_curve)
         max_curve_speed = CurveDetection._curve_target_speed(wps_curve)
@@ -59,9 +57,6 @@ class CurveDetection:
         start_id = next(filter(lambda r: r[0] < radius_threshold, radiuses), None)
         end_id = next(filter(lambda r: r[0] > radius_threshold, radiuses), None)
 
-        if start_id and end_id:
-            print(f'curve detected: {wps[start_id[1]:end_id[1]+1]}')
-
         return (start_id[1], end_id[1]) if start_id and end_id else None
 
     @staticmethod
@@ -76,5 +71,4 @@ class CurveDetection:
         radius = approx_curvature_radius(p_1, p_2, p_3)
         max_speed = sqrt(friction_coeff * gravity_accel * radius)
 
-        print(f"radius: {radius}, max speed: {max_speed}")
         return max_speed
