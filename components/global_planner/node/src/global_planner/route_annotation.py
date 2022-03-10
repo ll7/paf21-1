@@ -153,16 +153,13 @@ class RouteAnnotation:
             is_first_section = i == 0
             is_road_end = not is_road_end if is_first_section else is_road_end
 
-            if road_id == 10:
-                road = road_by_id(road_id)
-
             is_entering_new_section = road_id != last_road_id
             if is_entering_new_section:
                 road = road_by_id(road_id)
                 drive_reverse = is_road_end
                 norm_lane_id = abs(lane_id)
                 poss_lanes = RouteAnnotation._get_poss_lanes(road, drive_reverse)
-                lane_offset = road.road_width * (norm_lane_id - 0.5)
+                lane_offset = road.lane_widths[lane_id] * (norm_lane_id - 0.5)
                 road_bounds = bounding_box(road.road_start, road.road_end, lane_offset)
                 end_pos = road_bounds[1] if drive_reverse else road_bounds[3]
                 section = PathSection(road_id, norm_lane_id, drive_reverse, poss_lanes, end_pos)
@@ -182,4 +179,3 @@ class RouteAnnotation:
 
         poss_lanes = list(sorted([id * (1 if drive_reverse else -1) for id in poss_lanes]))
         return poss_lanes
-
