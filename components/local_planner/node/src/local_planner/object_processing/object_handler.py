@@ -250,7 +250,7 @@ class ObjectHandler:
         w = self.street_width  # parameter to stop in the  middle of other lane
         mu = 1  # slope of overtaking
         relative_velocity = self.vehicle.velocity_mps - object_speed
-        relative_distance_to_object = min([dist(point, obj) for obj in object_coordinates])
+        relative_distance_to_object = dist(point, min(object_coordinates[0]))
         if dist(point, first_coord) > \
                 min([dist(first_coord, obj) for obj in object_coordinates]):
             relative_distance_to_object = -relative_distance_to_object
