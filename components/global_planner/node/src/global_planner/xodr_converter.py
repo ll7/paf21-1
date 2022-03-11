@@ -9,7 +9,7 @@ from xml.etree import ElementTree as eTree
 from xml.etree.ElementTree import Element
 import numpy as np
 
-from global_planner.geometry import rotate_vector, unit_vector, points_to_vector, \
+from geometry import rotate_vector, unit_vector, points_to_vector, \
     vector_len, scale_vector, add_vector, vec2dir
 
 
@@ -312,7 +312,7 @@ class Road:
                 continue
 
             points = Road._circular_interpolation(start, end, arc_radius)
-            geo_vecs = geo_vecs = zip(points[:-1], points[1:])
+            geo_vecs = zip(points[:-1], points[1:])
             vec_len = euclid_dist(points[0], points[1])
             objects.extend([Geometry(start, end, vec_len, offset) for (start, end) in geo_vecs])
 
@@ -326,11 +326,11 @@ class Road:
         arc_radius = abs(arc_radius)
 
         # compute the center of the arc circle
-        center_offset = sqrt(pow(arc_radius, 2) - pow(euclid_dist(start, end) / 2, 2))
-        vec = rotate_vector(scale_vector(points_to_vector(start, end), 1), pi/2 * sign)
-        conn_middle = ((start[0] + end[0]) / 2,
-                        (start[1] + end[1]) / 2)
-        circle_center = add_vector(conn_middle, scale_vector(vec, center_offset))
+        # center_offset = sqrt(pow(arc_radius, 2) - pow(euclid_dist(start, end) / 2, 2))
+        # vec = rotate_vector(scale_vector(points_to_vector(start, end), 1), pi/2 * sign)
+        # conn_middle = ((start[0] + end[0]) / 2,
+        #                 (start[1] + end[1]) / 2)
+        # circle_center = add_vector(conn_middle, scale_vector(vec, center_offset))
 
         # partition the arc into steps (-> interpol. geometries)
         angle = asin((euclid_dist(start, end) / 2) / arc_radius) * 2

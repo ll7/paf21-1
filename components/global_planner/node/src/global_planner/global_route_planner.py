@@ -1,18 +1,19 @@
 """A global route planner based on map and hmi data."""
 
-from math import dist as euclid_dist, pi
+from math import dist as euclid_dist, pi, copysign
 from typing import Tuple, List, Dict
 
 import numpy as np
+# from components.global_planner.node.src.global_planner.main import main
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
-from global_planner.xodr_converter import XodrMap, Geometry, Road, create_key
-from global_planner.geometry import add_vector, bounding_box, \
+from xodr_converter import XodrMap, Geometry, Road, create_key
+from geometry import add_vector, bounding_box, \
                                     orth_offset_right, orth_offset_left, \
                                     scale_vector, sub_vector, unit_vector, vec2dir
-from global_planner.route_interpolation import RouteInterpolation
-from global_planner.route_annotation import AnnRouteWaypoint, RouteAnnotation
+from route_interpolation import RouteInterpolation
+from route_annotation import AnnRouteWaypoint, RouteAnnotation
 
 
 class ShortestPath:
@@ -303,13 +304,13 @@ class GlobalPlanner:
             elif is_initial_section:
                 route_waypoints.append(start_pos)
                 road = xodr_map.roads_by_id[road_id2]
-                displaced_points = GlobalPlanner._displace_points(road, sec_2, is_final=False)
-                route_waypoints.append(displaced_points)
+                displaced_points = GlobalPlanner._displace_points(road, sec_2, start_pos, is_final=False)
+                route_waypoints.extend(displaced_points)
 
             elif is_final_section:
                 road = xodr_map.roads_by_id[road_id1]
-                displaced_points = GlobalPlanner._displace_points(road, sec_1, is_final=True)
-                route_waypoints.append(displaced_points)
+                displaced_points = GlobalPlanner._displace_points(road, sec_1, end_pos, is_final=True)
+                route_waypoints.extend(displaced_points)
                 route_waypoints.append(end_pos)
 
         return route_waypoints
@@ -323,7 +324,8 @@ class GlobalPlanner:
         polygon = RoadDetection.compute_polygons(road)[lane_id]
         poly_x, poly_y = polygon.exterior.xy
         polygon_points: List[Tuple[float, float]] = list(zip(poly_x, poly_y))
-        print(f'road: {road.road_id}, lane: {lane_id}, points: {polygon_points}')
+        polygon_points = polygon_points[:-1]
+        # print(f'road: {road.road_id}, lane: {lane_id}, points: {polygon_points}')
 
         bound_len = len(polygon_points) // 2
         geo_pairs = zip(polygon_points[:bound_len], reversed(polygon_points[bound_len:]))
@@ -341,16 +343,38 @@ class GlobalPlanner:
         return [key_list[p_id] for p_id in path_ids]
 
     @staticmethod
-    def _displace_points(road: Road, sec: str, is_final: bool):
+    def _displace_points(road: Road, sec: str, pos: Tuple[float, float], 
+                            is_final: bool) -> List[Tuple[float, float]]:
         moving_towards_end = int(sec.split('_')[1])
-        lane_id = int(sec.split('_')[2])
-
-        # TODO: rework this using the road polygons
-        #         - ignore the geometries behind the start / end position
-        #         - make this work for curves as well, not only straight roads
-
         end_geo = road.geometries[-1] if moving_towards_end else road.geometries[0]
-        points = bounding_box(end_geo.start_point, end_geo.end_point, road.lane_widths[lane_id] / 2)
-        if is_final:
-            return points[2] if moving_towards_end else points[0]
-        return points[3] if moving_towards_end else points[1]
+        end_pos = end_geo.end_point if moving_towards_end else end_geo.start_point
+
+        polygon = Polygon(bounding_box(pos, end_pos, 50))
+        filtered_wps = []
+        wps = GlobalPlanner._get_intermed_section_waypoints(sec, road)
+        for wp in wps:
+            point = Point(wp)
+            if polygon.contains(point):
+                filtered_wps.append(wp)
+        return filtered_wps
+
+#Mikro hat gespackt
+
+def load_town_04():
+    from xodr_converter import XODRConverter
+    from os import path
+
+    xodr_path = "/home/axel/paf21-1/components/global_planner/xodr/Town04.xodr"
+    print("File exists:", path.exists(xodr_path))
+    xodr_map = XODRConverter.read_xodr(xodr_path)
+    return xodr_map
+
+
+if __name__ == "__main__":
+    xodr = load_town_04()
+    start = (406.0249938964844, 124.69999694824219)
+    end = (7.50634155273438, 130.54249572753906)
+    path = GlobalPlanner.get_shortest_path(start,end, xodr)
+    route_waypoints = GlobalPlanner._preplan_route(start, end, path, xodr)
+    
+    print(route_waypoints)
