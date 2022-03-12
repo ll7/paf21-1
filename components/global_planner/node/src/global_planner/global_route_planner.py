@@ -23,18 +23,17 @@ class ShortestPath:
     @staticmethod
     def shortest_path(start_pos: int, end_pos: int, matrix: np.ndarray) -> List[int]:
         """Find the shortest path for the given start / end positions and graph"""
-       
         parent = ShortestPath._dijkstra(start_pos, matrix)
 
-        path = [end_pos]
+        path_short = [end_pos]
         pos = end_pos
         while pos != start_pos:
             pos = parent[pos]
             if pos == -1:
                 return [start_pos]
-            path.insert(0, pos)
+            path_short.insert(0, pos)
 
-        return path
+        return path_short
 
     @staticmethod
     def _dijkstra(start_pos: int, matrix: np.ndarray):
@@ -119,7 +118,7 @@ class RoadDetection:
         offsets_vectors = []
         if len(road.geometries) > 1:
             geo_pairs = zip(road.geometries[:-1], road.geometries[1:])
-            offsets_vectors = [RoadDetection._compute_intermediate_offset_vectors(p[0], p[1], road)
+            offsets_vectors = [RoadDetection._compute_intermediate_offset_vectors(p[0], p[1])
                                for p in geo_pairs]
 
         # compute offset vectors for first / last geometry
@@ -171,7 +170,7 @@ class RoadDetection:
         return all_polygons
 
     @staticmethod
-    def _compute_intermediate_offset_vectors(geo_0: Geometry, geo_1: Geometry, road: Road) \
+    def _compute_intermediate_offset_vectors(geo_0: Geometry, geo_1: Geometry) \
                                                  -> Tuple[Tuple[float, float], Tuple[float, float]]:
 
         # directions of vectors, geo_0 pointing forward, geo_1 pointing backward
@@ -261,12 +260,12 @@ class GlobalPlanner:
 
     @staticmethod
     def generate_waypoints(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
-                           orientation_rad: float, xodr_map: XodrMap) -> List[AnnRouteWaypoint]:
+                           xodr_map: XodrMap) -> List[AnnRouteWaypoint]:
         """Generate route waypoints for the given start / end positions using the map"""
 
         print ("Startpos:", start_pos, "endpos:", end_pos)
         path = GlobalPlanner.get_shortest_path(start_pos, end_pos, xodr_map)
-        print(f'planned path:', path)
+        # print(f'planned path:', path)
 
         if len(path) < 1:
             road_start = RoadDetection.find_neighbor_sections(start_pos, xodr_map)
@@ -298,20 +297,20 @@ class GlobalPlanner:
 
             if drive_road_from_start_to_end:
                 road_1 = xodr_map.roads_by_id[road_id1]
-                if (road_id1 == 50):
-                    pass
                 interm_wps = GlobalPlanner._get_intermed_section_waypoints(sec_1, road_1)
                 route_waypoints += interm_wps
 
             elif is_initial_section:
                 route_waypoints.append(start_pos)
                 road = xodr_map.roads_by_id[road_id2]
-                # displaced_points = GlobalPlanner._displace_points(road, sec_2, start_pos, is_final=False)
+                # displaced_points = GlobalPlanner._displace_points
+                # (road, sec_2, start_pos, is_final=False)
                 # route_waypoints.extend(displaced_points)
 
             elif is_final_section:
                 road = xodr_map.roads_by_id[road_id1]
-                displaced_points = GlobalPlanner._displace_points(road, sec_1, end_pos, is_final=True)
+                displaced_points = GlobalPlanner._displace_points(
+                    road, sec_1, end_pos, is_final=True)
                 route_waypoints.extend(displaced_points)
                 route_waypoints.append(end_pos)
 
@@ -338,6 +337,8 @@ class GlobalPlanner:
     @staticmethod
     def get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
                            xodr_map: XodrMap) -> List[str]:
+        """Calculate the shortest path with a given xodr map and return
+        a list of keys (road_id, direction, lane_id)."""
         AdjMatrixPrep.extend_matrix(start_pos, end_pos, xodr_map)
         start_id, end_id = xodr_map.mapping['-1_0_0'], xodr_map.mapping['-2_0_0']
         path_ids = ShortestPath.shortest_path(start_id, end_id, xodr_map.matrix)
@@ -345,58 +346,53 @@ class GlobalPlanner:
         return [key_list[p_id] for p_id in path_ids]
 
     @staticmethod
-    def _displace_points(road: Road, sec: str, pos: Tuple[float, float], 
+    def _displace_points(road: Road, sec: str, pos: Tuple[float, float],
                             is_final: bool) -> List[Tuple[float, float]]:
         moving_towards_end = int(sec.split('_')[1])
         end_geo = road.geometries[-1] if moving_towards_end else road.geometries[0]
         end_pos = end_geo.end_point if moving_towards_end else end_geo.start_point
-
         polygon = Polygon(bounding_box(pos, end_pos, 50))
         filtered_wps = []
-        wps = GlobalPlanner._get_intermed_section_waypoints(sec, road)
-        for wp in wps:
+        waypoints = GlobalPlanner._get_intermed_section_waypoints(sec, road)
+        for wp in waypoints:
             point = Point(wp)
             if polygon.contains(point):
                 filtered_wps.append(wp)
         return filtered_wps
 
-#Mikro hat gespackt
+# def load_town_04():
+#     from xodr_converter import XODRConverter
+#     from os import path
 
-def load_town_04():
-    from xodr_converter import XODRConverter
-    from os import path
+#     xodr_path = "/home/axel/paf21-1/components/global_planner/xodr/Town04.xodr"
+#     print("File exists:", path.exists(xodr_path))
+#     xodr_map = XODRConverter.read_xodr(xodr_path)
+#     return xodr_map
 
-    xodr_path = "/home/axel/paf21-1/components/global_planner/xodr/Town04.xodr"
-    print("File exists:", path.exists(xodr_path))
-    xodr_map = XODRConverter.read_xodr(xodr_path)
-    return xodr_map
+# def test_cirle():
+#     p1 = (0 ,100)
+#     p2 = (100, 0)
+#     rad = 400
+#     points = Road._circular_interpolation(p1, p2, rad)
+#     x = [p[0] for p in points]
+#     y = [p[1] for p in points]
+#     import matplotlib.pyplot as plt
+#     plt.plot(x, y)
+#     plt.show()
 
-def test_cirle():
-    p1 = (0 ,100)
-    p2 = (100, 0)
-    rad = 400
-    points = Road._circular_interpolation(p1, p2, rad)
-    x = [p[0] for p in points]
-    y = [p[1] for p in points]
-    import matplotlib.pyplot as plt
-    plt.plot(x, y)
-    plt.show()
+# if __name__ == "__main__":
 
-
-if __name__ == "__main__":
-
-    # test_cirle()
-    xodr = load_town_04()
-    start = (406.0249938964844, 124.69999694824219)
-    # start = (182.8696438619712, 388.94453431093973)
-    end = (7.50634155273438, 130.54249572753906)
-    path = GlobalPlanner.get_shortest_path(start,end, xodr)
-    print(path)
-    route_waypoints = GlobalPlanner._preplan_route(start, end, path, xodr)
-    x = [p[0] for p in route_waypoints]
-    y = [p[1] for p in route_waypoints]
-    import matplotlib.pyplot as plt
-    plt.scatter(x, y)
-    plt.show()
-
-    print(route_waypoints)
+#     # test_cirle()
+#     xodr = load_town_04()
+#     start = (406.0249938964844, 124.69999694824219)
+#     # start = (182.8696438619712, 388.94453431093973)
+#     end = (7.50634155273438, 130.54249572753906)
+#     path = GlobalPlanner.get_shortest_path(start,end, xodr)
+#     print(path)
+#     route_waypoints = GlobalPlanner._preplan_route(start, end, path, xodr)
+#     x = [p[0] for p in route_waypoints]
+#     y = [p[1] for p in route_waypoints]
+#     import matplotlib.pyplot as plt
+#     plt.scatter(x, y)
+#     plt.show()
+#     print(route_waypoints)

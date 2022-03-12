@@ -72,7 +72,7 @@ def test_route_interpolation():
     xodr_map = load_town_01()
     start = (1.5599901676177979, -149.83001708984375)
     end = (322.09625244140625, -55.15309143066406)
-    route = GlobalPlanner.generate_waypoints(start, end, 0, xodr_map)
+    route = GlobalPlanner.generate_waypoints(start, end, xodr_map)
 
     # the route contains at least 2 waypoints and the x/y coords have reasonable values
     assert len(route) > 2
@@ -87,7 +87,7 @@ def test_route_annotations():
     xodr_map = load_town_01()
     start = (1.5599901676177979, -149.83001708984375)
     end = (322.09625244140625, -55.15309143066406)
-    route = GlobalPlanner.generate_waypoints(start, end, 0, xodr_map)
+    route = GlobalPlanner.generate_waypoints(start, end, xodr_map)
 
     # the speed signs are interpreted correctly
     speed_zones = []

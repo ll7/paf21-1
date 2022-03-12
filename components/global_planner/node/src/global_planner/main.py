@@ -30,7 +30,6 @@ class GlobalPlannerNode:
         global_route = GlobalPlanner.generate_waypoints(
             (nav_request.start_x, nav_request.start_y),
             (nav_request.end_x, nav_request.end_y),
-            nav_request.orientation_rad,
             xodr_map
         )
 
