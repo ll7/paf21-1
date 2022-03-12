@@ -298,14 +298,16 @@ class GlobalPlanner:
 
             if drive_road_from_start_to_end:
                 road_1 = xodr_map.roads_by_id[road_id1]
+                if (road_id1 == 50):
+                    pass
                 interm_wps = GlobalPlanner._get_intermed_section_waypoints(sec_1, road_1)
                 route_waypoints += interm_wps
 
             elif is_initial_section:
                 route_waypoints.append(start_pos)
                 road = xodr_map.roads_by_id[road_id2]
-                displaced_points = GlobalPlanner._displace_points(road, sec_2, start_pos, is_final=False)
-                route_waypoints.extend(displaced_points)
+                # displaced_points = GlobalPlanner._displace_points(road, sec_2, start_pos, is_final=False)
+                # route_waypoints.extend(displaced_points)
 
             elif is_final_section:
                 road = xodr_map.roads_by_id[road_id1]
@@ -369,12 +371,27 @@ def load_town_04():
     xodr_map = XODRConverter.read_xodr(xodr_path)
     return xodr_map
 
+def test_cirle():
+    p1 = (0 ,100)
+    p2 = (100, 0)
+    rad = 400
+    points = Road._circular_interpolation(p1, p2, rad)
+    x = [p[0] for p in points]
+    y = [p[1] for p in points]
+    import matplotlib.pyplot as plt
+    plt.plot(x, y)
+    plt.show()
+
 
 if __name__ == "__main__":
+
+    # test_cirle()
     xodr = load_town_04()
     start = (406.0249938964844, 124.69999694824219)
+    # start = (182.8696438619712, 388.94453431093973)
     end = (7.50634155273438, 130.54249572753906)
     path = GlobalPlanner.get_shortest_path(start,end, xodr)
+    print(path)
     route_waypoints = GlobalPlanner._preplan_route(start, end, path, xodr)
     
     print(route_waypoints)
