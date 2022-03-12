@@ -16,7 +16,6 @@ class NaiveSteeringController:
     """Representing a very straight-forward implementation of a steering
     controller driving towards an aim point in front of the vehicle."""
     vehicle: Vehicle
-    min_dist_ahead: float
 
     def compute_steering_angle(self, route: List[Tuple[float, float]]) -> float:
         """Compute the steering angle for driving towards an aim point"""
@@ -34,6 +33,17 @@ class NaiveSteeringController:
         max_angle = self.vehicle.meta.max_steer_angle_rad
         steer_angle = min(max(steer_angle, -max_angle), max_angle)
         return steer_angle
+
+    @property
+    def min_dist_ahead(self) -> float:
+        speed= self.vehicle.velocity_mps
+        if speed < 45.0 / 3.6:
+            return 5.0
+        elif speed < 60.0 / 3.6:
+            return 9.0
+        elif speed < 80.0 / 3.6:
+            return 15.0
+        return 20.0
 
     def _get_aim_point(self, route: List[Tuple[float, float]]) -> Tuple[float, float] or None:
         if len(route) < 2:

@@ -36,7 +36,7 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
 
     def __post_init__(self):
         if not self.steer_control:
-            self.steer_control = NaiveSteeringController(self.vehicle, 5.0)
+            self.steer_control = NaiveSteeringController(self.vehicle)
 
     def update_route(self, waypoints: List[Tuple[float, float]]):
         """Update the route to be followed and cache first waypoint"""
