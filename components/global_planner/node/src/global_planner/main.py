@@ -16,7 +16,7 @@ from global_planner.xodr_converter import XODRConverter
 class GlobalPlannerNode:
     """A class representing a ROS node that's planning a global route."""
     vehicle_name: str
-    map_path = "/app/res/xodr/Town04.xodr"
+    map_path = "/app/res/xodr/Town01.xodr"
 
     def run_node(self):
         """Launch the ROS node to receive the map, the start and

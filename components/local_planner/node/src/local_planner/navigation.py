@@ -22,7 +22,7 @@ def load_spawn_positions() -> List[Tuple[float, float]]:
     # print(rospy.get_param(full_param_name))
     # active_town = rospy.get_param(full_param_name)['carla']['town']
     # print("Town is : ", active_town)
-    return town_spawns.spawns['Town04']
+    return town_spawns.spawns['Town01']
 
 
 @dataclass

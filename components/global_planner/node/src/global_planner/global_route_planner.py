@@ -264,7 +264,7 @@ class GlobalPlanner:
         """Generate route waypoints for the given start / end positions using the map"""
 
         print ("Startpos:", start_pos, "endpos:", end_pos)
-        path = GlobalPlanner.get_shortest_path(start_pos, end_pos, xodr_map)
+        path = GlobalPlanner._get_shortest_path(start_pos, end_pos, xodr_map)
         # print(f'planned path:', path)
 
         if len(path) < 1:
@@ -335,7 +335,7 @@ class GlobalPlanner:
         return list(reversed(road_waypoints)) if reverse else road_waypoints
 
     @staticmethod
-    def get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
+    def _get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
                            xodr_map: XodrMap) -> List[str]:
         """Calculate the shortest path with a given xodr map and return
         a list of keys (road_id, direction, lane_id)."""
