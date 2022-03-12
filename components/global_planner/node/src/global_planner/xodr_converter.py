@@ -1,18 +1,15 @@
 """A xodr converter based on xodr files."""
 from abc import ABC
-from cmath import sin
-from dis import dis
 from enum import IntEnum
-from logging import raiseExceptions
 from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
-from math import dist as euclid_dist, sqrt, pi, asin, sin, cos
+from math import dist as euclid_dist, sqrt, pi, asin
 
 from xml.etree import ElementTree as eTree
 from xml.etree.ElementTree import Element
 import numpy as np
 
-from geometry import rotate_vector, unit_vector, points_to_vector, \
+from global_planner.geometry import rotate_vector, unit_vector, points_to_vector, \
     vector_len, scale_vector, add_vector, vec2dir
 
 
@@ -297,20 +294,19 @@ class Road:
             start = (float(geo_0.get('x')), float(geo_0.get('y')))
             length = float(geo_0.get('length'))
             is_last_geometry = i == len(geometries)-1
-            
+
             arc = [float(node.get('curvature')) for node in geo_0 if node.tag == 'arc']
             arc_radius = 1 / arc[0] if arc else 0
 
             if is_last_geometry:
                 angle = float(geo_0.get('hdg'))
                 end = Road._calculate_end_point(start, angle, length, arc_radius)
-                if (euclid_dist(start, end)> length+1):
-                    raise Exception("End Point was set incorrectly")
+                if (euclid_dist(start, end) > length+0.2):
+                    raise Exception("End Point was set incorrectly", start, end, angle, length)
             else:
                 geo_1 = geometries[i+1]
                 end = (float(geo_1.get('x')), float(geo_1.get('y')))
 
-            
             offset = offsets[i] if offsets and i < len(offsets) else 0
 
             circular_interpolation = arc_radius != 0
@@ -326,53 +322,28 @@ class Road:
         return objects
 
     @staticmethod
-    def get_intersections(start,end, radius)->List[Tuple[float,float]]:
-        # circle 1: (x0, y0), radius r0
-        # circle 2: (x1, y1), radius r1
-        x0, y0 = start
-        x1, y1 = end
-
-        d=sqrt((x1-x0)**2 + (y1-y0)**2)
-        # coincident circles
-        if d == 0:
-            return None
-        else:
-            a=(d**2)/(2*d)
-            h=sqrt(radius**2-a**2)
-            x2=x0+a*(x1-x0)/d   
-            y2=y0+a*(y1-y0)/d   
-            x3=x2+h*(y1-y0)/d     
-            y3=y2-h*(x1-x0)/d 
-
-            x4=x2-h*(y1-y0)/d
-            y4=y2+h*(x1-x0)/d
-        
-        return [(x3, y3), (x4, y4)]
-
-    @staticmethod
     def _circular_interpolation(start: Tuple[float, float], end: Tuple[float, float],
                                 arc_radius: float) -> List[Tuple[float, float]]:
 
+        step_size = 2.0
         sign = -1 if arc_radius < 0 else 1
         arc_radius = abs(arc_radius)
-        # center:List[Tuple[float,float]] = Road.get_intersections(start, end, arc_radius)
-        # center = center[0] if sign == -1 else center[1]
-        # compute the center of the arc circle
-        blub = pow(arc_radius, 2) - pow(euclid_dist(start, end) / 2, 2)
-        if blub < 0:
-            raise Exception("Oh no:", arc_radius, euclid_dist(start, end) / 2) 
-        center_offset = sqrt(blub)
-        vec = rotate_vector(scale_vector(points_to_vector(start, end), 1), pi/2 * sign)
-        conn_middle = ((start[0] + end[0]) / 2,
-                        (start[1] + end[1]) / 2)
-        circle_center = add_vector(conn_middle, scale_vector(vec, center_offset))
-        # partition the arc into steps (-> interpol. geometries)
-        angle = asin((euclid_dist(start, end) / 2) / arc_radius) * 2
-        #  r * 2 * pi * (2 pi / angle)
-        arc_circumference = arc_radius * angle
-        num_steps = int(arc_circumference / 2.0) + 1
 
-        # compute the interpolated geometries
+        # determine the circular angle of the arc
+        angle = asin((euclid_dist(start, end) / 2) / arc_radius) * 2
+        assert(arc_radius > euclid_dist(start, end) / 2)
+
+        # construct the mid-perpendicular of |start, end| to determine the circle's center
+        conn_middle = ((start[0] + end[0]) / 2, (start[1] + end[1]) / 2)
+        center_offset = sqrt(pow(arc_radius, 2) - pow(euclid_dist(start, end) / 2, 2))
+        mid_perpend = rotate_vector(points_to_vector(start, end), pi/2 * sign)
+        circle_center = add_vector(conn_middle, scale_vector(mid_perpend, center_offset))
+
+        # partition the arc into steps (-> interpol. geometries)
+        arc_circumference = arc_radius * angle # (r * 2 pi) * (angle / 2 pi)
+        num_steps = int(arc_circumference / step_size) + 1 # each step < step size
+
+        # compute the interpolated points on the circle arc
         vec_to_p = points_to_vector(circle_center, start)
         rot_angles = [angle * (i / num_steps) for i in range(num_steps+1)]
         points = [add_vector(circle_center, rotate_vector(vec_to_p, rot * sign))
@@ -383,19 +354,25 @@ class Road:
     @staticmethod
     def _calculate_end_point(start_point: Tuple[float, float], angle: float,
                              length: float, radius: float) -> Tuple[float, float]:
-        
+
+        # simple case for no arc
         if radius == 0.0:
             diff_vec = scale_vector(unit_vector(angle), length)
             return add_vector(start_point, diff_vec)
 
-        alpha = length / (radius)
-        radius = radius
-        end_x = (radius) * sin(alpha)          
-        end_y = -radius + radius * cos(alpha)
-        end = (end_x, end_y)         
-        return add_vector(end, start_point)# rotate_vector(end, angle)
+        # determine the length of |start, end|
+        alpha = length / radius
+        diff_vec = scale_vector(unit_vector(alpha), radius)
+        dist_start_end = euclid_dist(diff_vec, (radius, 0))
 
-        
+        # determine the direction of |start, end| and apply it
+        dir_start_end = unit_vector(alpha / 2 + angle)
+        # TODO: figure out why the direction is actually 'alpha / 2 + angle'
+
+        # apply vector |start --> end| to the start point to retrieve the end point
+        diff_vec = scale_vector(dir_start_end, dist_start_end)
+        return add_vector(start_point, diff_vec)
+
 
 @dataclass
 class Connection:

@@ -1,6 +1,6 @@
 """A global route planner based on map and hmi data."""
 
-from math import dist as euclid_dist, pi, copysign
+from math import dist as euclid_dist, pi
 from typing import Tuple, List, Dict
 
 import numpy as np
@@ -8,12 +8,12 @@ import numpy as np
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
-from xodr_converter import XodrMap, Geometry, Road, create_key
-from geometry import add_vector, bounding_box, \
+from global_planner.xodr_converter import XodrMap, Geometry, Road, create_key
+from global_planner.geometry import add_vector, bounding_box, \
                                     orth_offset_right, orth_offset_left, \
                                     scale_vector, sub_vector, unit_vector, vec2dir
-from route_interpolation import RouteInterpolation
-from route_annotation import AnnRouteWaypoint, RouteAnnotation
+from global_planner.route_interpolation import RouteInterpolation
+from global_planner.route_annotation import AnnRouteWaypoint, RouteAnnotation
 
 
 class ShortestPath:
@@ -393,5 +393,10 @@ if __name__ == "__main__":
     path = GlobalPlanner.get_shortest_path(start,end, xodr)
     print(path)
     route_waypoints = GlobalPlanner._preplan_route(start, end, path, xodr)
-    
+    x = [p[0] for p in route_waypoints]
+    y = [p[1] for p in route_waypoints]
+    import matplotlib.pyplot as plt
+    plt.scatter(x, y)
+    plt.show()
+
     print(route_waypoints)
