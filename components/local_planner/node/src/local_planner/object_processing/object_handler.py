@@ -6,9 +6,9 @@ from dataclasses import dataclass, field
 
 import numpy as np
 from local_planner.core import Vehicle
-from local_planner.core.geometry import norm_angle, rotate_vector
+from local_planner.core.geometry import rotate_vector
 from local_planner.object_processing.object_meta import ObjectMeta
-from local_planner.state_machine import SpeedObservation, ManeuverObservation
+from local_planner.state_machine import SpeedObservation
 
 
 @dataclass

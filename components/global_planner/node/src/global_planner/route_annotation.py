@@ -65,16 +65,16 @@ class RouteAnnotation:
         ann_waypoints: List[AnnRouteWaypoint] = []
 
         legal_speed = metadata.initial_speed
-        for wp in waypoints:
+        for waypoint in waypoints:
             tl_pos, ss_pos, sec_end_pos = next_tl_pos(), next_ss_pos(), next_sec_end()
-            tl_dist = euclid_dist(wp, tl_pos) if tl_pos else max_dist
-            ss_dist = euclid_dist(wp, ss_pos) if ss_pos else max_dist
-            sec_dist = euclid_dist(wp, sec_end_pos) if sec_end_pos else max_dist
+            tl_dist = euclid_dist(waypoint, tl_pos) if tl_pos else max_dist
+            ss_dist = euclid_dist(waypoint, ss_pos) if ss_pos else max_dist
+            sec_dist = euclid_dist(waypoint, sec_end_pos) if sec_end_pos else max_dist
 
             actual_lane = metadata.sections_ahead[sec_id].lane_id
             poss_lanes = metadata.sections_ahead[sec_id].possible_lanes
 
-            ann_wp = AnnRouteWaypoint(wp, actual_lane, poss_lanes, legal_speed, tl_dist, sec_dist)
+            ann_wp = AnnRouteWaypoint(waypoint, actual_lane, poss_lanes, legal_speed, tl_dist, sec_dist)
             ann_waypoints.append(ann_wp)
 
             if tl_dist < radius_handled:
@@ -84,7 +84,8 @@ class RouteAnnotation:
                 ss_id += 1
             if sec_dist < radius_handled:
                 legal_speed = default_speed
-                sec_id += 1
+                sec_id = max(sec_id + 1, len(metadata.sections_ahead) - 1)
+                # TODO: reason whether this quick index overflow fix actually makes sense
 
         return ann_waypoints
 
@@ -94,13 +95,14 @@ class RouteAnnotation:
         """Evaluate the path selected by the navigation algorithm
         regarding route metadata to annotate."""
 
-        path_sections: List[PathSection] = RouteAnnotation._norm_path(path, xodr_map.road_by_id)
+        road_by_id = lambda id: xodr_map.roads_by_id[id]
+        path_sections: List[PathSection] = RouteAnnotation._norm_path(path, road_by_id)
         traffic_lights: List[TrafficLight] = []
         speed_signs: List[TrafficSign] = []
         inital_speed = 50.0
 
         for i, section in enumerate(path_sections):
-            road = xodr_map.road_by_id(section.road_id)
+            road = xodr_map.roads_by_id[section.road_id]
 
             sec_traffic_lights = RouteAnnotation._filter_items(road.traffic_lights, section)
             sec_speed_signs = RouteAnnotation._filter_items(road.speed_signs, section)
@@ -134,7 +136,7 @@ class RouteAnnotation:
         return items
 
     @staticmethod
-    def _norm_path(path: List[str], road_by_id: Callable) -> List[PathSection]:
+    def _norm_path(path: List[str], road_by_id: Callable[[int], Road]) -> List[PathSection]:
         """Remove duplicates from the path and convert
         the path strings into a normalized structure"""
 
@@ -152,16 +154,13 @@ class RouteAnnotation:
             is_first_section = i == 0
             is_road_end = not is_road_end if is_first_section else is_road_end
 
-            if road_id == 10:
-                road = road_by_id(road_id)
-
             is_entering_new_section = road_id != last_road_id
             if is_entering_new_section:
-                road: Road = road_by_id(road_id)
+                road = road_by_id(road_id)
                 drive_reverse = is_road_end
                 norm_lane_id = abs(lane_id)
                 poss_lanes = RouteAnnotation._get_poss_lanes(road, drive_reverse)
-                lane_offset = road.road_width * (norm_lane_id - 0.5)
+                lane_offset = road.lane_widths[lane_id] * (norm_lane_id - 0.5)
                 road_bounds = bounding_box(road.road_start, road.road_end, lane_offset)
                 end_pos = road_bounds[1] if drive_reverse else road_bounds[3]
                 section = PathSection(road_id, norm_lane_id, drive_reverse, poss_lanes, end_pos)
@@ -181,4 +180,3 @@ class RouteAnnotation:
 
         poss_lanes = list(sorted([id * (1 if drive_reverse else -1) for id in poss_lanes]))
         return poss_lanes
-

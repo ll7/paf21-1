@@ -16,7 +16,6 @@ class NaiveSteeringController:
     """Representing a very straight-forward implementation of a steering
     controller driving towards an aim point in front of the vehicle."""
     vehicle: Vehicle
-    min_dist_ahead: float
 
     def compute_steering_angle(self, route: List[Tuple[float, float]]) -> float:
         """Compute the steering angle for driving towards an aim point"""
@@ -35,6 +34,17 @@ class NaiveSteeringController:
         steer_angle = min(max(steer_angle, -max_angle), max_angle)
         return steer_angle
 
+    @property
+    def min_dist_ahead(self) -> float:
+        speed= self.vehicle.velocity_mps
+        if speed < 45.0 / 3.6:
+            return 5.0
+        elif speed < 60.0 / 3.6:
+            return 9.0
+        elif speed < 80.0 / 3.6:
+            return 15.0
+        return 20.0
+
     def _get_aim_point(self, route: List[Tuple[float, float]]) -> Tuple[float, float] or None:
         if len(route) < 2:
             return None
@@ -50,7 +60,7 @@ class NaiveSteeringController:
 class StanleySteeringController:
     """Representing a steering controller implementing the Stanley method."""
     vehicle: Vehicle
-    k: float=2 # TODO: rename this variable with something meaningful
+    curvature: float=2 
     eps: float=1e-6
 
     def compute_steering_angle(self, route: List[Tuple[float, float]]) -> float:
@@ -81,5 +91,5 @@ class StanleySteeringController:
         traj_len = vector_len(prev_to_next)
         e_t = cross_prod / traj_len
 
-        arg = (self.k * e_t) / (self.eps + self.vehicle.velocity_mps)
+        arg = (self.curvature * e_t) / (self.eps + self.vehicle.velocity_mps)
         return atan(arg)
