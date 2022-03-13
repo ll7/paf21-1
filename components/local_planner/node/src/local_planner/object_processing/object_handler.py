@@ -56,7 +56,6 @@ class ObjectHandler:
 
         if not self.vehicle.is_ready:
             return SpeedObservation()
-        print(self.cache)
         keys = []
         cache_limit = 20
 
@@ -101,7 +100,6 @@ class ObjectHandler:
             spd_obs.is_trajectory_free = False
             spd_obs.dist_next_obstacle_m = distance
             spd_obs.obj_speed_ms = obj.velocity
-            print(spd_obs)
         return spd_obs
 
     def calculate_min_distance(self, route, until_id, obj_pos):
@@ -137,7 +135,6 @@ class ObjectHandler:
             temp_route[i] = (temp_route[i][0] + width * moving_vector[0],
                              temp_route[i][1] + width * moving_vector[1])
         new_check, _ = self.get_blocked_ids(temp_route)
-        print('widths', widths)
         if closest_object is not None:
             print('Distance to object', dist(self.vehicle.pos, closest_object.trajectory[-1]))
         return local_route if new_check else temp_route
@@ -153,7 +150,7 @@ class ObjectHandler:
             if len(obj.trajectory) > 3:
                 # obj_positions += objects[obj_id].kalman_filter.predict_points(self.num_predict)
                 obj_positions += ObjectHandler.predict_car_movement(obj)
-                blocked = self.find_blocked_points(route, obj_positions, 1.8, obj)
+                blocked = self.find_blocked_points(route, obj_positions, 2.0, obj)
                 if not blocked:
                     continue
                 if min(blocked) < min_id:
@@ -250,7 +247,7 @@ class ObjectHandler:
         w = self.street_width  # parameter to stop in the  middle of other lane
         mu = 1  # slope of overtaking
         relative_velocity = self.vehicle.velocity_mps - object_speed
-        relative_distance_to_object = dist(point, min(object_coordinates[0]))
+        relative_distance_to_object = dist(point, object_coordinates[0])
         if dist(point, first_coord) > \
                 min([dist(first_coord, obj) for obj in object_coordinates]):
             relative_distance_to_object = -relative_distance_to_object

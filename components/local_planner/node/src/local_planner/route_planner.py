@@ -113,7 +113,7 @@ class TrajectoryPlanner:
 
         bound = min(self.prev_wp_id + self.length_route, len(route))
         temp_route = route[self.prev_wp_id:bound]
-        temp_route = self.check_overtake(temp_route)
+        # temp_route = self.check_overtake(temp_route)
         self.current_route = temp_route
         return temp_route
 
