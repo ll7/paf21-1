@@ -39,26 +39,27 @@
   </include>
 
   <!-- the ego vehicle, that will be controlled by the carla_ad_agent -->
-  <include file="$(find carla_ego_vehicle)/launch/carla_example_ego_vehicle.launch">
+  <!-- <include file="$(find carla_ego_vehicle)/launch/carla_example_ego_vehicle.launch">
     <arg name='host' value='$(arg host)'/>
     <arg name='port' value='$(arg port)'/>
     <arg name='timeout' value='$(arg timeout)'/>
     <arg name="vehicle_filter" value='$(arg vehicle_filter)'/>
     <arg name="sensor_definition_file" default="$(arg sensor_definition_file)"/>
     <arg name='role_name' value='$(arg role_name)'/>
-    <!-- <arg name="spawn_point" value="406.025, -124.70, 1.0, 0.0, 0.0, 90.0"/> -->
-  </include>
+    <arg name="spawn_point" value="406.025, -124.70, 1.0, 0.0, 0.0, 90.0"/>
+  </include> -->
 
   <!-- Provide a route and access to the CARLA waypoint API (required by carla_ad_agent) -->
-  <include file="$(find carla_waypoint_publisher)/launch/carla_waypoint_publisher.launch">
+  <!-- <include file="$(find carla_waypoint_publisher)/launch/carla_waypoint_publisher.launch">
     <arg name='host' value='$(arg host)'/>
     <arg name='port' value='$(arg port)'/>
     <arg name='timeout' value='$(arg timeout)'/>
     <arg name='role_name' value='$(arg role_name)'/>
-  </include>
+  </include> -->
 
   <!-- a spectator camera that is attached to the ego vehicle and be controlled from within rviz -->
-  <include file="$(find carla_spectator_camera)/launch/carla_spectator_camera.launch">
+  <!-- TODO: figure out whether this camera is required for the dashboard -->
+  <!-- <include file="$(find carla_spectator_camera)/launch/carla_spectator_camera.launch">
     <arg name='host' value='$(arg host)'/>
     <arg name='port' value='$(arg port)'/>
     <arg name='timeout' value='$(arg timeout)'/>
@@ -66,17 +67,13 @@
     <arg name="resolution_x" value="$(arg resolution_x)"/>
     <arg name="resolution_y" value="$(arg resolution_y)"/>
     <arg name="fov" value="$(arg fov)"/>
-  </include>
+  </include> -->
 
-  <!-- To be able to maneuver with rviz, this node converts twist to vehicle control commands -->
-  <!-- <node pkg="carla_twist_to_control" type="carla_twist_to_control.py" name="carla_twist_to_control">
-    <remap from="/carla/$(arg role_name)/vehicle_control_cmd" to="/carla/$(arg role_name)/vehicle_control_cmd_manual"/>
-    <param name="role_name" value="$(arg role_name)"/>
-  </node> -->
+  <!--Convert Ackermann control commands to vehicle commands -->
   <include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch" />
 
   <!-- Scenario Runner and an example scenario-->
-  <node pkg="rostopic" type="rostopic" name="publish_scenarios"
+  <!-- <node pkg="rostopic" type="rostopic" name="publish_scenarios"
     args="pub /carla/available_scenarios carla_ros_scenario_runner_types/CarlaScenarioList '{ 'scenarios':  
       [
         {
@@ -85,13 +82,14 @@
         }
       ]
     }' -l"/>
+
   <include file="$(find carla_ros_scenario_runner)/launch/carla_ros_scenario_runner.launch">
     <arg name='host' value='$(arg host)'/>
     <arg name='port' value='$(arg port)'/>
     <arg name="role_name" value="$(arg role_name)"/>
     <arg name="scenario_runner_path" value="$(arg scenario_runner_path)"/>
     <arg name="wait_for_ego" value="True"/>
-  </include>
+  </include> -->
 
   <!-- Rviz visualization-->
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(arg rviz_config_file)" required="true" output="screen"/>

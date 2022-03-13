@@ -47,6 +47,16 @@ services:
       - carla
       - ros
 
+  launch-service:
+    image: launch_service
+    environment:
+      CARLA_SIM_HOST: carla-simulator
+      ROS_MASTER_URI: http://roscore:11311
+      ROS_HOSTNAME: local-planner
+    networks:
+      - carla
+      - ros
+
   local-planner:
     image: local_planner
     volumes:
