@@ -28,7 +28,7 @@ def test_path_finding():
     xodr_map = load_town_01()
     start = (1.5599901676177979, -149.83001708984375)
     end = (322.09625244140625, -55.15309143066406)
-    path = GlobalPlanner._get_shortest_path(start, end, xodr_map)
+    path = GlobalPlanner.get_shortest_path(start, end, xodr_map)
 
     assert path == ['-1_0_0', '15_0_1', '13_0_-1', '13_1_-1', '3_1_1', '3_0_1', '117_1_1', '117_0_1',
                     '2_1_1', '2_0_1', '61_1_1', '61_0_1', '1_1_1', '1_0_1', '27_1_1', '27_0_1',
@@ -102,6 +102,30 @@ def test_route_metadata():
     # TODO: enable this property test back again
 
 # ============================================================
+
+# def test_path_finding_multilane_highway_town_4():
+#     xodr_map = load_town_04()
+#     start = (406.0252685546875, 124.70137786865234)
+#     end  = (8.901467323303223, -96.35236358642578)
+#     path = GlobalPlanner.get_shortest_path(start, end, xodr_map)
+
+#     exp_path = ['-1_0_0', '36_0_4', '862_1_4', '862_0_4', '35_1_4', '35_0_4', '43_1_4', '43_0_4',
+#      '266_1_4', '266_0_4', '42_1_4', '42_0_4', '50_1_4', '50_0_4', '1161_1_1', '1161_0_1',
+#      '23_0_-2', '23_1_-2', '1450_0_-1', '1450_1_-1', '41_0_-4', '41_1_-4', '6_0_-4', '6_1_-4',
+#      '45_0_-4', '45_1_-4', '145_0_-4', '145_1_-4', '46_0_-4', '46_1_-4', '1072_0_-4', '-2_0_0']
+
+#     assert False
+
+
+def test_path_finding_multilane_highway_town_4():
+    xodr_map = load_town_04()
+    start = (406.0252685546875, 124.70137786865234)
+    end  = (8.901467323303223, -96.35236358642578)
+
+    wps = GlobalPlanner.generate_waypoints(start, end, xodr_map)
+    # print([wp.pos for wp in wps])
+    assert False
+
 
 # def test_path_finding_multilane_highway_town_4():
 #     xodr_map = load_town_04()
