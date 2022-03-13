@@ -4,7 +4,7 @@ source "/opt/carla-ros-bridge/install/setup.bash"
 
 #============ Variables ================
 export CONFIG_FILE="/config/Town01/town01_sg0.yaml"
-export TOWN="Town01"
+export TOWN="${CONFIG_FILE:8:6}"
 export NUM_CARS=40
 export NUM_PEDESTRIANS=50
 export SPAWN_POINT="$(python /scripts/parse_spawn_pos.py)"
