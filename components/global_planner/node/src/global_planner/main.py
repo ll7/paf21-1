@@ -10,13 +10,24 @@ import rospy
 from nav_srvs.srv import NavigationRequest, NavigationRequestResponse
 from global_planner.global_route_planner import GlobalPlanner
 from global_planner.xodr_converter import XODRConverter
-
+from time import sleep
 
 @dataclass
 class GlobalPlannerNode:
     """A class representing a ROS node that's planning a global route."""
     vehicle_name: str
-    map_path = "/app/res/xodr/Town01.xodr"
+    map_path: str = None
+
+    def __post_init__(self):
+        while True:
+            try:
+                full_param_name = rospy.search_param('town')
+                town = rospy.get_param(full_param_name)['carla']['town']
+                self.map_path = f"/app/res/xodr/{town}.xodr"
+                print("Town is: ", town)
+                break
+            except:
+                sleep(1)
 
     def run_node(self):
         """Launch the ROS node to receive the map, the start and

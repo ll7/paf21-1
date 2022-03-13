@@ -20,6 +20,5 @@ RUN git clone $CM_GITHUB_URL . && \
 WORKDIR /
 
 # register a startup procedure to launch the ROS node
-ADD 
 ADD ./ros_entrypoint.sh /ros_entrypoint.sh
 ENTRYPOINT ["/ros_entrypoint.sh"]

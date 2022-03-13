@@ -1,29 +1,27 @@
 #!/bin/bash
 set -e
-
-# setup ros environment
 source "/opt/carla-ros-bridge/install/setup.bash"
+
+#============ Variables ================
+export CONFIG_FILE="/config/Town01/town01_sg0.yaml"
+export TOWN="Town01"
+export NUM_CARS=40
+export NUM_PEDESTRIANS=50
+export SPAWN_POINT="$(python /scripts/parse_spawn_pos.py)"
+
+echo $SPAWN_POINT
+
+# =====================================
+
+# load the configuration for the competition manager
+sleep 2
+rosparam load $CONFIG_FILE
 
 # wait for the CARLA simulator to launch
 sleep $CARLA_SIM_WAIT_SECS
 
 # launch the given ROS nodes from Docker CMD args
-python switch_town.py $CARLA_SIM_HOST $TOWN
-python set_car_spawn.py $CONFIG_FILE
 roslaunch $@ &
-sleep 5 && python /opt/carla/PythonAPI/examples/spawn_npc.py --host carla-simulator -n 0 -w 0 &
+sleep 5 && python /opt/carla/PythonAPI/examples/spawn_npc.py \
+    --host $CARLA_SIM_HOST -n $NUM_CARS -w $NUM_PEDESTRIANS &
 wait
-
-#============ Variables ================
-export CONFIG_FILE="/config/Town02/town02_sg0.yaml"
-export TOWN="Town02"
-# TODO: 
-
-# =====================================
-
-sleep 25
-python switch_town.py $CARLA_SIM_HOST $TOWN
-python spawn_car.py $CONFIG_FILE
-python /opt/carla/PythonAPI/examples/spawn_npc.py -n 40 -w 50 --host $CARLA_SIM_HOST
-echo 'successfully initialized!'
-

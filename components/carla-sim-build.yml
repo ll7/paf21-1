@@ -14,10 +14,3 @@ services:
       context: ./carla_ros_bridge
       args:
         - CARLA_VERSION=0.9.10.1
-
-  launch-service:
-    image: launch_service
-    build:
-      context: ./launch_service
-      args:
-        - CARLA_VERSION=0.9.10.1
