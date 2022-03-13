@@ -1,0 +1,6 @@
+<!-- -->
+<launch>
+  <node pkg="competition_manager" name="competition_manager"
+        type="simple_competition_manager.py" output="screen" required="true">
+  </node>
+</launch>

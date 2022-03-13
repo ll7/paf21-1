@@ -1,6 +1,11 @@
 version: '2'
 
 services:
+  # competition-manager:
+  #   image: competition_manager
+  #   build:
+  #     context: ./competition_manager
+
   local-planner:
     image: local_planner
     build:

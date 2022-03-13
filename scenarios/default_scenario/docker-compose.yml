@@ -47,6 +47,14 @@ services:
       - carla
       - ros
 
+  # competition-manager:
+  #   image: competition_manager
+  #   environment:
+  #     ROS_MASTER_URI: http://roscore:11311
+  #     ROS_HOSTNAME: competition-manager
+  #   networks:
+  #     - ros
+
   local-planner:
     image: local_planner
     volumes:
