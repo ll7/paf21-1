@@ -74,7 +74,8 @@ class RouteAnnotation:
             actual_lane = metadata.sections_ahead[sec_id].lane_id
             poss_lanes = metadata.sections_ahead[sec_id].possible_lanes
 
-            ann_wp = AnnRouteWaypoint(waypoint, actual_lane, poss_lanes, legal_speed, tl_dist, sec_dist)
+            ann_wp = AnnRouteWaypoint(
+                waypoint, actual_lane, poss_lanes, legal_speed, tl_dist, sec_dist)
             ann_waypoints.append(ann_wp)
 
             if tl_dist < radius_handled:

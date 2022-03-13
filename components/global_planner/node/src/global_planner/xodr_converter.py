@@ -537,7 +537,7 @@ class XodrMap:
             lane_link_ids.extend(fill_ids)
         elif diff < 0:
             # if len(conn_lane_link_ids) == 0:
-            #     print(f'link {road_id} to {link.road_id} has 
+            #     print(f'link {road_id} to {link.road_id} has
             #               no driving lanes. should never happen')
             #     print(f'{lane_link_ids}, {conn_lane_link_ids}')
             fill_ids = [conn_lane_link_ids[-1] for _ in range(abs(diff))]

@@ -1,6 +1,7 @@
 """A global route planner based on map and hmi data."""
 
-from math import dist as euclid_dist, pi
+from dis import dis
+from math import atan2, dist as euclid_dist, pi, radians
 from typing import Tuple, List, Dict
 
 import numpy as np
@@ -275,6 +276,7 @@ class GlobalPlanner:
 
         route_metadata = RouteAnnotation.preprocess_route_metadata(start_pos, path, xodr_map)
         route_waypoints = GlobalPlanner._preplan_route(start_pos, end_pos, path, xodr_map)
+        route_waypoints = GlobalPlanner.check_angles_of_route(route_waypoints)
         print("wps:", route_waypoints)
 
         interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
@@ -359,6 +361,28 @@ class GlobalPlanner:
             if polygon.contains(point):
                 filtered_wps.append(wp)
         return filtered_wps
+
+    @staticmethod
+    def check_angles_of_route(route_waypoints:List[Tuple[float, float]])->List[Tuple[float, float]]:
+        new_wps = []
+        bool_changes = False
+        
+        for index in range(2,len(route_waypoints)):
+            if (euclid_dist(route_waypoints[index-1], route_waypoints[index])< 0.2):
+               new_wps.append(route_waypoints[index-2])
+               continue 
+            vec1 = sub_vector(route_waypoints[index-1], route_waypoints[index-2])
+            vec2 = sub_vector(route_waypoints[index], route_waypoints[index-2])
+            angle = atan2(vec1[1]-vec2[1], vec1[0]- vec2[0])
+            if angle > radians(22):
+                bool_changes = True
+                route_waypoints[index-1] = add_vector(vec2, route_waypoints[index-2])
+            new_wps.append(route_waypoints[index-2])
+        print("new_wps:",new_wps)
+        return new_wps
+        # if bool_changes:
+        #     GlobalPlanner.check_angles_of_route(new_wps)
+
 
 # def load_town_04():
 #     from xodr_converter import XODRConverter

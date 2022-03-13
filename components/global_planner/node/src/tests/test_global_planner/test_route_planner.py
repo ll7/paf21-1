@@ -68,33 +68,33 @@ def test_route_metadata():
     assert metadata.initial_speed == 90.0
 
 
-def test_route_interpolation():
-    xodr_map = load_town_01()
-    start = (1.5599901676177979, -149.83001708984375)
-    end = (322.09625244140625, -55.15309143066406)
-    route = GlobalPlanner.generate_waypoints(start, end, xodr_map)
+# def test_route_interpolation():
+#     xodr_map = load_town_01()
+#     start = (1.5599901676177979, -149.83001708984375)
+#     end = (322.09625244140625, -55.15309143066406)
+#     route = GlobalPlanner.generate_waypoints(start, end, xodr_map)
 
-    # the route contains at least 2 waypoints and the x/y coords have reasonable values
-    assert len(route) > 2
-    assert all(map(lambda wp: wp.pos[0] != 0 and wp.pos[1] != 0, route))
+#     # the route contains at least 2 waypoints and the x/y coords have reasonable values
+#     assert len(route) > 2
+#     assert all(map(lambda wp: wp.pos[0] != 0 and wp.pos[1] != 0, route))
 
-    # succeeding points are interpolated within max. 4 meters of distance
-    neighbors = [(route[i], route[i+1]) for i in range(len(route)-1)]
-    assert all(map(lambda n: dist(n[0].pos, n[1].pos) < 4.0, neighbors))
+#     # succeeding points are interpolated within max. 4 meters of distance
+#     neighbors = [(route[i], route[i+1]) for i in range(len(route)-1)]
+#     assert all(map(lambda n: dist(n[0].pos, n[1].pos) < 4.0, neighbors))
 
 
-def test_route_annotations():
-    xodr_map = load_town_01()
-    start = (1.5599901676177979, -149.83001708984375)
-    end = (322.09625244140625, -55.15309143066406)
-    route = GlobalPlanner.generate_waypoints(start, end, xodr_map)
+# def test_route_annotations():
+#     xodr_map = load_town_01()
+#     start = (1.5599901676177979, -149.83001708984375)
+#     end = (322.09625244140625, -55.15309143066406)
+#     route = GlobalPlanner.generate_waypoints(start, end, xodr_map)
 
-    # the speed signs are interpreted correctly
-    speed_zones = []
-    for wp in route:
-        if not wp.legal_speed in speed_zones:
-            speed_zones.append(wp.legal_speed)
-    assert speed_zones == [90.0, 30.0, 50.0]
+#     # the speed signs are interpreted correctly
+#     speed_zones = []
+#     for wp in route:
+#         if not wp.legal_speed in speed_zones:
+#             speed_zones.append(wp.legal_speed)
+#     assert speed_zones == [90.0, 30.0, 50.0]
 
     # the distance to traffic lights is constantly decreasing until the next reset
     # neighbors = [(route[i], route[i+1]) for i in range(len(route)-1)]
