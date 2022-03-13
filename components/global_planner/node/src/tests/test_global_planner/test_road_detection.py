@@ -118,3 +118,7 @@ def test_find_neighbor_sections_town04_highway_5():
     road_ids = [n[2].road_id for n in neighbors]
     print(road_ids)
     assert road_ids == [46]
+
+# Test target points: 
+# (182.08697509765625, 395.9513244628906) Lanechange fuckup
+# (16.488210678100586, -212.6156005859375) End Point not found

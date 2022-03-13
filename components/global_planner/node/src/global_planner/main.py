@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """Main script defining the ROS node"""
 
+import os
 import json
 from dataclasses import dataclass
-from pathlib import Path
 
 import rospy
 
@@ -27,7 +27,8 @@ class GlobalPlannerNode:
                 print("Town is: ", town)
                 break
             except:
-                sleep(1)
+                print('waiting for town rosparam')
+                sleep(0.1)
 
     def run_node(self):
         """Launch the ROS node to receive the map, the start and
@@ -37,22 +38,32 @@ class GlobalPlannerNode:
         rospy.spin()
 
     def _handle_navigation_request(self, nav_request):
-        xodr_map = XODRConverter.read_xodr(self.map_path)
-        global_route = GlobalPlanner.generate_waypoints(
-            (nav_request.start_x, nav_request.start_y),
-            (nav_request.end_x, nav_request.end_y),
-            xodr_map
-        )
+        try:
+            start_pos = (nav_request.start_x, nav_request.start_y)
+            end_pos = (nav_request.end_x, nav_request.end_y)
+            print(f'creating route from {start_pos} to {end_pos}')
+        except:
+            print('malformed request!')
+            return NavigationRequestResponse(waypoints_json=[], success=False)
 
-        for ann_wp in global_route:
-            print(ann_wp)
+        if not os.path.exists(self.map_path) or not os.path.isfile(self.map_path):
+            print('XODR not initialized!')
+            return NavigationRequestResponse(waypoints_json=[], success=False)
 
-        route_as_json = [{'x': wp.pos[0], 'y': wp.pos[1],
-                          'actual_lane': wp.actual_lane,
-                          'possible_lanes': wp.possible_lanes,
-                          'legal_speed': wp.legal_speed,
-                          'dist_next_tl': wp.dist_next_tl,
-                          'end_lane_m': wp.end_lane_m} for wp in global_route]
+        try:
+            xodr_map = XODRConverter.read_xodr(self.map_path)
+            global_route = GlobalPlanner.generate_waypoints(start_pos, end_pos, xodr_map)
+            print("Route generated!", global_route)
+
+            route_as_json = [{'x': wp.pos[0], 'y': wp.pos[1],
+                            'actual_lane': wp.actual_lane,
+                            'possible_lanes': wp.possible_lanes,
+                            'legal_speed': wp.legal_speed,
+                            'dist_next_tl': wp.dist_next_tl,
+                            'end_lane_m': wp.end_lane_m} for wp in global_route]
+        except:
+            print(f'request failed!')
+            return NavigationRequestResponse(waypoints_json=[], success=False)
 
         response = NavigationRequestResponse(
             waypoints_json = json.dumps(route_as_json),

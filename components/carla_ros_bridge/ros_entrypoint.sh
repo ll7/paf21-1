@@ -3,14 +3,12 @@ set -e
 source "/opt/carla-ros-bridge/install/setup.bash"
 
 #============ Variables ================
-export CONFIG_FILE="/config/Town01/town01_sg0.yaml"
+export CONFIG_FILE="/config/Town04/town04_sg0.yaml"
 export TOWN="${CONFIG_FILE:8:6}"
-export NUM_CARS=40
-export NUM_PEDESTRIANS=50
+export NUM_CARS=0
+export NUM_PEDESTRIANS=0
 export SPAWN_POINT="$(python /scripts/parse_spawn_pos.py)"
-
 echo $SPAWN_POINT
-
 # =====================================
 
 # load the configuration for the competition manager

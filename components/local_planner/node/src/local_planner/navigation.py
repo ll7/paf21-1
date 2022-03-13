@@ -20,10 +20,12 @@ def load_spawn_positions() -> List[Tuple[float, float]]:
         try:
             full_param_name = rospy.search_param('town')
             active_town = rospy.get_param(full_param_name)['carla']['town']
-            print("Town is : ", active_town)
+            print("Town is:", active_town)
+            print("Is unknown town:", active_town not in town_spawns.spawns)
             return town_spawns.spawns[active_town]
         except:
-            sleep(1)
+            print('waiting for town rosparam ...')
+            sleep(0.1)
 
 
 @dataclass
@@ -45,16 +47,18 @@ class InfiniteDrivingService():
 
         while True:
             if not self.vehicle.is_ready:
-                sleep(1)
+                print('vehicle not ready yet!')
+                sleep(0.1)
                 continue
 
             if self.current_dest is None:
                 self.current_dest = self.vehicle.pos
 
             if dist(self.vehicle.pos, self.current_dest) > 10.0:
-                sleep(0.01)
+                sleep(0.1)
                 continue
 
+            print('computing new route ...')
             start_pos = self.vehicle.pos
             orientation = self.vehicle.orientation_rad
             self.current_dest = choice(list_except(self.destinations, self.current_dest))
@@ -72,21 +76,23 @@ class InfiniteDrivingService():
 
         while True:
             try:
+                print('Sending navigation request ...')
                 navigate_proxy = rospy.ServiceProxy(service_name, NavigationRequest)
                 response = navigate_proxy(start_pos[0], start_pos[1],
                                           end_pos[0], end_pos[1], orientation_rad)
 
                 if not response.success:
+                    print('request not successful, trying again ...')
                     continue
 
                 json_list = json.loads(response.waypoints_json)
                 waypoints = [
                     AnnRouteWaypoint(
                         (wp['x'], wp['y']),
-                        wp['actual_lane'],
-                        wp['possible_lanes'],
-                        wp['legal_speed'], wp['dist_next_tl'],
-                        wp['end_lane_m'])
+                         wp['actual_lane'],
+                         wp['possible_lanes'],
+                         wp['legal_speed'], wp['dist_next_tl'],
+                         wp['end_lane_m'])
                     for wp in json_list]
                 return waypoints
 

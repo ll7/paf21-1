@@ -23,14 +23,12 @@ class RosMessagesAdapter:
     def json_message_to_tld_info(msg: StringMsg) -> TrafficLightInfo:
         """Convert a ROS message into a TrafficLightInfo"""
         obj = json.loads(msg.data)
-        # print("traffic_light: ", obj)
         return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
 
     @staticmethod
     def json_message_to_object_info(msg: StringMsg) -> List[ObjectMeta]:
         """Convert a ROS message into a list of ObjectInfo"""
         obj = json.loads(msg.data)
-        # print("object", obj)
         return obj
 
     @staticmethod
@@ -44,7 +42,6 @@ class RosMessagesAdapter:
         """converts the odometry message to velocity"""
         time_stamp = msg.header.stamp.secs + msg.header.stamp.nsecs * 1e-9
         array = [msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z]
-        # print("Speed ", np.linalg.norm(array))
         return np.linalg.norm(array), time_stamp
 
     @staticmethod
