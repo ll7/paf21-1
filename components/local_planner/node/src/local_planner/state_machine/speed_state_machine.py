@@ -56,8 +56,6 @@ class SpeedStateMachine:
         """Update the speed state machine with a new observation"""
         # WARNING: only uncomment when intending to ignore traffic lights
         # obs.tl_phase = TrafficLightPhase.GREEN
-        print(obs)
-        print(self.vehicle.velocity_mps)
         if obs.detected_speed_limit is not None:
             self.legal_speed_limit_mps = obs.detected_speed_limit / 3.6
 
@@ -76,9 +74,7 @@ class SpeedStateMachine:
             self._handle_brake(obs)
         else:
             raise ValueError(f'Unsupported speed state {self.current_state}!')
-        print(self.current_state)
-
-        if self.count % 10 == 0:
+        if self.count % 1000 == 0:
             print(f'speed state: {self.current_state},',
                   f'target speed: {self.target_speed_mps:.2f},',
                   f'legal speed: {self.legal_speed_limit_mps:.2f},',
@@ -199,10 +195,9 @@ class SpeedStateMachine:
         if action == SpeedState.ACCEL:
             self.target_speed_mps = self.legal_speed_limit_mps
         elif action == SpeedState.BRAKE:
-            pass
-            # self.target_speed_mps = 0
+            self.target_speed_mps = 0
         elif action == SpeedState.KEEP:
-            return self.vehicle.velocity_mps
+            self.target_speed_mps = self.vehicle.velocity_mps
             # self.target_speed_mps = self.vehicle.actual_velocity_mps
         else:
             raise ValueError(f'Unknown speed state {self.current_state} encountered!')

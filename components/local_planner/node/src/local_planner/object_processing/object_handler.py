@@ -18,6 +18,7 @@ class ObjectHandler:
     objects: Dict[int, ObjectMeta] = field(default_factory=dict)
     delta_time: float = 0.1
     num_predict: int = int(3.0 / delta_time)
+    max_velocity_change_rate: float = 2.0
     street_width: float = 4.0
     cache: Dict[int, int] = field(default_factory=dict)
     dist_safe: int = 10
@@ -100,6 +101,7 @@ class ObjectHandler:
             spd_obs.is_trajectory_free = False
             spd_obs.dist_next_obstacle_m = distance
             spd_obs.obj_speed_ms = obj.velocity
+            print(spd_obs)
         return spd_obs
 
     def calculate_min_distance(self, route, until_id, obj_pos):
@@ -135,8 +137,11 @@ class ObjectHandler:
             temp_route[i] = (temp_route[i][0] + width * moving_vector[0],
                              temp_route[i][1] + width * moving_vector[1])
         new_check, _ = self.get_blocked_ids(temp_route)
+        print('Second Block', new_check)
+        print('Blocked:', blocked_ids)
         if closest_object is not None:
             print('Distance to object', dist(self.vehicle.pos, closest_object.trajectory[-1]))
+            print(widths)
         return local_route if new_check else temp_route
 
     def get_blocked_ids(self, route):
@@ -150,7 +155,7 @@ class ObjectHandler:
             if len(obj.trajectory) > 3:
                 # obj_positions += objects[obj_id].kalman_filter.predict_points(self.num_predict)
                 obj_positions += ObjectHandler.predict_car_movement(obj)
-                blocked = self.find_blocked_points(route, obj_positions, 2.0, obj)
+                blocked = self.find_blocked_points(route, obj_positions, 1.8, obj)
                 if not blocked:
                     continue
                 if min(blocked) < min_id:
@@ -160,8 +165,6 @@ class ObjectHandler:
 
         blocked_ids = [num for num in blocked_ids if num >= 0]
         blocked_ids = set(blocked_ids)
-        if len(blocked_ids) > 0:
-            print('Blocked:', blocked_ids)
         return list(blocked_ids), min_obj
 
     @staticmethod
@@ -192,7 +195,7 @@ class ObjectHandler:
                                obj.velocity if obj.velocity != 0 else 999
                     time_self = (dist(self.vehicle.pos, point)-threshold) / \
                                 self.vehicle.velocity_mps if self.vehicle.velocity_mps != 0 else 999
-                    zone_clearence_time = abs(time_self - time_obj)
+                    zone_clearence_time = time_self - time_obj
                     if zone_clearence_time < 2:
                         ids += range(id-1, id+1)
                         break
@@ -215,6 +218,7 @@ class ObjectHandler:
 
     def _convert_relative_to_world(self, coordinate: Tuple[float, float]) -> Tuple[float, float]:
         """Converts relative coordinates to world coordinates"""
+        coordinate[1] = coordinate[1] + 0.5
         theta = self.vehicle.orientation_rad - pi / 2
         coordinate = rotate_vector(coordinate, theta)
         return coordinate[0] + self.vehicle.pos[0], coordinate[1] + self.vehicle.pos[1]
