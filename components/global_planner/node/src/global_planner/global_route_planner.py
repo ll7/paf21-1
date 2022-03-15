@@ -310,8 +310,10 @@ class GlobalPlanner:
         print("wps:", route_waypoints)
 
         interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
+
         ann_route = RouteAnnotation.annotate_waypoints(interpol_route, route_metadata)
         ann_route = GlobalPlanner.advanced_speed(ann_route)
+
         return ann_route
 
     @staticmethod
@@ -406,7 +408,29 @@ class GlobalPlanner:
             return waypoints[:reachable_point] if reachable_point > -1 else []
         else: 
             return waypoints[reachable_point:] if reachable_point > -1 else []
-
+    @staticmethod
+    def advanced_speed(anno_waypoints: List[AnnRouteWaypoint]):
+        """Set legal speed a bit earlier that the car have time to brake"""
+        break_dic: Dict[str, int] = {"90_60": 20, "90_50": 25, "90_30": 30, "60_30": 12, "50_30": 7}
+        last_speed = -1
+        interpolate_dist = 2.0
+        annotated_waypoints = anno_waypoints
+        for index, annotated_waypoint in enumerate(annotated_waypoints):
+            if f"{last_speed}_{annotated_waypoint.legal_speed}" in break_dic:
+                print("change speed")
+                dist_back = break_dic[f"{last_speed}_{annotated_waypoint.legal_speed}"]
+                set_speed = {annotated_waypoint.legal_speed}
+                for i in range(int(dist_back/interpolate_dist)):
+                    if index - i > 0:
+                        annotated_waypoints[index-i].legal_speed = set_speed
+            last_speed = annotated_waypoint.legal_speed
+        """Set unlimited speed if more then 3 lanes"""
+        for index, annotated_waypoint in enumerate(annotated_waypoints):
+            if len(annotated_waypoint.possible_lanes) > 3 and annotated_waypoint.legal_speed == 50:
+                print("Speed up to 120")
+                # TODO find out how fast we are allowed to drive on a highway
+                annotated_waypoints[index].legal_speed = 80
+        return annotated_waypoints
 # def load_town_04():
 #     from xodr_converter import XODRConverter
 #     from os import path
