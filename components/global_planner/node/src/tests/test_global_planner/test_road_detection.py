@@ -82,10 +82,8 @@ def test_find_neighbor_sections_town04_highway_1():
     point = (406.0252685546875, 124.70137786865234)
     xodr_map = load_town_04()
     neighbors = RoadDetection.find_sections(point, xodr_map)
-    print(neighbors)
-    road_ids = [n[2].road_id for n in neighbors]
-    print(xodr_map.roads_by_id[36].right_ids, xodr_map.roads_by_id[36].left_ids)
-    assert road_ids == [36]
+    lane_id, _, road = neighbors[0]
+    assert road.road_id == 36 and lane_id == 4
 
 
 def test_find_neighbor_sections_town04_highway_2():
