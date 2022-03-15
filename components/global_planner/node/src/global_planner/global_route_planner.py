@@ -311,6 +311,7 @@ class GlobalPlanner:
 
         interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
         ann_route = RouteAnnotation.annotate_waypoints(interpol_route, route_metadata)
+        ann_route = GlobalPlanner.advanced_speed(ann_route)
         return ann_route
 
     @staticmethod
