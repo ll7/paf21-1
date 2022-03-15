@@ -41,6 +41,7 @@ class GlobalPlannerNode:
         try:
             start_pos = (nav_request.start_x, nav_request.start_y)
             end_pos = (nav_request.end_x, nav_request.end_y)
+            orient_rad = nav_request.orientation_rad
             print(f'creating route from {start_pos} to {end_pos}')
         except:
             print('malformed request!')
@@ -52,7 +53,8 @@ class GlobalPlannerNode:
 
         try:
             xodr_map = XODRConverter.read_xodr(self.map_path)
-            global_route = GlobalPlanner.generate_waypoints(start_pos, end_pos, xodr_map)
+            global_route = GlobalPlanner.generate_waypoints(
+                start_pos, end_pos, orient_rad, xodr_map)
             print("Route generated!")
 
             route_as_json = [{'x': wp.pos[0], 'y': wp.pos[1],

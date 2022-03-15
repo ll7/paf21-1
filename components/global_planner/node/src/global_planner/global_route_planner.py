@@ -4,7 +4,6 @@ from math import atan2, dist as euclid_dist, pi, radians
 from typing import Tuple, List, Dict
 
 import numpy as np
-# from components.global_planner.node.src.global_planner.main import main
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
@@ -106,31 +105,11 @@ class RoadDetection:
         return sections
 
     @staticmethod
-    def compute_offset_vectors(road: Road) -> List[Tuple[Tuple[float, float], Tuple[float, float]]]:
-        offsets_vectors = []
-        if len(road.geometries) > 1:
-            geo_pairs = zip(road.geometries[:-1], road.geometries[1:])
-            offsets_vectors = [RoadDetection._compute_intermediate_offset_vectors(p[0], p[1])
-                               for p in geo_pairs]
-
-        # compute offset vectors for first / last geometry
-        start_0, end_0 = road.geometries[0].start_point, road.geometries[0].end_point
-        start_n, end_n = road.geometries[-1].start_point, road.geometries[-1].end_point
-        offsets_start = (orth_offset_left(start_0, end_0, 1),
-                         orth_offset_right(start_0, end_0, 1))
-        offsets_end = (orth_offset_left(start_n, end_n, 1),
-                       orth_offset_right(start_n, end_n, 1))
-        offsets_vectors.insert(0, offsets_start)
-        offsets_vectors.append(offsets_end)
-
-        return offsets_vectors
-
-    @staticmethod
     def compute_polygons(road: Road) -> Dict[int, Polygon]:
         """Compute the polygons representing the road bounds."""
 
         # compute intermediate offset vectors for curved road sections
-        offset_vectors = RoadDetection.compute_offset_vectors(road)
+        offset_vectors = RoadDetection._compute_offset_vectors(road)
 
         # compute the middle of lane (line of geometries without offset)
         middle = [geo.start_point for geo in road.geometries] + [road.geometries[-1].end_point]
@@ -163,6 +142,26 @@ class RoadDetection:
         return all_polygons
 
     @staticmethod
+    def _compute_offset_vectors(road: Road) -> List[Tuple[Tuple[float, float], Tuple[float, float]]]:
+        offsets_vectors = []
+        if len(road.geometries) > 1:
+            geo_pairs = zip(road.geometries[:-1], road.geometries[1:])
+            offsets_vectors = [RoadDetection._compute_intermediate_offset_vectors(p[0], p[1])
+                               for p in geo_pairs]
+
+        # compute offset vectors for first / last geometry
+        start_0, end_0 = road.geometries[0].start_point, road.geometries[0].end_point
+        start_n, end_n = road.geometries[-1].start_point, road.geometries[-1].end_point
+        offsets_start = (orth_offset_left(start_0, end_0, 1),
+                         orth_offset_right(start_0, end_0, 1))
+        offsets_end = (orth_offset_left(start_n, end_n, 1),
+                       orth_offset_right(start_n, end_n, 1))
+        offsets_vectors.insert(0, offsets_start)
+        offsets_vectors.append(offsets_end)
+
+        return offsets_vectors
+
+    @staticmethod
     def _compute_intermediate_offset_vectors(geo_0: Geometry, geo_1: Geometry) \
                                                  -> Tuple[Tuple[float, float], Tuple[float, float]]:
 
@@ -185,13 +184,28 @@ class AdjMatrixPrep:
     """Representing a helper for preparing """
 
     @staticmethod
-    def extend_matrix(start_pos: Tuple[float, float],
-                      end_pos: Tuple[float, float], xodr_map: XodrMap):
+    def extend_matrix(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
+                      orient_rad: float, xodr_map: XodrMap):
         """Find the nearest road to the start and end point."""
         # append two rows and columns to graph and append start and end to mapping
         xodr_map.matrix = AdjMatrixPrep._append_start_and_end(xodr_map.matrix, xodr_map.mapping)
 
-        start_neighbors = RoadDetection.find_sections(start_pos, xodr_map)
+        left_offset = rotate_vector(unit_vector(orient_rad), pi/2)
+        right_offset = rotate_vector(unit_vector(orient_rad), -pi/2)
+
+        # handle spawns on sections next to a drivable lane
+        start_neighbors = []
+        for shift in np.arange(0.0, 7.0, 0.5):
+            shift_left = add_vector(start_pos, scale_vector(left_offset, shift))
+            start_neighbors = RoadDetection.find_sections(shift_left, xodr_map)
+            if start_neighbors:
+                break
+
+            shift_right = add_vector(start_pos, scale_vector(right_offset, shift))
+            start_neighbors = RoadDetection.find_sections(shift_right, xodr_map)
+            if start_neighbors:
+                break
+
         AdjMatrixPrep._insert_matrix_edges(xodr_map, start_pos, start_neighbors, is_start=True)
         end_neighbors = RoadDetection.find_sections(end_pos, xodr_map)
         AdjMatrixPrep._insert_matrix_edges(xodr_map, end_pos, end_neighbors, is_start=False)
@@ -253,11 +267,11 @@ class GlobalPlanner:
 
     @staticmethod
     def generate_waypoints(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
-                           xodr_map: XodrMap) -> List[AnnRouteWaypoint]:
+                           orient_rad: float, xodr_map: XodrMap) -> List[AnnRouteWaypoint]:
         """Generate route waypoints for the given start / end positions using the map"""
 
         print ("Startpos:", start_pos, "endpos:", end_pos)
-        path = GlobalPlanner.get_shortest_path(start_pos, end_pos, xodr_map)
+        path = GlobalPlanner.get_shortest_path(start_pos, end_pos, orient_rad, xodr_map)
         print(f'planned path:', path)
 
         if len(path) < 1:
@@ -339,10 +353,10 @@ class GlobalPlanner:
 
     @staticmethod
     def get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
-                           xodr_map: XodrMap) -> List[str]:
+                          orient_rad: float, xodr_map: XodrMap) -> List[str]:
         """Calculate the shortest path with a given xodr map and return
         a list of keys (road_id, direction, lane_id)."""
-        AdjMatrixPrep.extend_matrix(start_pos, end_pos, xodr_map)
+        AdjMatrixPrep.extend_matrix(start_pos, end_pos, orient_rad, xodr_map)
         start_id, end_id = xodr_map.mapping['-1_0_0'], xodr_map.mapping['-2_0_0']
         path_ids = ShortestPath.shortest_path(start_id, end_id, xodr_map.matrix)
         key_list = list(xodr_map.mapping.keys())
