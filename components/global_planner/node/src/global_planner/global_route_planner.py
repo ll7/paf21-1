@@ -374,6 +374,8 @@ class GlobalPlanner:
     def advanced_speed(anno_waypoints: List[AnnRouteWaypoint]):
         """Set legal speed a bit earlier that the car have time to brake"""
 
+        # this logic might be a bit shaky -> disable if it causes trouble
+
         brake_dists: Dict[str, int] = {
             "90_60": 20, "90_50": 25, "90_30": 30,
             "60_30": 12, "50_30": 7}
@@ -387,10 +389,10 @@ class GlobalPlanner:
             if key in brake_dists:
                 print("change speed")
                 dist_back = brake_dists[key]
-                set_speed = {annotated_waypoint.legal_speed}
+                target_speed = annotated_waypoint.legal_speed
                 for i in range(int(dist_back/interpolate_dist)):
                     if index - i > 0:
-                        annotated_waypoints[index-i].legal_speed = set_speed
+                        annotated_waypoints[index-i].legal_speed = target_speed
             last_speed = annotated_waypoint.legal_speed
 
         """Set unlimited speed if more then 3 lanes"""
