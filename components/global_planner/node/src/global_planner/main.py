@@ -44,11 +44,11 @@ class GlobalPlannerNode:
             print(f'creating route from {start_pos} to {end_pos}')
         except:
             print('malformed request!')
-            return NavigationRequestResponse(waypoints_json=[], success=False)
+            return NavigationRequestResponse(waypoints_json='[]', success=False)
 
         if not os.path.exists(self.map_path) or not os.path.isfile(self.map_path):
             print('XODR not initialized!')
-            return NavigationRequestResponse(waypoints_json=[], success=False)
+            return NavigationRequestResponse(waypoints_json='[]', success=False)
 
         try:
             xodr_map = XODRConverter.read_xodr(self.map_path)
@@ -63,7 +63,7 @@ class GlobalPlannerNode:
                             'end_lane_m': wp.end_lane_m} for wp in global_route]
         except:
             print(f'request failed!')
-            return NavigationRequestResponse(waypoints_json=[], success=False)
+            return NavigationRequestResponse(waypoints_json='[]', success=False)
 
         response = NavigationRequestResponse(
             waypoints_json = json.dumps(route_as_json),
