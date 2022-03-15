@@ -30,7 +30,7 @@ class Vehicle:
     @property
     def is_ready(self) -> bool:
         """A boolean indicating whether the vehicle is ready for use"""
-        return self.pos and self.velocity_mps and self.orientation_rad
+        return self.pos and self.velocity_mps is not None and self.orientation_rad is not None
 
     # @property
     # def pos_front(self) -> Tuple[float, float]:
