@@ -80,13 +80,10 @@ class RoadDetection:
     """Representing a helper for detecting roads belonging to positions on a map"""
 
     @staticmethod
-    def find_neighbor_sections(pos: Tuple[float, float],
-                               xodr_map: XodrMap) -> List[Tuple[int, bool, Road]]:
+    def find_sections(pos: Tuple[float, float], xodr_map: XodrMap) -> List[Tuple[int, bool, Road]]:
         """Find the neighboring road sections related to the given position on the map"""
-        neighbors = []
+        sections = []
 
-        # TODO: figure out something more intelligent than looping over all roads
-        #       e.g. only check nearby roads (euclid distance) or perform some hashing, etc.
         for road in xodr_map.roads_by_id.values():
 
             if not road.geometries:
@@ -103,16 +100,14 @@ class RoadDetection:
             poly_hit = next(filter(lambda x: x[1], poly_hits), None)
             if not poly_hit:
                 continue
-
             lane_id, _ = poly_hit
             is_right_road_side = lane_id < 0
-            neighbors.append((lane_id, is_right_road_side, road))
-            # TODO: refactor the result as a tuple of (road_id, lane_id)
+            sections.append((lane_id, is_right_road_side, road))
 
-        return neighbors
+        return sections
 
     @staticmethod
-    def compute_polygons(road: Road) -> Dict[int, Polygon]:
+    def compute_polygons(road: Road, ) -> Dict[int, Polygon]:
         """Compute the polygons representing the road bounds."""
 
         # compute intermediate offset vectors for curved road sections
@@ -123,7 +118,6 @@ class RoadDetection:
                                for p in geo_pairs]
 
         # compute offset vectors for first / last geometry
-        # width = road.road_width
         start_0, end_0 = road.geometries[0].start_point, road.geometries[0].end_point
         start_n, end_n = road.geometries[-1].start_point, road.geometries[-1].end_point
         offsets_start = (orth_offset_left(start_0, end_0, 1),
@@ -133,19 +127,43 @@ class RoadDetection:
         offsets_vectors.insert(0, offsets_start)
         offsets_vectors.append(offsets_end)
 
+        # # compute the middle of lane (line of geometries without offset)
+        # middle = [geo.start_point for geo in road.geometries] + [road.geometries[-1].end_point]
+        # all_lane_polygons: Dict[int, Polygon] = {}
+
+        # # compute the inner / outer bounds for each lane and create the lane polygon from it
+        # for lane_id in road.lane_widths:
+        #     vec_id = lane_id < 0
+        #     uniform_lane_offsets = [pair[vec_id] for pair in offsets_vectors]
+
+        #     inner_scale = road.lane_widths[lane_id] * (lane_id - 1)
+        #     outer_scale = road.lane_widths[lane_id] * lane_id
+
+        #     inner_offsets = [scale_vector(vec, inner_scale) for vec in uniform_lane_offsets]
+        #     outer_offsets = [scale_vector(vec, outer_scale) for vec in uniform_lane_offsets]
+
+        #     inner_bound = [add_vector(middle[i], inner_offsets[i]) for i in range(len(middle))]
+        #     outer_bound = [add_vector(middle[i], outer_offsets[i]) for i in range(len(middle))]
+
+        #     all_lane_polygons[lane_id] = Polygon(inner_bound + list(reversed(outer_bound)))
+
+        # return all_lane_polygons
+
         # compute right / left bounds of the lane polygons
         middle = [geo.start_point for geo in road.geometries] + [road.geometries[-1].end_point]
         left_bounds, right_bounds = { 0: middle }, { 0: middle }
 
         for lane_id in road.left_ids:
-            scale = abs(lane_id) * road.lane_widths[lane_id] + road.geometries[0].offset
+            scale = abs(lane_id) * road.lane_widths[lane_id] 
+            scale += road.geometries[0].offset
             scaled_offsets = [scale_vector(offsets_vectors[i][0], scale)
                               for i in range(len(middle))]
             bounds = [add_vector(m, scaled_offsets[i]) for i, m in enumerate(middle)]
             left_bounds[lane_id] = bounds
 
         for lane_id in road.right_ids:
-            scale = abs(lane_id) * road.lane_widths[lane_id] + road.geometries[0].offset
+            scale = abs(lane_id) * road.lane_widths[lane_id]
+            scale -= road.geometries[0].offset
             scaled_offsets = [scale_vector(offsets_vectors[i][1], scale)
                               for i in range(len(middle))]
             bounds = [add_vector(m, scaled_offsets[i]) for i, m in enumerate(middle)]
@@ -154,20 +172,33 @@ class RoadDetection:
         # put the bounds together to retrieve polygon boxes
         # note: for a road with only one geometry this defaults to a rectangle
         left_polygons = {}
+        road36_l = []
         if road.left_ids:
             left_ids = [0] + list(sorted(road.left_ids))
             for id_0, id_1 in zip(left_ids[:-1], left_ids[1:]):
+                road36_l.extend(left_bounds[id_0] \
+                    + list(reversed(left_bounds[id_1])))
                 left_polygons[id_1] = Polygon(left_bounds[id_0] \
                     + list(reversed(left_bounds[id_1])))
 
         right_polygons = {}
+        road36 = []
+       
         if road.right_ids:
             right_ids = [0] + list(reversed(sorted(road.right_ids)))
             for id_0, id_1 in zip(right_ids[:-1], right_ids[1:]):
+                if road.road_id == 36:
+                    
+                    road36.extend(right_bounds[id_0] \
+                    + list(reversed(right_bounds[id_1])))
                 right_polygons[id_1] = Polygon(right_bounds[id_0] \
                     + list(reversed(right_bounds[id_1])))
 
         all_polygons = {**right_polygons, **left_polygons}
+        if road.road_id == 36:
+            print("road36:", road36)
+            print("road36 LEFT:", road36_l)
+        
         return all_polygons
 
     @staticmethod
@@ -199,9 +230,9 @@ class AdjMatrixPrep:
         # append two rows and columns to graph and append start and end to mapping
         xodr_map.matrix = AdjMatrixPrep._append_start_and_end(xodr_map.matrix, xodr_map.mapping)
 
-        start_neighbors = RoadDetection.find_neighbor_sections(start_pos, xodr_map)
+        start_neighbors = RoadDetection.find_sections(start_pos, xodr_map)
         AdjMatrixPrep._insert_matrix_edges(xodr_map, start_pos, start_neighbors, is_start=True)
-        end_neighbors = RoadDetection.find_neighbor_sections(end_pos, xodr_map)
+        end_neighbors = RoadDetection.find_sections(end_pos, xodr_map)
         AdjMatrixPrep._insert_matrix_edges(xodr_map, end_pos, end_neighbors, is_start=False)
 
         if not start_neighbors or not end_neighbors:
@@ -265,12 +296,12 @@ class GlobalPlanner:
         """Generate route waypoints for the given start / end positions using the map"""
 
         print ("Startpos:", start_pos, "endpos:", end_pos)
-        path = GlobalPlanner._get_shortest_path(start_pos, end_pos, xodr_map)
+        path = GlobalPlanner.get_shortest_path(start_pos, end_pos, xodr_map)
         print(f'planned path:', path)
 
         if len(path) < 1:
-            road_start = RoadDetection.find_neighbor_sections(start_pos, xodr_map)
-            road_end = RoadDetection.find_neighbor_sections(start_pos, xodr_map)
+            road_start = RoadDetection.find_sections(start_pos, xodr_map)
+            road_end = RoadDetection.find_sections(start_pos, xodr_map)
             raise ValueError(f'start / end of route not found! \
                 Starts with {road_start} and ends with {road_end}.')
 
@@ -279,8 +310,10 @@ class GlobalPlanner:
         print("wps:", route_waypoints)
 
         interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
+
         ann_route = RouteAnnotation.annotate_waypoints(interpol_route, route_metadata)
         ann_route = GlobalPlanner.advanced_speed(ann_route)
+
         return ann_route
 
     @staticmethod
@@ -292,28 +325,35 @@ class GlobalPlanner:
         for sec_1, sec_2 in sections:
             road_id1 = int(sec_1.split('_')[0])
             road_id2 = int(sec_2.split('_')[0])
+            forward_id1 = int(sec_1.split('_')[1])
+            forward_id2 = int(sec_2.split('_')[1])
 
-            drive_road_from_start_to_end = road_id1 == road_id2
+            same_road = road_id1 == road_id2
+            drive_road_from_start_to_end = forward_id1 != forward_id2
             is_initial_section = road_id1 == -1
             is_final_section = road_id2 == -2
 
-            if drive_road_from_start_to_end:
+            if same_road:
                 road_1 = xodr_map.roads_by_id[road_id1]
                 interm_wps = GlobalPlanner._get_intermed_section_waypoints(sec_1, road_1)
-                route_waypoints += interm_wps
+                
+                if drive_road_from_start_to_end:
+                    route_waypoints += interm_wps
+                else:
+                    route_waypoints.append(interm_wps[0])
 
             elif is_initial_section:
                 route_waypoints.append(start_pos)
-                road = xodr_map.roads_by_id[road_id2]
-                # displaced_points = GlobalPlanner._displace_points
-                # (road, sec_2, start_pos, is_final=False)
+                # road = xodr_map.roads_by_id[road_id2]
+                # displaced_points = GlobalPlanner._displace_points(
+                #     road, sec_2, start_pos, is_final=False)
                 # route_waypoints.extend(displaced_points)
 
             elif is_final_section:
-                road = xodr_map.roads_by_id[road_id1]
-                displaced_points = GlobalPlanner._displace_points(
-                    road, sec_1, end_pos, is_final=True)
-                route_waypoints.extend(displaced_points)
+                # road = xodr_map.roads_by_id[road_id1]
+                # displaced_points = GlobalPlanner._displace_points(
+                #     road, sec_1, end_pos, is_final=True)
+                # route_waypoints.extend(displaced_points)
                 route_waypoints.append(end_pos)
 
         return route_waypoints
@@ -331,13 +371,13 @@ class GlobalPlanner:
         # print(f'road: {road.road_id}, lane: {lane_id}, points: {polygon_points}')
 
         bound_len = len(polygon_points) // 2
-        geo_pairs = zip(polygon_points[:bound_len], reversed(polygon_points[bound_len:]))
+        geo_pairs = list(zip(polygon_points[:bound_len], reversed(polygon_points[bound_len:])))
         road_waypoints = [((p[0][0] + p[1][0]) / 2, (p[0][1] + p[1][1]) / 2) for p in geo_pairs]
 
         return list(reversed(road_waypoints)) if reverse else road_waypoints
 
     @staticmethod
-    def _get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
+    def get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
                            xodr_map: XodrMap) -> List[str]:
         """Calculate the shortest path with a given xodr map and return
         a list of keys (road_id, direction, lane_id)."""
@@ -348,20 +388,26 @@ class GlobalPlanner:
         return [key_list[p_id] for p_id in path_ids]
 
     @staticmethod
-    def _displace_points(road: Road, sec: str, pos: Tuple[float, float],
+    def _displace_points(road: Road, sec: str, pos: Tuple[float, float], 
                             is_final: bool) -> List[Tuple[float, float]]:
-        moving_towards_end = int(sec.split('_')[1])
-        end_geo = road.geometries[-1] if moving_towards_end else road.geometries[0]
-        end_pos = end_geo.end_point if moving_towards_end else end_geo.start_point
-        polygon = Polygon(bounding_box(pos, end_pos, 50))
-        filtered_wps = []
-        waypoints = GlobalPlanner._get_intermed_section_waypoints(sec, road)
-        for wp in waypoints:
-            point = Point(wp)
-            if polygon.contains(point):
-                filtered_wps.append(wp)
-        return filtered_wps
+        waypoints_whole_lane = GlobalPlanner._get_intermed_section_waypoints(sec, road)
+        waypoints = []
+        for wp1, wp2 in zip(waypoints_whole_lane[:-1], waypoints_whole_lane[1:]): 
+            waypoints.extend(RouteInterpolation._linear_interpolation(wp1, wp2, interval_m=2.0))
+        
+        reachable_point = -1
+        threshold = radians(135) if is_final else radians(45) 
+        for index, waypoint in enumerate(waypoints):
+            vec = sub_vector(pos, waypoint)
+            angle = atan2(vec[1], vec[0])
+            if abs(angle) <= threshold:
+                reachable_point = index
+                break
 
+        if is_final:        
+            return waypoints[:reachable_point] if reachable_point > -1 else []
+        else: 
+            return waypoints[reachable_point:] if reachable_point > -1 else []
     @staticmethod
     def advanced_speed(anno_waypoints: List[AnnRouteWaypoint]):
         """Set legal speed a bit earlier that the car have time to brake"""
@@ -385,31 +431,6 @@ class GlobalPlanner:
                 # TODO find out how fast we are allowed to drive on a highway
                 annotated_waypoints[index].legal_speed = 80
         return annotated_waypoints
-
-
-    # @staticmethod
-    # def check_angles_of_route(route_waypoints:List[Tuple[float, float]])->List[Tuple[float, float]]:
-    #     new_wps = []
-    #     bool_changes = False
-
-    #     for index in range(2,len(route_waypoints)):
-    #         if (euclid_dist(route_waypoints[index-1], route_waypoints[index])< 0.2):
-    #            new_wps.append(route_waypoints[index-2])
-    #            continue 
-    #         vec1 = sub_vector(route_waypoints[index-1], route_waypoints[index-2])
-    #         vec2 = sub_vector(route_waypoints[index], route_waypoints[index-2])
-    #         angle = atan2(vec1[1]-vec2[1], vec1[0]- vec2[0])
-    #         if angle > radians(22):
-    #             bool_changes = True
-    #             route_waypoints[index-1] = add_vector(vec2, route_waypoints[index-2])
-    #         new_wps.append(route_waypoints[index-2])
-    #     print("new_wps:",new_wps)
-    #     return new_wps
-
-
-
-
-
 # def load_town_04():
 #     from xodr_converter import XODRConverter
 #     from os import path
