@@ -223,8 +223,6 @@ def test_accel_red_out_of_range():
     vehicle.orientation_rad = 1
     vehicle.velocity_mps = 30 / 3.6
     speed_s = SpeedStateMachine(vehicle)
-    speed_s.current_state = SpeedState.ACCEL
-
     speed_o = SpeedObservation()
     speed_o.tl_phase = TrafficLightPhase.RED
     speed_o.is_trajectory_free = True

@@ -101,7 +101,7 @@ class ObjectHandler:
             spd_obs.is_trajectory_free = False
             spd_obs.dist_next_obstacle_m = distance
             spd_obs.obj_speed_ms = obj.velocity
-            print(spd_obs)
+
         return spd_obs
 
     def calculate_min_distance(self, route, until_id, obj_pos):
@@ -121,11 +121,12 @@ class ObjectHandler:
         blocked_ids, closest_object = self.get_blocked_ids(temp_route)
         widths = []
         for i in range(0, len(temp_route)):
-            if i < (len(temp_route) - 1):
+            if i != 0:
+                moving_vector = ObjectHandler.ortho_vector_from_points(temp_route[i - 1],
+                                                                       temp_route[i])
+            else:
                 moving_vector = ObjectHandler.ortho_vector_from_points(temp_route[i],
                                                                        temp_route[i + 1])
-            else:
-                moving_vector = [0, 0]
             if closest_object is not None:
                 width = self.sigmoid_smooth(closest_object.velocity,
                                             [temp_route[u] for u in blocked_ids],
@@ -141,7 +142,8 @@ class ObjectHandler:
         print('Blocked:', blocked_ids)
         if closest_object is not None:
             print('Distance to object', dist(self.vehicle.pos, closest_object.trajectory[-1]))
-            print(widths)
+            if len(new_check) == 0:
+                print(temp_route)
         return local_route if new_check else temp_route
 
     def get_blocked_ids(self, route):
@@ -177,7 +179,6 @@ class ObjectHandler:
         orthogonal_vector = rotate_vector(unit_vector, pi / 2)
 
         return orthogonal_vector
-
 
     def find_blocked_points(self, route, points, threshold, obj):
         """finds blocked points and returns their ids"""
@@ -252,6 +253,8 @@ class ObjectHandler:
         mu = 1  # slope of overtaking
         relative_velocity = self.vehicle.velocity_mps - object_speed
         relative_distance_to_object = dist(point, object_coordinates[0])
+        if relative_distance_to_object > 2:
+            relative_distance_to_object -= 2
         if dist(point, first_coord) > \
                 min([dist(first_coord, obj) for obj in object_coordinates]):
             relative_distance_to_object = -relative_distance_to_object

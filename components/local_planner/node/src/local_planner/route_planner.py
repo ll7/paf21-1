@@ -113,7 +113,7 @@ class TrajectoryPlanner:
 
         bound = min(self.prev_wp_id + self.length_route, len(route))
         temp_route = route[self.prev_wp_id:bound]
-        temp_route = self.check_overtake(temp_route)
+        #temp_route = self.check_overtake(temp_route)
         self.current_route = temp_route
         return temp_route
 
@@ -123,7 +123,6 @@ class TrajectoryPlanner:
             next_wp = route[self.next_wp_id]
             vec_route = points_to_vector(prev_wp, next_wp)
             vec_car = points_to_vector(self.vehicle.pos, next_wp)
-
             angle = angle_between_vectors(vec_route, vec_car)
 
             is_wp_in_front_of_car = abs(angle) < 0.5 * pi
@@ -137,7 +136,7 @@ class TrajectoryPlanner:
     def check_overtake(self, route):
         curve_obs = self.curve_detection.find_next_curve(self.current_route)
         dist_next_curve = curve_obs.dist_until_curve
-        if dist_next_curve > 0 and self.latest_speed_observation.dist_next_traffic_light_m > 0:
+        if dist_next_curve > 50 and self.latest_speed_observation.dist_next_traffic_light_m > 50:
             route = self.obj_handler.plan_route_around_objects(route)
         return route
 
