@@ -162,3 +162,25 @@ def test_path_finding_multilane_highway_town_4():
 #     # assert path == ['-1_0_0', '15_0_1', '13_0_-1', '13_1_-1', '3_1_1', '3_0_1', '117_1_1', '117_0_1',
 #     #                 '2_1_1', '2_0_1', '61_1_1', '61_0_1', '1_1_1', '1_0_1', '27_1_1', '27_0_1',
 #     #                 '16_0_-1', '16_1_-1', '253_0_-1', '253_1_-1', '10_1_1', '-2_0_0']
+
+
+def test_lane_change():
+    points = [(0.0, 0.0), (0.0, 2.0), (0.0, 3.0), (0.0, 6.0),
+              (0.0, 8.0), (0.0, 10.0), (0.0, 12.0), (0.0, 14.0)]
+    ref_point = (4.0, 14.0)
+    speed = 13.0
+    street_width = -4.0  
+    new_points = GlobalPlanner.lane_change(points, ref_point, speed, street_width)
+    print(new_points)
+    assert False
+
+
+def test_lane_change_1():
+    points = [(0.0, 0.0), (2.0, 0.0), (3.0, 0.0), (6.0, 0.0),
+              (8.0, 0.0), (10.0, 0.0), (12.0, 0.0), (14.0, 0.0)]
+    ref_point = (14.0, 4.0)
+    speed = 13.0
+    street_width = 4.0  
+    new_points = GlobalPlanner.lane_change(points, ref_point, speed, street_width)
+    print(new_points)
+    assert False

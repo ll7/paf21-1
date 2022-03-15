@@ -1,7 +1,7 @@
 """A global route planner based on map and hmi data."""
 
 from dis import dis
-from math import atan2, dist as euclid_dist, pi, radians
+from math import atan2, dist as euclid_dist, pi, radians, exp, sqrt
 from typing import Tuple, List, Dict
 
 import numpy as np
@@ -408,6 +408,34 @@ class GlobalPlanner:
             return waypoints[:reachable_point] if reachable_point > -1 else []
         else: 
             return waypoints[reachable_point:] if reachable_point > -1 else []
+
+    @staticmethod
+    def lane_change(points, ref_point, speed, street_width):
+        """tries to smooth out the overtaking maneuver so it can be driven at higher speeds"""
+        mu = 3  # slope of overtaking
+        time_to_collision = 0.3
+        dist_safe = max([speed * time_to_collision, 0])
+        displaced_points = []
+        for point_1, point_2 in zip(points[:-1], points[1:]):
+            GlobalPlanner.sigmoid_displace(ref_point, street_width, mu, 
+            dist_safe, displaced_points, point_1, point_2)
+        
+        point_1 = point_2
+
+        GlobalPlanner.sigmoid_displace(ref_point, -street_width, mu, 
+            dist_safe, displaced_points, points[-1], points[-2])
+        return displaced_points
+
+    @staticmethod
+    def sigmoid_displace(ref_point, street_width, mu, dist_safe, displaced_points, point_1, point_2):
+        distance_to_ref = euclid_dist(point_1, ref_point)
+        rel_dist = -sqrt(distance_to_ref**2 - street_width ** 2)
+        x_1 = (1 / mu) * (rel_dist + dist_safe)
+        deviation = (street_width / (1 + exp(-x_1)))
+        print(deviation, rel_dist)
+        displaced_point = add_vector(point_1, orth_offset_left(point_1, point_2, deviation))
+        displaced_points.append(displaced_point)
+
     @staticmethod
     def advanced_speed(anno_waypoints: List[AnnRouteWaypoint]):
         """Set legal speed a bit earlier that the car have time to brake"""
@@ -429,8 +457,12 @@ class GlobalPlanner:
             if len(annotated_waypoint.possible_lanes) > 3 and annotated_waypoint.legal_speed == 50:
                 print("Speed up to 120")
                 # TODO find out how fast we are allowed to drive on a highway
-                annotated_waypoints[index].legal_speed = 80
+                annotated_waypoints[index].legal_speed = 50
         return annotated_waypoints
+
+
+
+
 # def load_town_04():
 #     from xodr_converter import XODRConverter
 #     from os import path
