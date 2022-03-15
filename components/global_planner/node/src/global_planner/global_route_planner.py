@@ -127,79 +127,79 @@ class RoadDetection:
         offsets_vectors.insert(0, offsets_start)
         offsets_vectors.append(offsets_end)
 
-        # compute the middle of lane (line of geometries without offset)
-        middle = [geo.start_point for geo in road.geometries] + [road.geometries[-1].end_point]
-        all_lane_polygons: Dict[int, Polygon] = {}
-
-        # compute the inner / outer bounds for each lane and create the lane polygon from it
-        for lane_id in road.lane_widths:
-            vec_id = lane_id < 0
-            uniform_lane_offsets = [pair[vec_id] for pair in offsets_vectors]
-
-            inner_scale = road.lane_widths[lane_id] * (lane_id - 1)
-            outer_scale = road.lane_widths[lane_id] * lane_id
-
-            inner_offsets = [scale_vector(vec, inner_scale) for vec in uniform_lane_offsets]
-            outer_offsets = [scale_vector(vec, outer_scale) for vec in uniform_lane_offsets]
-
-            inner_bound = [add_vector(middle[i], inner_offsets[i]) for i in range(len(middle))]
-            outer_bound = [add_vector(middle[i], outer_offsets[i]) for i in range(len(middle))]
-
-            all_lane_polygons[lane_id] = Polygon(inner_bound + list(reversed(outer_bound)))
-
-        return all_lane_polygons
-
-        # # compute right / left bounds of the lane polygons
+        # # compute the middle of lane (line of geometries without offset)
         # middle = [geo.start_point for geo in road.geometries] + [road.geometries[-1].end_point]
-        # left_bounds, right_bounds = { 0: middle }, { 0: middle }
+        # all_lane_polygons: Dict[int, Polygon] = {}
 
-        # for lane_id in road.left_ids:
-        #     scale = abs(lane_id) * road.lane_widths[lane_id] * road_width_factor 
-        #     scale += road.geometries[0].offset
-        #     scaled_offsets = [scale_vector(offsets_vectors[i][0], scale)
-        #                       for i in range(len(middle))]
-        #     bounds = [add_vector(m, scaled_offsets[i]) for i, m in enumerate(middle)]
-        #     left_bounds[lane_id] = bounds
+        # # compute the inner / outer bounds for each lane and create the lane polygon from it
+        # for lane_id in road.lane_widths:
+        #     vec_id = lane_id < 0
+        #     uniform_lane_offsets = [pair[vec_id] for pair in offsets_vectors]
 
-        # for lane_id in road.right_ids:
-        #     scale = abs(lane_id) * road.lane_widths[lane_id] * road_width_factor 
-        #     scale -= road.geometries[0].offset
-        #     scaled_offsets = [scale_vector(offsets_vectors[i][1], scale)
-        #                       for i in range(len(middle))]
-        #     bounds = [add_vector(m, scaled_offsets[i]) for i, m in enumerate(middle)]
-        #     right_bounds[lane_id] = bounds
+        #     inner_scale = road.lane_widths[lane_id] * (lane_id - 1)
+        #     outer_scale = road.lane_widths[lane_id] * lane_id
 
-        # # put the bounds together to retrieve polygon boxes
-        # # note: for a road with only one geometry this defaults to a rectangle
-        # left_polygons = {}
-        # road36_l = []
-        # if road.left_ids:
-        #     left_ids = [0] + list(sorted(road.left_ids))
-        #     for id_0, id_1 in zip(left_ids[:-1], left_ids[1:]):
-        #         road36_l.extend(left_bounds[id_0] \
-        #             + list(reversed(left_bounds[id_1])))
-        #         left_polygons[id_1] = Polygon(left_bounds[id_0] \
-        #             + list(reversed(left_bounds[id_1])))
+        #     inner_offsets = [scale_vector(vec, inner_scale) for vec in uniform_lane_offsets]
+        #     outer_offsets = [scale_vector(vec, outer_scale) for vec in uniform_lane_offsets]
 
-        # right_polygons = {}
-        # road36 = []
+        #     inner_bound = [add_vector(middle[i], inner_offsets[i]) for i in range(len(middle))]
+        #     outer_bound = [add_vector(middle[i], outer_offsets[i]) for i in range(len(middle))]
+
+        #     all_lane_polygons[lane_id] = Polygon(inner_bound + list(reversed(outer_bound)))
+
+        # return all_lane_polygons
+
+        # compute right / left bounds of the lane polygons
+        middle = [geo.start_point for geo in road.geometries] + [road.geometries[-1].end_point]
+        left_bounds, right_bounds = { 0: middle }, { 0: middle }
+
+        for lane_id in road.left_ids:
+            scale = abs(lane_id) * road.lane_widths[lane_id] 
+            scale += road.geometries[0].offset
+            scaled_offsets = [scale_vector(offsets_vectors[i][0], scale)
+                              for i in range(len(middle))]
+            bounds = [add_vector(m, scaled_offsets[i]) for i, m in enumerate(middle)]
+            left_bounds[lane_id] = bounds
+
+        for lane_id in road.right_ids:
+            scale = abs(lane_id) * road.lane_widths[lane_id]
+            scale -= road.geometries[0].offset
+            scaled_offsets = [scale_vector(offsets_vectors[i][1], scale)
+                              for i in range(len(middle))]
+            bounds = [add_vector(m, scaled_offsets[i]) for i, m in enumerate(middle)]
+            right_bounds[lane_id] = bounds
+
+        # put the bounds together to retrieve polygon boxes
+        # note: for a road with only one geometry this defaults to a rectangle
+        left_polygons = {}
+        road36_l = []
+        if road.left_ids:
+            left_ids = [0] + list(sorted(road.left_ids))
+            for id_0, id_1 in zip(left_ids[:-1], left_ids[1:]):
+                road36_l.extend(left_bounds[id_0] \
+                    + list(reversed(left_bounds[id_1])))
+                left_polygons[id_1] = Polygon(left_bounds[id_0] \
+                    + list(reversed(left_bounds[id_1])))
+
+        right_polygons = {}
+        road36 = []
        
-        # if road.right_ids:
-        #     right_ids = [0] + list(reversed(sorted(road.right_ids)))
-        #     for id_0, id_1 in zip(right_ids[:-1], right_ids[1:]):
-        #         if road.road_id == 36:
+        if road.right_ids:
+            right_ids = [0] + list(reversed(sorted(road.right_ids)))
+            for id_0, id_1 in zip(right_ids[:-1], right_ids[1:]):
+                if road.road_id == 36:
                     
-        #             road36.extend(right_bounds[id_0] \
-        #             + list(reversed(right_bounds[id_1])))
-        #         right_polygons[id_1] = Polygon(right_bounds[id_0] \
-        #             + list(reversed(right_bounds[id_1])))
+                    road36.extend(right_bounds[id_0] \
+                    + list(reversed(right_bounds[id_1])))
+                right_polygons[id_1] = Polygon(right_bounds[id_0] \
+                    + list(reversed(right_bounds[id_1])))
 
-        # all_polygons = {**right_polygons, **left_polygons}
-        # if road.road_id == 36:
-        #     print("road36:", road_width_factor,road36)
-        #     print("road36 LEFT:", road_width_factor,road36_l)
+        all_polygons = {**right_polygons, **left_polygons}
+        if road.road_id == 36:
+            print("road36:", road36)
+            print("road36 LEFT:", road36_l)
         
-        # return all_polygons
+        return all_polygons
 
     @staticmethod
     def _compute_intermediate_offset_vectors(geo_0: Geometry, geo_1: Geometry) \
@@ -341,16 +341,16 @@ class GlobalPlanner:
 
             elif is_initial_section:
                 route_waypoints.append(start_pos)
-                road = xodr_map.roads_by_id[road_id2]
-                displaced_points = GlobalPlanner._displace_points(
-                    road, sec_2, start_pos, is_final=False)
-                route_waypoints.extend(displaced_points)
+                # road = xodr_map.roads_by_id[road_id2]
+                # displaced_points = GlobalPlanner._displace_points(
+                #     road, sec_2, start_pos, is_final=False)
+                # route_waypoints.extend(displaced_points)
 
             elif is_final_section:
-                road = xodr_map.roads_by_id[road_id1]
-                displaced_points = GlobalPlanner._displace_points(
-                    road, sec_1, end_pos, is_final=True)
-                route_waypoints.extend(displaced_points)
+                # road = xodr_map.roads_by_id[road_id1]
+                # displaced_points = GlobalPlanner._displace_points(
+                #     road, sec_1, end_pos, is_final=True)
+                # route_waypoints.extend(displaced_points)
                 route_waypoints.append(end_pos)
 
         return route_waypoints
@@ -361,7 +361,7 @@ class GlobalPlanner:
         lane_id = int(sec_1.split('_')[2])
 
         road_waypoints = []
-        polygon = RoadDetection.compute_polygons(road, road_width_factor=1.0)[lane_id]
+        polygon = RoadDetection.compute_polygons(road)[lane_id]
         poly_x, poly_y = polygon.exterior.xy
         polygon_points: List[Tuple[float, float]] = list(zip(poly_x, poly_y))
         polygon_points = polygon_points[:-1]
