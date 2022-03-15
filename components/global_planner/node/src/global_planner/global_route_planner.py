@@ -1,6 +1,5 @@
 """A global route planner based on map and hmi data."""
 
-from dis import dis
 from math import atan2, dist as euclid_dist, pi, radians
 from typing import Tuple, List, Dict
 
@@ -10,7 +9,7 @@ from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
 from global_planner.xodr_converter import XodrMap, Geometry, Road, create_key
-from global_planner.geometry import add_vector, bounding_box, \
+from global_planner.geometry import add_vector, bounding_box, rotate_vector, \
                                     orth_offset_right, orth_offset_left, \
                                     scale_vector, sub_vector, unit_vector, vec2dir
 from global_planner.route_interpolation import RouteInterpolation
@@ -107,10 +106,7 @@ class RoadDetection:
         return sections
 
     @staticmethod
-    def compute_polygons(road: Road, ) -> Dict[int, Polygon]:
-        """Compute the polygons representing the road bounds."""
-
-        # compute intermediate offset vectors for curved road sections
+    def compute_offset_vectors(road: Road) -> List[Tuple[Tuple[float, float], Tuple[float, float]]]:
         offsets_vectors = []
         if len(road.geometries) > 1:
             geo_pairs = zip(road.geometries[:-1], road.geometries[1:])
@@ -127,78 +123,43 @@ class RoadDetection:
         offsets_vectors.insert(0, offsets_start)
         offsets_vectors.append(offsets_end)
 
-        # # compute the middle of lane (line of geometries without offset)
-        # middle = [geo.start_point for geo in road.geometries] + [road.geometries[-1].end_point]
-        # all_lane_polygons: Dict[int, Polygon] = {}
+        return offsets_vectors
 
-        # # compute the inner / outer bounds for each lane and create the lane polygon from it
-        # for lane_id in road.lane_widths:
-        #     vec_id = lane_id < 0
-        #     uniform_lane_offsets = [pair[vec_id] for pair in offsets_vectors]
+    @staticmethod
+    def compute_polygons(road: Road) -> Dict[int, Polygon]:
+        """Compute the polygons representing the road bounds."""
 
-        #     inner_scale = road.lane_widths[lane_id] * (lane_id - 1)
-        #     outer_scale = road.lane_widths[lane_id] * lane_id
+        # compute intermediate offset vectors for curved road sections
+        offset_vectors = RoadDetection.compute_offset_vectors(road)
 
-        #     inner_offsets = [scale_vector(vec, inner_scale) for vec in uniform_lane_offsets]
-        #     outer_offsets = [scale_vector(vec, outer_scale) for vec in uniform_lane_offsets]
-
-        #     inner_bound = [add_vector(middle[i], inner_offsets[i]) for i in range(len(middle))]
-        #     outer_bound = [add_vector(middle[i], outer_offsets[i]) for i in range(len(middle))]
-
-        #     all_lane_polygons[lane_id] = Polygon(inner_bound + list(reversed(outer_bound)))
-
-        # return all_lane_polygons
-
-        # compute right / left bounds of the lane polygons
+        # compute the middle of lane (line of geometries without offset)
         middle = [geo.start_point for geo in road.geometries] + [road.geometries[-1].end_point]
-        left_bounds, right_bounds = { 0: middle }, { 0: middle }
 
-        for lane_id in road.left_ids:
-            scale = abs(lane_id) * road.lane_widths[lane_id] 
-            scale += road.geometries[0].offset
-            scaled_offsets = [scale_vector(offsets_vectors[i][0], scale)
-                              for i in range(len(middle))]
-            bounds = [add_vector(m, scaled_offsets[i]) for i, m in enumerate(middle)]
-            left_bounds[lane_id] = bounds
+        # shift the middle by the lane offset
+        # assumption: all lane offsets of a road are the same
+        lane_offset = road.geometries[0].offset
+        middle = [add_vector(middle[i], scale_vector(offset_vectors[i][0], lane_offset))
+                  for i in range(len(middle))]
 
-        for lane_id in road.right_ids:
-            scale = abs(lane_id) * road.lane_widths[lane_id]
-            scale -= road.geometries[0].offset
-            scaled_offsets = [scale_vector(offsets_vectors[i][1], scale)
-                              for i in range(len(middle))]
-            bounds = [add_vector(m, scaled_offsets[i]) for i, m in enumerate(middle)]
-            right_bounds[lane_id] = bounds
+        all_polygons: Dict[int, Polygon] = {}
 
-        # put the bounds together to retrieve polygon boxes
-        # note: for a road with only one geometry this defaults to a rectangle
-        left_polygons = {}
-        road36_l = []
-        if road.left_ids:
-            left_ids = [0] + list(sorted(road.left_ids))
-            for id_0, id_1 in zip(left_ids[:-1], left_ids[1:]):
-                road36_l.extend(left_bounds[id_0] \
-                    + list(reversed(left_bounds[id_1])))
-                left_polygons[id_1] = Polygon(left_bounds[id_0] \
-                    + list(reversed(left_bounds[id_1])))
+        # compute the inner / outer bounds for each lane and create the lane polygon from it
+        for lane_id in road.left_ids + road.right_ids:
+            vec_id = 1 if lane_id < 0 else 0
+            uniform_lane_offsets = [pair[vec_id] for pair in offset_vectors]
 
-        right_polygons = {}
-        road36 = []
-       
-        if road.right_ids:
-            right_ids = [0] + list(reversed(sorted(road.right_ids)))
-            for id_0, id_1 in zip(right_ids[:-1], right_ids[1:]):
-                if road.road_id == 36:
-                    
-                    road36.extend(right_bounds[id_0] \
-                    + list(reversed(right_bounds[id_1])))
-                right_polygons[id_1] = Polygon(right_bounds[id_0] \
-                    + list(reversed(right_bounds[id_1])))
+            inner_scale = road.lane_widths[lane_id] * (abs(lane_id) - 1)
+            outer_scale = road.lane_widths[lane_id] * abs(lane_id)
 
-        all_polygons = {**right_polygons, **left_polygons}
-        if road.road_id == 36:
-            print("road36:", road36)
-            print("road36 LEFT:", road36_l)
-        
+            inner_offsets = [scale_vector(vec, inner_scale) for vec in uniform_lane_offsets]
+            outer_offsets = [scale_vector(vec, outer_scale) for vec in uniform_lane_offsets]
+
+            inner_bound = [add_vector(middle[i], inner_offsets[i]) for i in range(len(middle))]
+            outer_bound = [add_vector(middle[i], outer_offsets[i]) for i in range(len(middle))]
+
+            poly_points = inner_bound + list(reversed(outer_bound))
+            all_polygons[lane_id] = Polygon(poly_points)
+
         return all_polygons
 
     @staticmethod
@@ -336,7 +297,7 @@ class GlobalPlanner:
             if same_road:
                 road_1 = xodr_map.roads_by_id[road_id1]
                 interm_wps = GlobalPlanner._get_intermed_section_waypoints(sec_1, road_1)
-                
+
                 if drive_road_from_start_to_end:
                     route_waypoints += interm_wps
                 else:
@@ -408,62 +369,34 @@ class GlobalPlanner:
             return waypoints[:reachable_point] if reachable_point > -1 else []
         else: 
             return waypoints[reachable_point:] if reachable_point > -1 else []
+
     @staticmethod
     def advanced_speed(anno_waypoints: List[AnnRouteWaypoint]):
         """Set legal speed a bit earlier that the car have time to brake"""
-        break_dic: Dict[str, int] = {"90_60": 20, "90_50": 25, "90_30": 30, "60_30": 12, "50_30": 7}
+
+        brake_dists: Dict[str, int] = {
+            "90_60": 20, "90_50": 25, "90_30": 30,
+            "60_30": 12, "50_30": 7}
+
         last_speed = -1
         interpolate_dist = 2.0
         annotated_waypoints = anno_waypoints
+
         for index, annotated_waypoint in enumerate(annotated_waypoints):
-            if f"{last_speed}_{annotated_waypoint.legal_speed}" in break_dic:
+            key = f"{int(last_speed)}_{int(annotated_waypoint.legal_speed)}"
+            if key in brake_dists:
                 print("change speed")
-                dist_back = break_dic[f"{last_speed}_{annotated_waypoint.legal_speed}"]
+                dist_back = brake_dists[key]
                 set_speed = {annotated_waypoint.legal_speed}
                 for i in range(int(dist_back/interpolate_dist)):
                     if index - i > 0:
                         annotated_waypoints[index-i].legal_speed = set_speed
             last_speed = annotated_waypoint.legal_speed
+
         """Set unlimited speed if more then 3 lanes"""
         for index, annotated_waypoint in enumerate(annotated_waypoints):
             if len(annotated_waypoint.possible_lanes) > 3 and annotated_waypoint.legal_speed == 50:
-                print("Speed up to 120")
                 # TODO find out how fast we are allowed to drive on a highway
                 annotated_waypoints[index].legal_speed = 80
+
         return annotated_waypoints
-# def load_town_04():
-#     from xodr_converter import XODRConverter
-#     from os import path
-
-#     xodr_path = "/home/axel/paf21-1/components/global_planner/xodr/Town04.xodr"
-#     print("File exists:", path.exists(xodr_path))
-#     xodr_map = XODRConverter.read_xodr(xodr_path)
-#     return xodr_map
-
-# def test_cirle():
-#     p1 = (0 ,100)
-#     p2 = (100, 0)
-#     rad = 400
-#     points = Road._circular_interpolation(p1, p2, rad)
-#     x = [p[0] for p in points]
-#     y = [p[1] for p in points]
-#     import matplotlib.pyplot as plt
-#     plt.plot(x, y)
-#     plt.show()
-
-# if __name__ == "__main__":
-
-#     # test_cirle()
-#     xodr = load_town_04()
-#     start = (406.0249938964844, 124.69999694824219)
-#     # start = (182.8696438619712, 388.94453431093973)
-#     end = (7.50634155273438, 130.54249572753906)
-#     path = GlobalPlanner.get_shortest_path(start,end, xodr)
-#     print(path)
-#     route_waypoints = GlobalPlanner._preplan_route(start, end, path, xodr)
-#     x = [p[0] for p in route_waypoints]
-#     y = [p[1] for p in route_waypoints]
-#     import matplotlib.pyplot as plt
-#     plt.scatter(x, y)
-#     plt.show()
-#     print(route_waypoints)

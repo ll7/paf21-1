@@ -53,7 +53,7 @@ class GlobalPlannerNode:
         try:
             xodr_map = XODRConverter.read_xodr(self.map_path)
             global_route = GlobalPlanner.generate_waypoints(start_pos, end_pos, xodr_map)
-            print("Route generated!", global_route)
+            print("Route generated!")
 
             route_as_json = [{'x': wp.pos[0], 'y': wp.pos[1],
                             'actual_lane': wp.actual_lane,
