@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from local_planner.core import Vehicle, AnnRouteWaypoint
 from local_planner.vehicle_control import DrivingController
 from local_planner.core.geometry import angle_between_vectors, points_to_vector
-from local_planner.state_machine import SpeedObservation, TrafficLightInfo
+from local_planner.state_machine import SpeedObservation, TrafficLightInfo, ManeuverObservation
 from local_planner.vehicle_control import CurveDetection
 from local_planner.object_processing import ObjectHandler
 
@@ -26,6 +26,7 @@ class TrajectoryPlanner:
     length_route: int = 50
     obj_handler: ObjectHandler = None
     tld_info: TrafficLightInfo = TrafficLightInfo()
+    current_route: List[Tuple[float, float]] = field(default_factory=list)
     curve_detection: CurveDetection = CurveDetection()
 
     def __post_init__(self):
@@ -104,8 +105,19 @@ class TrajectoryPlanner:
 
         if self.is_last_wp:
             return route[-1:]
-
         # delete route waypoints behind car
+        #if len(self.current_route) > 0:
+        #    route = route[:self.prev_wp_id] + self.current_route \
+        #            + route[self.prev_wp_id + self.length_route:]
+        self.check_passed_waypoints(route)
+
+        bound = min(self.prev_wp_id + self.length_route, len(route))
+        temp_route = route[self.prev_wp_id:bound]
+        #temp_route = self.check_overtake(temp_route)
+        self.current_route = temp_route
+        return temp_route
+
+    def check_passed_waypoints(self, route):
         while True:
             prev_wp = route[self.prev_wp_id]
             next_wp = route[self.next_wp_id]
@@ -121,24 +133,40 @@ class TrajectoryPlanner:
             self.next_wp_id += 1
             self.prev_wp_id += 1
 
-        return self.cached_local_route
+    def check_overtake(self, route):
+        curve_obs = self.curve_detection.find_next_curve(self.current_route)
+        dist_next_curve = curve_obs.dist_until_curve
+        if dist_next_curve > 50 and self.latest_speed_observation.dist_next_traffic_light_m > 50:
+            route = self.obj_handler.plan_route_around_objects(route)
+        return route
 
     @property
     def latest_speed_observation(self) -> SpeedObservation:
         """Retrieve the latest speed observation"""
-        if not self.cached_local_route:
-            return SpeedObservation()
 
+        if not self.current_route:
+            return SpeedObservation()
         # fuse object detection with traffic light detection
-        speed_obs = self.obj_handler.get_speed_observation(self.cached_local_route)
+        speed_obs = self.obj_handler.get_speed_observation(self.current_route)
         speed_obs.tl_phase = self.tld_info.phase
-        speed_obs.dist_next_traffic_light_m = self.tld_info.distance
-        curve_obs = self.curve_detection.find_next_curve(self.cached_local_route)
+        #speed_obs.dist_next_traffic_light_m = self.tld_info.distance
+        speed_obs.dist_next_traffic_light_m = 10000
+        curve_obs = self.curve_detection.find_next_curve(self.current_route)
         speed_obs.dist_next_curve = curve_obs.dist_until_curve
         speed_obs.curve_target_speed = curve_obs.max_speed
-        speed_obs.detected_speed_limit = self.cached_local_ann_route[0].legal_speed
-
+        if len(self.cached_local_ann_route) > 0:
+            speed_obs.detected_speed_limit = self.cached_local_ann_route[0].legal_speed
         return speed_obs
+
+    @property
+    def latest_maneuver_observation(self) -> ManeuverObservation:
+        """Retrieve the latest speed observation"""
+        if not self.current_route:
+            return ManeuverObservation()
+        man_obs = ManeuverObservation()
+        curve_obs = self.curve_detection.find_next_curve(self.current_route)
+        man_obs.dist_next_curve = curve_obs.dist_until_curve
+        return man_obs
 
     def update_tld_info(self, tld_info: TrafficLightInfo):
         """Update the latest information on the traffic lights ahead"""
