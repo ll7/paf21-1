@@ -1,6 +1,7 @@
 """A global route planner based on map and hmi data."""
 
-from math import dist as euclid_dist, pi
+from dis import dis
+from math import atan2, dist as euclid_dist, pi, radians
 from typing import Tuple, List, Dict
 
 import numpy as np
@@ -265,7 +266,7 @@ class GlobalPlanner:
 
         print ("Startpos:", start_pos, "endpos:", end_pos)
         path = GlobalPlanner._get_shortest_path(start_pos, end_pos, xodr_map)
-        # print(f'planned path:', path)
+        print(f'planned path:', path)
 
         if len(path) < 1:
             road_start = RoadDetection.find_neighbor_sections(start_pos, xodr_map)
@@ -279,6 +280,7 @@ class GlobalPlanner:
 
         interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
         ann_route = RouteAnnotation.annotate_waypoints(interpol_route, route_metadata)
+        ann_route = GlobalPlanner.advanced_speed(ann_route)
         return ann_route
 
     @staticmethod
@@ -359,6 +361,54 @@ class GlobalPlanner:
             if polygon.contains(point):
                 filtered_wps.append(wp)
         return filtered_wps
+
+    @staticmethod
+    def advanced_speed(anno_waypoints: List[AnnRouteWaypoint]):
+        """Set legal speed a bit earlier that the car have time to brake"""
+        break_dic: Dict[str, int] = {"90_60": 20, "90_50": 25, "90_30": 30, "60_30": 12, "50_30": 7}
+        last_speed = -1
+        interpolate_dist = 2.0
+        annotated_waypoints = anno_waypoints
+        for index, annotated_waypoint in enumerate(annotated_waypoints):
+            if f"{last_speed}_{annotated_waypoint.legal_speed}" in break_dic:
+                print("change speed")
+                dist_back = break_dic[f"{last_speed}_{annotated_waypoint.legal_speed}"]
+                set_speed = {annotated_waypoint.legal_speed}
+                for i in range(int(dist_back/interpolate_dist)):
+                    if index - i > 0:
+                        annotated_waypoints[index-i].legal_speed = set_speed
+            last_speed = annotated_waypoint.legal_speed
+        """Set unlimited speed if more then 3 lanes"""
+        for index, annotated_waypoint in enumerate(annotated_waypoints):
+            if len(annotated_waypoint.possible_lanes) > 3 and annotated_waypoint.legal_speed == 50:
+                print("Speed up to 120")
+                # TODO find out how fast we are allowed to drive on a highway
+                annotated_waypoints[index].legal_speed = 80
+        return annotated_waypoints
+
+
+    # @staticmethod
+    # def check_angles_of_route(route_waypoints:List[Tuple[float, float]])->List[Tuple[float, float]]:
+    #     new_wps = []
+    #     bool_changes = False
+
+    #     for index in range(2,len(route_waypoints)):
+    #         if (euclid_dist(route_waypoints[index-1], route_waypoints[index])< 0.2):
+    #            new_wps.append(route_waypoints[index-2])
+    #            continue 
+    #         vec1 = sub_vector(route_waypoints[index-1], route_waypoints[index-2])
+    #         vec2 = sub_vector(route_waypoints[index], route_waypoints[index-2])
+    #         angle = atan2(vec1[1]-vec2[1], vec1[0]- vec2[0])
+    #         if angle > radians(22):
+    #             bool_changes = True
+    #             route_waypoints[index-1] = add_vector(vec2, route_waypoints[index-2])
+    #         new_wps.append(route_waypoints[index-2])
+    #     print("new_wps:",new_wps)
+    #     return new_wps
+
+
+
+
 
 # def load_town_04():
 #     from xodr_converter import XODRConverter

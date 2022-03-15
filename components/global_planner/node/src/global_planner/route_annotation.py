@@ -74,7 +74,8 @@ class RouteAnnotation:
             actual_lane = metadata.sections_ahead[sec_id].lane_id
             poss_lanes = metadata.sections_ahead[sec_id].possible_lanes
 
-            ann_wp = AnnRouteWaypoint(waypoint, actual_lane, poss_lanes, legal_speed, tl_dist, sec_dist)
+            ann_wp = AnnRouteWaypoint(
+                waypoint, actual_lane, poss_lanes, legal_speed, tl_dist, sec_dist)
             ann_waypoints.append(ann_wp)
 
             if tl_dist < radius_handled:
@@ -84,7 +85,7 @@ class RouteAnnotation:
                 ss_id += 1
             if sec_dist < radius_handled:
                 legal_speed = default_speed
-                sec_id = max(sec_id + 1, len(metadata.sections_ahead) - 1)
+                sec_id = min(sec_id + 1, len(metadata.sections_ahead) - 1)
                 # TODO: reason whether this quick index overflow fix actually makes sense
 
         return ann_waypoints

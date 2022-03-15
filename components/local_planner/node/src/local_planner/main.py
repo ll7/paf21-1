@@ -53,17 +53,21 @@ class LocalPlannerNode:
         nav_thread.start()
 
         while not rospy.is_shutdown():
-            local_route = self.route_planner.calculate_trajectory()
-            self.speed_state_machine.update_state(self.route_planner.latest_speed_observation)
-            velocity = self.speed_state_machine.get_target_speed()
-            self.driving_control.update_route(local_route)
-            self.driving_control.update_target_velocity(velocity)
-            driving_signal = self.driving_control.next_signal()
-            msg = RosMessagesAdapter.signal_to_message(driving_signal)
-            self.driving_signal_publisher.publish(msg)
+            try:
+                local_route = self.route_planner.calculate_trajectory()
+                self.speed_state_machine.update_state(self.route_planner.latest_speed_observation)
+                velocity = self.speed_state_machine.get_target_speed()
+                self.driving_control.update_route(local_route)
+                self.driving_control.update_target_velocity(velocity)
+                driving_signal = self.driving_control.next_signal()
+                msg = RosMessagesAdapter.signal_to_message(driving_signal)
+                self.driving_signal_publisher.publish(msg)
+            except:
+                print('failed to send driving signal!')
             rate.sleep()
 
     def _init_ros(self):
+        
         rospy.init_node(f'local_planner_{self.vehicle.name}', anonymous=True)
         self.driving_signal_publisher = self._init_driving_signal_publisher()
         self._init_vehicle_position_subscriber()

@@ -20,7 +20,7 @@ RUN apt-get update \
     libglx0 \
     libegl1 \
     freeglut3-dev \
-  && rm -rf /var/lib/apt/lists/*# Env vars for the nvidia-container-runtime.
+  && rm -rf /var/lib/apt/lists/*
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
 
@@ -46,7 +46,7 @@ ENV PYTHONPATH=$PYTHONPATH:/opt/carla-ros-bridge/install/lib/python3/dist-packag
 
 # install simple_pid
 RUN python -m pip install pip --upgrade \
-    && python -m pip install simple_pid pygame
+    && python -m pip install simple_pid pygame transformations
 
 # install the scenario runner from GitHub release source
 ENV CARLA_ROOT=/opt/carla
@@ -71,6 +71,9 @@ ENV EGO_VEHICLE_SENSORS=/config/sensors.json
 
 COPY ./rosbridge_with_rviz_scenario.launch /rosbridge_with_rviz_scenario.launch
 COPY ./ros_entrypoint.sh /ros_entrypoint.sh
+
+ADD ./scripts /scripts
+ADD ./config /config
 
 ENTRYPOINT [ "/ros_entrypoint.sh" ]
 CMD ["/rosbridge_with_rviz_scenario.launch", "--wait"]
