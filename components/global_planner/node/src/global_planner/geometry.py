@@ -51,6 +51,21 @@ def vec2dir(start: Tuple[float, float], end: Tuple[float, float]) -> float:
     return atan2(vec_dir[1], vec_dir[0])
 
 
+def norm_angle(angle_rad: float) -> float:
+    """Normalize the given angle within [-pi, +pi)"""
+    while angle_rad > pi:
+        angle_rad -= 2.0 * pi
+    while angle_rad < -pi:
+        angle_rad += 2.0 * pi
+    if angle_rad == pi:
+        angle_rad = -pi
+
+    if angle_rad < -pi or angle_rad >= pi:
+        print('norm angle failed! this should never happen')
+
+    return angle_rad
+
+
 def orth_offset_right(start_point: Tuple[float, float], end_point: Tuple[float, float],
                       offset: float) -> Tuple[float, float]:
     """Calculate the orthogonal offset according the road width in right direction"""

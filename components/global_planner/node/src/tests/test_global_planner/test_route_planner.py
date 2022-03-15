@@ -109,7 +109,7 @@ def test_path_finding_multilane_highway_town_4():
     end  = (182.08697509765625, 395.9513244628906) 
     path = GlobalPlanner.get_shortest_path(start, end, 0.0, xodr_map)
     print(path)
-    route = GlobalPlanner._preplan_route(start, end, path, xodr_map)
+    route = GlobalPlanner._preplan_route(start, end, path, 0.0, xodr_map)
 
     print(route)
     assert True
