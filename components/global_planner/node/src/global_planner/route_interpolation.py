@@ -20,7 +20,7 @@ class RouteInterpolation:
         # use linear_interpolation
 
         for index in range(len(orig_route) - 1):
-            waypoints = RouteInterpolation._linear_interpolation(
+            waypoints = RouteInterpolation.linear_interpolation(
                 orig_route[index], orig_route[index + 1], interval_m=interval_m)
             route.extend(waypoints)
         print("linear")
@@ -33,7 +33,7 @@ class RouteInterpolation:
         for index in range(len(orig_route) - 1):
             # use linear interpolation for first and last segment
             if index == 0 or index == (len(orig_route) - 2):
-                waypoints = RouteInterpolation._linear_interpolation(
+                waypoints = RouteInterpolation.linear_interpolation(
                     orig_route[index], orig_route[index + 1], interval_m=interval_m)
                 route.extend(waypoints)
             # else use spline interpolation
@@ -48,8 +48,8 @@ class RouteInterpolation:
         return RouteInterpolation._clean_route_duplicates(route, min_dist=0.1)
 
     @staticmethod
-    def _linear_interpolation(start: Tuple[float, float], end: Tuple[float, float],
-                              interval_m: float) -> List[Tuple[float, float]]:
+    def linear_interpolation(start: Tuple[float, float], end: Tuple[float, float],
+                             interval_m: float) -> List[Tuple[float, float]]:
 
         distance = euclid_dist(start, end)
         vector = (end[0] - start[0], end[1] - start[1])
