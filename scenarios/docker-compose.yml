@@ -33,6 +33,7 @@ services:
       - seccomp:unconfined
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./config:/config/settings
       - ./FollowLeadingVehicle.xosc:/config/FollowLeadingVehicle.xosc
     environment:
       SDL_VIDEODRIVER: x11
@@ -43,17 +44,18 @@ services:
       ROS_HOSTNAME: carla-ros-bridge
       CARLA_SIM_HOST: carla-simulator
       CARLA_OPENSCENARIO_FILE: /config/FollowLeadingVehicle.xosc
+      CONFIG_FILE: ${CONFIG_FILE}
     networks:
       - carla
       - ros
 
-  # competition-manager:
-  #   image: competition_manager
-  #   environment:
-  #     ROS_MASTER_URI: http://roscore:11311
-  #     ROS_HOSTNAME: competition-manager
-  #   networks:
-  #     - ros
+  competition-manager:
+    image: competition_manager
+    environment:
+      ROS_MASTER_URI: http://roscore:11311
+      ROS_HOSTNAME: competition-manager
+    networks:
+      - ros
 
   local-planner:
     image: local_planner
@@ -83,6 +85,19 @@ services:
     networks:
       - ros
 
+  # WARNING: this recorder might write several dozens of gigabites within minutes
+  #          use it carefully and only for recording
+  # rosbag-recorder:
+  #   image: ros:noetic
+  #   # command: rosbag record -O /app/recordings/recording.bag --all
+  #   command: rosbag record -O /app/recordings/recording.bag -e "/carla/ego_vehicle/(.*)" -x "(.*)ackermann_cmd(.*)" --split --size=1024 /chatter
+  #   volumes:
+  #     - './recordings:/app/recordings'
+  #   environment:
+  #      ROS_MASTER_URI: http://roscore:11311
+  #      ROS_HOSTNAME: rosbag-recorder
+  #   networks:
+  #     - ros
 
 networks:
   carla:
