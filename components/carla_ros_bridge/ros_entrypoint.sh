@@ -3,7 +3,7 @@ set -e
 source "/opt/carla-ros-bridge/install/setup.bash"
 
 #============ Variables ================
-export CONFIG_FILE="/config/Town01/town01_sg0.yaml"
+export CONFIG_FILE="/config/Town03/town03_sg1.yaml"
 export TOWN="${CONFIG_FILE:8:6}"
 export NUM_CARS=0
 export NUM_PEDESTRIANS=0

@@ -28,7 +28,7 @@ def test_path_finding():
     xodr_map = load_town_01()
     start = (1.5599901676177979, -149.83001708984375)
     end = (322.09625244140625, -55.15309143066406)
-    path = GlobalPlanner.get_shortest_path(start, end, xodr_map)
+    path = GlobalPlanner.get_shortest_path(start, end, 0.0, xodr_map)
 
     assert path == ['-1_0_0', '15_0_1', '13_0_-1', '13_1_-1', '3_1_1', '3_0_1', '117_1_1', '117_0_1',
                     '2_1_1', '2_0_1', '61_1_1', '61_0_1', '1_1_1', '1_0_1', '27_1_1', '27_0_1',
@@ -107,9 +107,9 @@ def test_path_finding_multilane_highway_town_4():
     xodr_map = load_town_04()
     start = (406.0252685546875, 124.70137786865234)
     end  = (182.08697509765625, 395.9513244628906) 
-    path = GlobalPlanner.get_shortest_path(start, end, xodr_map)
+    path = GlobalPlanner.get_shortest_path(start, end, 0.0, xodr_map)
     print(path)
-    route = GlobalPlanner._preplan_route(start, end, path, xodr_map)
+    route = GlobalPlanner._preplan_route(start, end, path, 0.0, xodr_map)
 
     print(route)
     assert True
@@ -162,6 +162,10 @@ def test_path_finding_multilane_highway_town_4():
 #     # assert path == ['-1_0_0', '15_0_1', '13_0_-1', '13_1_-1', '3_1_1', '3_0_1', '117_1_1', '117_0_1',
 #     #                 '2_1_1', '2_0_1', '61_1_1', '61_0_1', '1_1_1', '1_0_1', '27_1_1', '27_0_1',
 #     #                 '16_0_-1', '16_1_-1', '253_0_-1', '253_1_-1', '10_1_1', '-2_0_0']
+
+
+# test for town 05
+# (-152.083251953125, -154.6916046142578) to (69.37128448486328, 200.74708557128906)
 
 
 def test_lane_change_north_right():
