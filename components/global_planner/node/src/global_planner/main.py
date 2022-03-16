@@ -26,7 +26,7 @@ class GlobalPlannerNode:
                 self.map_path = f"/app/res/xodr/{town}.xodr"
                 print("Town is: ", town)
                 break
-            except:
+            except KeyError:
                 print('waiting for town rosparam')
                 sleep(0.1)
 
