@@ -12,39 +12,33 @@ class RouteInterpolation:
     @staticmethod
     def interpolate_route(orig_route: List[Tuple[float, float]], interval_m=0.5):
         """Interpolate the given route waypoints with a given interval"""
-        route = []
 
         "Clean Duplicates"
         orig_route = RouteInterpolation._clean_route_duplicates(orig_route, min_dist=0.01)
 
         # use linear_interpolation
-
+        route = []
         for index in range(len(orig_route) - 1):
             waypoints = RouteInterpolation.linear_interpolation(
                 orig_route[index], orig_route[index + 1], interval_m=interval_m)
             route.extend(waypoints)
-        print("linear")
-        print(route)
-        route = []
+        print("linear: ", route)
+        #
+        # for index in range(len(orig_route) - 1):
+        #     # use linear interpolation for first and last segment
+        #     if index == 0 or index == (len(orig_route) - 2):
+        #         waypoints = RouteInterpolation.linear_interpolation(
+        #             orig_route[index], orig_route[index + 1], interval_m=interval_m)
+        #         route.extend(waypoints)
+        #     # else use spline interpolation
+        #     else:
+        #         waypoints = RouteInterpolation._catmull_rom_spline(
+        #             orig_route[index-1:index+3], interval_m=interval_m)
+        #         route.extend(waypoints)
 
-        # use spline_interpolation
-        print("orgi_route")
-        print(orig_route)
-        for index in range(len(orig_route) - 1):
-            # use linear interpolation for first and last segment
-            if index == 0 or index == (len(orig_route) - 2):
-                waypoints = RouteInterpolation.linear_interpolation(
-                    orig_route[index], orig_route[index + 1], interval_m=interval_m)
-                route.extend(waypoints)
-            # else use spline interpolation
-            else:
-                waypoints = RouteInterpolation._catmull_rom_spline(orig_route[index - 1],
-                                                                   orig_route[index], orig_route[index + 1],
-                                                                   orig_route[index + 2], interval_m=interval_m)
-                route.extend(waypoints)
         route = route + [orig_route[-1]]
-        print("Spline Route")
-        print(route)
+        # print("Spline Route")
+        # print(route)
         return RouteInterpolation._clean_route_duplicates(route, min_dist=0.1)
 
     @staticmethod
@@ -66,52 +60,44 @@ class RouteInterpolation:
         return lin_points
 
     @staticmethod
-    def _catmull_rom_spline(p0, p1, p2, p3, interval_m):
+    def _catmull_rom_spline(points: List[Tuple[float, float]], interval_m):
         """
         p0, p1, p2, and p3 should be (x,y) point pairs that define the Catmull-Rom spline.
         numpoints is the number of points to include in this curve segment.
         """
-
+        p_0, p_1, p_2, p_3 = points
         # calc number of Interpolation Points
-        distance = euclid_dist(p1, p2)
-        numpoints = max(2, ceil(distance / interval_m)+1)
+        distance = euclid_dist(p_1, p_2)
+        num_points = max(2, ceil(distance / interval_m) + 1)
 
         # Convert the points to numpy so that we can do array multiplication
-        p0, p1, p2, p3 = map(numpy.array, [p0, p1, p2, p3])
+        p_0, p_1, p_2, p_3 = map(numpy.array, [p_0, p_1, p_2, p_3])
 
-        # Parametric constant: 0.5 for the centripetal spline, 0.0 for the uniform spline, 1.0 for the chordal spline.
-        alpha = 0.5
-        # Premultiplied power constant for the following tj() function.
-        alpha = alpha / 2
+        # Parametric constant: 0.5 for the centripetal spline,
+        # 0.0 for the uniform spline, 1.0 for the chordal spline.
+        alpha = 0.25
 
-        def tj(ti, pi, pj):
-            xi, yi = pi
-            xj, yj = pj
-            return ((xj - xi) ** 2 + (yj - yi) ** 2) ** alpha + ti
-
+        circle = lambda t_i, p_i, p_j: ((p_j[0] - p_i[0]) ** 2 +
+                                        (p_j[1] - p_i[1]) ** 2) ** alpha + t_i
         # Calculate t0 to t3
-        t0 = 0
-        t1 = tj(t0, p0, p1)
-        t2 = tj(t1, p1, p2)
-        t3 = tj(t2, p2, p3)
+        t_0 = 0
+        t_1 = circle(t_0, p_0, p_1)
+        t_2 = circle(t_1, p_1, p_2)
+        t_3 = circle(t_2, p_2, p_3)
 
         # Only calculate points between P1 and P2
-        t = numpy.linspace(t1, t2, numpoints)
+        t = numpy.linspace(t_1, t_2, num_points)
 
         # Reshape so that we can multiply by the points P0 to P3
         # and get a point for each value of t.
         t = t.reshape(len(t), 1)
-        #print(t)
-        a1 = (t1 - t) / (t1 - t0) * p0 + (t - t0) / (t1 - t0) * p1
-        a2 = (t2 - t) / (t2 - t1) * p1 + (t - t1) / (t2 - t1) * p2
-        a3 = (t3 - t) / (t3 - t2) * p2 + (t - t2) / (t3 - t2) * p3
-        #print(a1)
-        #print(a2)
-        #print(a3)
-        b1 = (t2 - t) / (t2 - t0) * a1 + (t - t0) / (t2 - t0) * a2
-        b2 = (t3 - t) / (t3 - t1) * a2 + (t - t1) / (t3 - t1) * a3
+        a1 = (t_1 - t) / (t_1 - t_0) * p_0 + (t - t_0) / (t_1 - t_0) * p_1
+        a2 = (t_2 - t) / (t_2 - t_1) * p_1 + (t - t_1) / (t_2 - t_1) * p_2
+        a3 = (t_3 - t) / (t_3 - t_2) * p_2 + (t - t_2) / (t_3 - t_2) * p_3
+        b1 = (t_2 - t) / (t_2 - t_0) * a1 + (t - t_0) / (t_2 - t_0) * a2
+        b2 = (t_3 - t) / (t_3 - t_1) * a2 + (t - t_1) / (t_3 - t_1) * a3
 
-        c = (t2 - t) / (t2 - t1) * b1 + (t - t1) / (t2 - t1) * b2
+        c = (t_2 - t) / (t_2 - t_1) * b1 + (t - t_1) / (t_2 - t_1) * b2
         spline: List[Tuple[float, float]] = []
         for next_p in c:
             spline.append((next_p[0], next_p[1]))
