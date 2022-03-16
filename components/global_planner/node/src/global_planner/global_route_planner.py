@@ -304,7 +304,7 @@ class GlobalPlanner:
 
             # keep point if angle is not too steem
             print('Filter Wps', abs(norm_angle(dir_2 - dir_1)))
-            if abs(norm_angle(dir_2 - dir_1)) <= pi/10:
+            if abs(norm_angle(dir_2 - dir_1)) <= pi/8:
                 i += 1
                 continue
 
