@@ -18,10 +18,10 @@ def create_key(road: int, pos: int, link: int) -> str:
     return f"{road}_{pos}_{link}"
 
 
-def split_key(key: str) -> Tuple[int, int, int]:
+def split_key(key: str) -> Tuple[int, bool, int]:
     """Function to split the key of the mapping dictionary."""
     key_split = key.split('_')
-    return int(key_split[0]), int(key_split[1]), int(key_split[2])
+    return int(key_split[0]), bool(int(key_split[1])), int(key_split[2])
 
 
 def global_pos(road_start: Tuple[float, float], road_end: Tuple[float, float],
