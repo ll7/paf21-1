@@ -12,6 +12,7 @@ from global_planner.global_route_planner import GlobalPlanner
 from global_planner.xodr_converter import XODRConverter
 from time import sleep
 
+
 @dataclass
 class GlobalPlannerNode:
     """A class representing a ROS node that's planning a global route."""
@@ -58,18 +59,18 @@ class GlobalPlannerNode:
             print("Route generated!")
 
             route_as_json = [{'x': wp.pos[0], 'y': wp.pos[1],
-                            'actual_lane': wp.actual_lane,
-                            'possible_lanes': wp.possible_lanes,
-                            'legal_speed': wp.legal_speed,
-                            'dist_next_tl': wp.dist_next_tl,
-                            'end_lane_m': wp.end_lane_m} for wp in global_route]
+                              'actual_lane': wp.actual_lane,
+                              'possible_lanes': wp.possible_lanes,
+                              'legal_speed': wp.legal_speed,
+                              'dist_next_tl': wp.dist_next_tl,
+                              'end_lane_m': wp.end_lane_m} for wp in global_route]
         except:
             print(f'request failed!')
             return NavigationRequestResponse(waypoints_json='[]', success=False)
 
         response = NavigationRequestResponse(
-            waypoints_json = json.dumps(route_as_json),
-            success = True
+            waypoints_json=json.dumps(route_as_json),
+            success=True
         )
 
         return response
