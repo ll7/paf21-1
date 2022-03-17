@@ -3,7 +3,7 @@
 # set config file
 export CONFIG_FILE=$1
 if [ -z $CONFIG_FILE ]; then
-    export CONFIG_FILE="town03_sg1.yaml"
+    export CONFIG_FILE="town04_sg1.yaml"
 fi
 
 # build docker images

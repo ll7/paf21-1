@@ -34,7 +34,6 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ./config:/config/settings
-      - ./FollowLeadingVehicle.xosc:/config/FollowLeadingVehicle.xosc
     environment:
       SDL_VIDEODRIVER: x11
       SDL_HINT_CUDA_DEVICE: 0
