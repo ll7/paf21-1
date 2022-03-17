@@ -126,7 +126,7 @@ def main():
 
     vehicle_name = "ego_vehicle"
     vehicle = Vehicle(vehicle_name)
-    publish_rate_hz = 10
+    publish_rate_hz = 20
     node = LocalPlannerNode(vehicle, publish_rate_hz)
     node.run_node()
 

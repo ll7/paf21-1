@@ -48,7 +48,7 @@ class NaiveSteeringController:
     @property
     def min_dist_ahead(self) -> float:
         speed = self.vehicle.velocity_mps
-        return ceil(speed / 3.6 / 10)
+        return ceil((speed * (dist(self.last_pos, self.vehicle.pos) / speed)))
 
 
     def _get_aim_point(self, route: List[Tuple[float, float]]) -> Tuple[float, float] or None:
@@ -66,7 +66,7 @@ class NaiveSteeringController:
 class StanleySteeringController:
     """Representing a steering controller implementing the Stanley method."""
     vehicle: Vehicle
-    curvature: float = 2
+    curvature: float = 0
     eps: float = 1e-6
     last_pos: Tuple[float, float] = (0, 0)
 
@@ -77,10 +77,11 @@ class StanleySteeringController:
             print('canceled 1')
             return 0.0
 
-        prev_wp = self._get_prev_point(route)
-        next_wp = self._get_next_point(route)
+        prev_wp, next_wp= self._get_prev_and_next_point(route)
+
         if not prev_wp or not next_wp or prev_wp == next_wp:
             # TODO: think of a better fallback case
+            print(prev_wp, next_wp)
             print('canceled 2')
             return 0.0
 
@@ -91,22 +92,29 @@ class StanleySteeringController:
 
         max_angle = self.vehicle.meta.max_steer_angle_rad
         steer_angle = min(max(steer_angle, -max_angle), max_angle)
-        print(np.rad2deg(steer_angle), 'angle')
+
         return steer_angle
 
     @property
     def min_dist_ahead(self) -> float:
         speed = self.vehicle.velocity_mps
-        return ceil(speed / 3.6 / 10)
 
-    def _get_prev_point(self, route: List[Tuple[float, float]]) -> Tuple[float, float] or None:
+        if speed == 0:
+            gate = 0
+        else:
+            gate = ceil((speed * (dist(self.last_pos, self.vehicle.pos) / speed)))
+        print(gate, 'Ceiling')
+        return gate
+
+    def _get_prev_and_next_point(self, route: List[Tuple[float, float]]) -> Tuple[float, float] or None:
         if len(route) < 2:
-            return None
+            return None, None
         min_dist = self.min_dist_ahead
-        for i in range(len(route)):
+        for i in range(2, len(route)):
             if dist(route[i], self.vehicle.pos) >= min_dist:
-                return route[i]
-        return route[-2]
+                print(i, 'index')
+                return route[i], route[i+1]
+        return route[-2], route[-1]
 
     def _get_next_point(self, route: List[Tuple[float, float]]) -> Tuple[float, float] or None:
         if len(route) < 2:
@@ -127,8 +135,8 @@ class StanleySteeringController:
         prev_to_next = points_to_vector(prev_wp, next_wp)
         vector_axle = rotate_vector((1.45, 0), self.vehicle.orientation_rad)
         pos_front_axle = add_vector(vector_axle, self.vehicle.pos)
-        print(self.vehicle.pos, pos_front_axle, 'Positions')
-        print(self.vehicle.orientation_rad, 'Orientation')
+        #print(self.vehicle.pos, pos_front_axle, 'Positions')
+        #print(self.vehicle.orientation_rad, 'Orientation')
         print(dist(self.last_pos, self.vehicle.pos), 'Traveled_Distance')
         self.last_pos = self.vehicle.pos
         prev_to_vehicle = points_to_vector(prev_wp, pos_front_axle)
@@ -136,6 +144,8 @@ class StanleySteeringController:
         traj_len = vector_len(prev_to_next)
         e_t = cross_prod / traj_len
         print('cross_track_error', e_t)
+        if abs(e_t) > 1:
+            print('thrown off')
         #arg = (self.curvature * e_t) / (self.eps + self.vehicle.velocity_mps)
         return atan2((self.curvature * e_t), self.eps + self.vehicle.velocity_mps)
 
