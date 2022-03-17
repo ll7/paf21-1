@@ -17,4 +17,5 @@ class TrafficLightInfo:
     """Representing information on a recently detected traffic light"""
     phase: TrafficLightPhase
     distance: float
+    accuracy: float
     # position: Tuple[float, float]

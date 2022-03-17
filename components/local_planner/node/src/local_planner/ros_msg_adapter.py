@@ -23,7 +23,9 @@ class RosMessagesAdapter:
     def json_message_to_tld_info(msg: StringMsg) -> TrafficLightInfo:
         """Convert a ROS message into a TrafficLightInfo"""
         obj = json.loads(msg.data)
-        return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])), float(obj['distance']))
+        return TrafficLightInfo(TrafficLightPhase(int(obj['phase'])),
+                                float(obj['distance']),
+                                float(obj['accuracy']))
 
     @staticmethod
     def json_message_to_object_info(msg: StringMsg) -> List[ObjectMeta]:

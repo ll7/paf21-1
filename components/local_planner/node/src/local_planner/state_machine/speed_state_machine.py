@@ -26,6 +26,7 @@ class TrafficLightInfo:
     """Representing information on a recently detected traffic light"""
     phase: TrafficLightPhase = TrafficLightPhase.GREEN
     distance: float = 1000
+    accuracy: float = 0.0
 
 
 @dataclass
