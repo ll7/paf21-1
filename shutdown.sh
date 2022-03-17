@@ -9,5 +9,10 @@ pushd scenarios
     docker-compose logs perception > $LOG_DIR/perception_log.txt
     docker-compose logs local-planner > $LOG_DIR/local-planner_log.txt
     docker-compose logs global-planner > $LOG_DIR/global_log.txt
+    COMP_MGR_OUT=$(docker-compose logs competition-manager | tail -n 1)
     docker-compose down
 popd
+
+echo '=========================='
+echo 'competition manager output'
+echo $COMP_MGR_OUT
