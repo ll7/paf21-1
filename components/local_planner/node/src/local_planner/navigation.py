@@ -53,7 +53,7 @@ class CompetitionDrivingService:
         while True:
             try:
                 goal_x = float(rospy.get_param('competition/goal/position/x'))
-                goal_y = float(rospy.get_param('competition/goal/position/y')) * -1
+                goal_y = float(rospy.get_param('competition/goal/position/y'))
                 return (goal_x, goal_y)
             except Exception as err:
                 print(f'error: {err}')
