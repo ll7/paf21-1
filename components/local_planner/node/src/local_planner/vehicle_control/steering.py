@@ -66,7 +66,7 @@ class NaiveSteeringController:
 class StanleySteeringController:
     """Representing a steering controller implementing the Stanley method."""
     vehicle: Vehicle
-    curvature: float = 0
+    curvature: float = 1
     eps: float = 1e-6
     last_pos: Tuple[float, float] = (0, 0)
 
@@ -112,16 +112,16 @@ class StanleySteeringController:
         min_dist = self.min_dist_ahead
         for i in range(2, len(route)):
             if dist(route[i], self.vehicle.pos) >= min_dist:
-                print(i, 'index')
-                return route[i], route[i+1]
+                return route[i], self._get_next_point(route, i)
+                #return route[i], route[i]
         return route[-2], route[-1]
 
-    def _get_next_point(self, route: List[Tuple[float, float]]) -> Tuple[float, float] or None:
+    def _get_next_point(self, route: List[Tuple[float, float]], index) -> Tuple[float, float] or None:
         if len(route) < 2:
             return None
-        min_dist = self.min_dist_ahead * 2
-        for i in range(len(route)):
-            if dist(route[i], self.vehicle.pos) >= min_dist:
+        min_dist = self.min_dist_ahead
+        for i in range(index, len(route)):
+            if dist(route[i], route[index]) >= min_dist:
                 return route[i]
         return route[-1]
 
@@ -137,15 +137,15 @@ class StanleySteeringController:
         pos_front_axle = add_vector(vector_axle, self.vehicle.pos)
         #print(self.vehicle.pos, pos_front_axle, 'Positions')
         #print(self.vehicle.orientation_rad, 'Orientation')
-        print(dist(self.last_pos, self.vehicle.pos), 'Traveled_Distance')
+        #print(dist(self.last_pos, self.vehicle.pos), 'Traveled_Distance')
         self.last_pos = self.vehicle.pos
         prev_to_vehicle = points_to_vector(prev_wp, pos_front_axle)
         cross_prod = -np.cross(prev_to_next, prev_to_vehicle)
         traj_len = vector_len(prev_to_next)
         e_t = cross_prod / traj_len
-        print('cross_track_error', e_t)
-        if abs(e_t) > 1:
-            print('thrown off')
+        #print('cross_track_error', e_t)
+        #if abs(e_t) > 1:
+            #print('thrown off')
         #arg = (self.curvature * e_t) / (self.eps + self.vehicle.velocity_mps)
         return atan2((self.curvature * e_t), self.eps + self.vehicle.velocity_mps)
 
