@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 from local_planner.core import Vehicle
 from local_planner.vehicle_control import NaiveSteeringController
+from local_planner.vehicle_control import StanleySteeringController
 
 
 @dataclass
@@ -36,7 +37,7 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
 
     def __post_init__(self):
         if not self.steer_control:
-            self.steer_control = NaiveSteeringController(self.vehicle)
+            self.steer_control = StanleySteeringController(self.vehicle)
 
     def update_route(self, waypoints: List[Tuple[float, float]]):
         """Update the route to be followed and cache first waypoint"""
@@ -53,7 +54,7 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         vehicle follow the suggested ideal route"""
         # generate logs for each driving signal tick
         steering_angle = self.steer_control.compute_steering_angle(self.route_waypoints)
-        targetspeed =  self.target_velocity_mps # if self.route_waypoints else 0.0
+        targetspeed = self.target_velocity_mps # if self.route_waypoints else 0.0
         signal = DrivingSignal(steering_angle, targetspeed)
         # if self.vehicle.is_ready:
         #     print("Signal. Time : {}, pos[1]: {}, orientation_rad: {}, \

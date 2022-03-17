@@ -11,7 +11,7 @@ from typing import Tuple
 class VehicleMetadata:
     """Representing construction-specific vehicle features"""
     length_between_axles_m: float = 3.1
-    max_steer_angle_rad: float = 0.5
+    max_steer_angle_rad: float = 0.4
     base_accel_mps2: float = 2.0
     base_brake_mps2: float = -2.0
     vehicle_reaction_time_s: float = 0.1

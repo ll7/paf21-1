@@ -9,8 +9,8 @@ from local_planner.core.geometry import approx_curvature_radius
 @dataclass
 class CurveObservation:
     """Representing the next curve ahead"""
-    dist_until_curve: float=1000
-    max_speed: float=500
+    dist_until_curve: float = 1000
+    max_speed: float = 500
 
 
 class CurveDetection:
@@ -37,7 +37,7 @@ class CurveDetection:
 
     @staticmethod
     def _route_dist(wps: List[Tuple[float, float]]):
-        return sum([euclid_dist(wps[i], wps[i+1]) for i in range(len(wps) - 1)])
+        return sum([euclid_dist(wps[i], wps[i + 1]) for i in range(len(wps) - 1)])
 
     @staticmethod
     def _find_next_curve_bounds(wps: List[Tuple[float, float]]) -> Tuple[int, int] or None:
@@ -52,7 +52,7 @@ class CurveDetection:
 
         ids = range(len(wps) - 7)
         radiuses = iter(map(lambda i: (approx_curvature_radius(wps[i],
-                                        wps[i+3], wps[i+6]), i), ids))
+                                                               wps[i + 3], wps[i + 6]), i), ids))
         start_id = next(filter(lambda r: r[0] < radius_threshold, radiuses), None)
         end_id = next(filter(lambda r: r[0] > radius_threshold, radiuses), None)
 
@@ -63,11 +63,11 @@ class CurveDetection:
         """ Determine the max. speed possible to drive the given curvature
         using a formula that approximates the car's friction given the radius."""
 
-        friction_coeff = 1.0 # 0.6
+        friction_coeff = 1.0  # 0.6
         gravity_accel = 9.81
 
         p_1, p_2, p_3 = wps_curve[0], wps_curve[len(wps_curve) // 2], wps_curve[-1]
         radius = approx_curvature_radius(p_1, p_2, p_3)
         max_speed = sqrt(friction_coeff * gravity_accel * radius)
-
+        print(max_speed, 'speed in curve')
         return max_speed
