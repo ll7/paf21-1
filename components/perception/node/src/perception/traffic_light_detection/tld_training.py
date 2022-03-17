@@ -14,8 +14,7 @@ from tensorflow.keras.losses import Loss, SparseCategoricalCrossentropy
 from tensorflow.keras.callbacks import TensorBoard
 from tensorflow_datasets import ImageFolder
 
-from perception.traffic_light_detection.preprocessing import augment_image, resize_image
-
+from preprocessing import augment_image, resize_image
 
 @dataclass
 class TldTrainingSession:
