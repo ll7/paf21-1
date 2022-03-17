@@ -54,11 +54,12 @@ class TrafficLightDetector:
             # 2) ignore traffic lights that are too small sized (-> filter pedestrian / bicycle TLs)
             max_dist_m = 80
             area_min, area_max = 1, 1 # TODO: @Pavlo choose appropriate area thresholds
-            closeby_patches = [(i, patches[i]) for i in range(len(patches))
-                               if distances[i] <= max_dist_m and area_min < obj_areas[i] < area_max]
+            cond = lambda i: distances[i] <= max_dist_m and area_min <= obj_areas[i] <= area_max
+            closeby_patches = [(i, patches[i]) for i in range(len(patches)) if cond(i)]
 
             # abort if there are no patches to evaluate
             if not closeby_patches:
+                print('all patches rejected!')
                 return None
 
             # classify each of the relevant traffic lights
@@ -70,14 +71,8 @@ class TrafficLightDetector:
             # ignore traffic lights of opposing side (for american case)
             results = [r for r in results if r.phase != TrafficLightPhase.BACKSIDE]
 
-            # example for an accuracy metric
-            # @Pavlo: choose appropriate thresholds
-            scores = [TrafficLightDetector._hot_zone_score(input) for input in inputs]
-
             # choose the best fit
-            max_score_id = np.argmax(scores)
-            tl_info = results[max_score_id]
-            tl_info.accuracy = scores[max_score_id]
+            tl_info = results[np.argmax([r.accuracy for r in results])] if results else None
 
             # TODO: think of delegating the choice to the Local Planner (-> more context info)
             #       e.g. map data where the traffic lights are expected, etc.
@@ -122,7 +117,8 @@ class TrafficLightDetector:
 
         cut_rgb_image = TrafficLightDetector._cut_image_patch(rgb_patch, tl_meta.rgb_img)
         tl_phase = self._classify_tl_phase(cut_rgb_image)
-        tl_info = TrafficLightInfo(phase=tl_phase, distance=tl_meta.distance)
+        tl_score = TrafficLightDetector._hot_zone_score(tl_meta)
+        tl_info = TrafficLightInfo(phase=tl_phase, distance=tl_meta.distance, accuracy=tl_score)
         return tl_info
 
     def _find_object_patches(self, semantic_image: np.ndarray) -> List[List[int]]:
