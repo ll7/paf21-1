@@ -2,6 +2,7 @@
 """Main script defining the ROS node"""
 from dataclasses import dataclass
 from threading import Thread
+from typing import Protocol, Callable, List
 
 import rospy
 from sensor_msgs.msg import Imu as ImuMsg
@@ -9,13 +10,24 @@ from nav_msgs.msg import Odometry as OdometryMsg
 from ackermann_msgs.msg import AckermannDrive
 from std_msgs.msg import String as StringMsg
 
-from local_planner.core import Vehicle
-from local_planner.navigation import InfiniteDrivingService
+from local_planner.core import Vehicle, AnnRouteWaypoint
+from local_planner.navigation import CompetitionDrivingService
 from local_planner.route_planner import TrajectoryPlanner
 from local_planner.ros_msg_adapter import RosMessagesAdapter
 from local_planner.vehicle_control import DrivingController
 from local_planner.state_machine import SpeedStateMachine, ManeuverStateMachine
 
+
+@dataclass
+class NavService(Protocol):
+    """Representing a navigation service blueprint"""
+    vehicle: Vehicle
+    update_route: Callable[[List[AnnRouteWaypoint]], None]
+
+    def run_routing():
+        """Start the parallel navigation task that notifies subscribers
+        when a route was found by calling self.update_route()."""
+        ...
 
 @dataclass
 class LocalPlannerNode:
@@ -24,7 +36,7 @@ class LocalPlannerNode:
     vehicle: Vehicle
     publish_rate_in_hz: int
     driving_signal_publisher: rospy.Publisher = None
-    nav_service: InfiniteDrivingService = None
+    nav_service: NavService = None
     route_planner: TrajectoryPlanner = None
     driving_control: DrivingController = None
     speed_state_machine: SpeedStateMachine = None
@@ -41,15 +53,16 @@ class LocalPlannerNode:
             self.maneuver_state_machine = ManeuverStateMachine(self.vehicle)
         if self.nav_service is None:
             route_callback = self.route_planner.update_global_route
-            self.nav_service = InfiniteDrivingService(self.vehicle, route_callback)
+            self.nav_service = CompetitionDrivingService(self.vehicle, route_callback)
 
     def run_node(self):
-        """Launch the ROS node to plan actionable trajectories from
-        a globally planned route and various sensors"""
+        """Launch the ROS node to plan actionable trajectories
+        from a globally planned route and various sensors"""
+
         self._init_ros()
         rate = rospy.Rate(self.publish_rate_in_hz)
 
-        nav_thread = Thread(target=self.nav_service.run_infinite_driving)
+        nav_thread = Thread(target=self.nav_service.run_routing)
         nav_thread.start()
 
         while not rospy.is_shutdown():

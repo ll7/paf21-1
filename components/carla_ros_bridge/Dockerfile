@@ -1,9 +1,4 @@
-
-# # base on the original CARLA ROS bridge image from GitHub
-# ARG ROS_BRIDGE_BASE_IMG
-# FROM $ROS_BRIDGE_BASE_IMG as base
-
-ARG CARLA_VERSION
+ARG CARLA_VERSION=0.9.10.1
 FROM carlasim/carla:$CARLA_VERSION as carla
 
 # supply the base image with an environment supporting ROS UI via x11
@@ -13,13 +8,8 @@ COPY --from=carla /home/carla/PythonAPI /opt/carla/PythonAPI
 # install rendering dependencies for rviz / rqt
 RUN apt-get update \
   && apt-get install -y -qq --no-install-recommends \
-    libxext6 \
-    libx11-6 \
-    libglvnd0 \
-    libgl1 \
-    libglx0 \
-    libegl1 \
-    freeglut3-dev \
+    libxext6 libx11-6 libglvnd0 libgl1 \
+    libglx0 libegl1 freeglut3-dev \
   && rm -rf /var/lib/apt/lists/*
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
@@ -28,8 +18,9 @@ ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
 ENV PYTHONPATH=$PYTHONPATH:/opt/ros/noetic/lib/python3/dist-packages
 ENV PYTHONPATH=$PYTHONPATH:/opt/carla/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg:/opt/carla/PythonAPI/carla
 
-# install pip, wget, git and some ROS dependencies for building the CARLA ROS bridge
-RUN apt-get update && apt-get install -y python3-pip wget git python-is-python3 \
+# install mlocate, pip, wget, git and some ROS dependencies for building the CARLA ROS bridge
+RUN apt-get update && apt-get install -y \
+        mlocate python3-pip wget git python-is-python3 \
         ros-noetic-ackermann-msgs \ros-noetic-derived-object-msgs \
         ros-noetic-carla-msgs ros-noetic-pcl-conversions \
         ros-noetic-rviz ros-noetic-rqt ros-noetic-pcl-ros && \
@@ -71,9 +62,7 @@ ENV EGO_VEHICLE_SENSORS=/config/sensors.json
 
 COPY ./rosbridge_with_rviz_scenario.launch /rosbridge_with_rviz_scenario.launch
 COPY ./ros_entrypoint.sh /ros_entrypoint.sh
-
 ADD ./scripts /scripts
-ADD ./config /config
 
 ENTRYPOINT [ "/ros_entrypoint.sh" ]
 CMD ["/rosbridge_with_rviz_scenario.launch", "--wait"]

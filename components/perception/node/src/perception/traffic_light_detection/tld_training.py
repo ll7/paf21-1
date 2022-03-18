@@ -16,7 +16,6 @@ from tensorflow_datasets import ImageFolder
 
 from perception.traffic_light_detection.preprocessing import augment_image, resize_image
 
-
 @dataclass
 class TldTrainingSession:
     """Representing a session for training the traffic light detection model."""
