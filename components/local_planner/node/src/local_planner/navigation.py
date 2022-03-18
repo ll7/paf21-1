@@ -8,8 +8,8 @@ from typing import Callable, List, Tuple
 from dataclasses import dataclass
 
 import rospy
-
 from nav_srvs.srv import NavigationRequest
+
 from local_planner.core import Vehicle, AnnRouteWaypoint
 from local_planner.config import town_spawns
 
@@ -42,7 +42,7 @@ class CompetitionDrivingService:
                 continue
 
             goal_pos = CompetitionDrivingService._get_destination_from_rosparams()
-            route = InfiniteDrivingService._request_new_route(
+            route = CompetitionDrivingService._request_new_route(
                 self.vehicle.pos, goal_pos, self.vehicle.orientation_rad)
             self.update_route(route)
             print('route found, shutting down navigation task')
