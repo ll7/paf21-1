@@ -103,6 +103,19 @@ def test_route_metadata():
 
 # ============================================================
 
+# TODO: enable this regression test
+# def test_path_finding_multilane_highway_town_3():
+#     xodr_map = load_town_03()
+#     start = (-41.71999740600586, 208.92999267578125)
+#     end  = (28.129140173585185, -196.96087987528907)
+#     path = GlobalPlanner.get_shortest_path(start, end, 0.0, xodr_map)
+#     print(path)
+#     route = GlobalPlanner._preplan_route(start, end, path, 0.0, xodr_map)
+
+#     print(route)
+#     assert False
+
+
 def test_path_finding_multilane_highway_town_4():
     xodr_map = load_town_04()
     start = (406.0252685546875, 124.70137786865234)

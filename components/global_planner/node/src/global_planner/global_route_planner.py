@@ -127,8 +127,9 @@ class RoadDetection:
             vec_id = 1 if lane_id < 0 else 0
             uniform_lane_offsets = [pair[vec_id] for pair in offset_vectors]
 
-            inner_scale = road.lane_widths[lane_id] * (abs(lane_id) - 1)
-            outer_scale = road.lane_widths[lane_id] * abs(lane_id)
+
+            inner_scale = road.lane_offsets[lane_id] - road.lane_widths[lane_id]
+            outer_scale = road.lane_offsets[lane_id] 
 
             inner_offsets = [scale_vector(vec, inner_scale) for vec in uniform_lane_offsets]
             outer_offsets = [scale_vector(vec, outer_scale) for vec in uniform_lane_offsets]

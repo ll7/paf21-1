@@ -29,7 +29,7 @@ RUN source /opt/ros/noetic/setup.bash && catkin_make
 WORKDIR /app/src/local_planner/src
 RUN source /opt/ros/noetic/setup.bash && source /app/catkin_ws/devel/setup.bash && \
     python -m pytest tests && \
-    pylint local_planner --fail-under=9.5 --extension-pkg-whitelist=cv2
+    pylint local_planner --fail-under=9.0 --extension-pkg-whitelist=cv2
 
 # register a startup procedure to launch the ROS node
 ADD ./ros_entrypoint.sh /ros_entrypoint.sh
