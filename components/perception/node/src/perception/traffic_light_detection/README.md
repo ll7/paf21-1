@@ -21,6 +21,8 @@ Now, you can run the training script to retrieve a .*h5 file containing a traine
 python tld_training.py
 ```
 
+*Note: You need to execute the commands from src directory (run cd ../..), otherwise the imports will fail*
+
 ## Load Pre-Trained Model
 Now, you can make predictions using the pre-trained model.
 
