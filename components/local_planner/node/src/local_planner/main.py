@@ -29,6 +29,7 @@ class NavService(Protocol):
         when a route was found by calling self.update_route()."""
         ...
 
+
 @dataclass
 class LocalPlannerNode:
     """A class representing a ROS node that's processing route and

@@ -39,11 +39,11 @@ class NaiveSteeringController:
         speed = self.vehicle.velocity_mps
         if speed < 45.0 / 3.6:
             return 6.0
-        elif speed < 55.0 / 3.6:
+        if speed < 55.0 / 3.6:
             return 8.0
-        elif speed < 65.0 / 3.6:
+        if speed < 65.0 / 3.6:
             return 15.0
-        elif speed < 75.0 / 3.6:
+        if speed < 75.0 / 3.6:
             return 17.0
         return 22.0
 
