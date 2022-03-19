@@ -27,15 +27,15 @@ by a more sophisticated logic considering traffic hotspots / wait times at traff
 ### Route Interpolation
 For retrieving the route points between our lanelets, we use several interpolation techniques such as:
 
-1) Linear Interpolation
+#### 1) Linear Interpolation
 This technique draws a linear between the start / end point of a given geometry and puts some points
 inbetween them. The interpolation conforms to a given distance between the generated points.
 
-2) Circular Arc Interpolation
+#### 2) Circular Arc Interpolation
 For curved geometries defined as circular arcs, we compute the circle from the curvature coefficient
 and interpolate some uniformly distributed points on top of the circle between start / end position.
 
-3) Centripetal Catmull–Rom Spline
+#### 3) Centripetal Catmull–Rom Spline
 For smoothing the trajectory, we additionally apply a centripetal spline to retrieve a more
 streamlined route, facilitating dynamic driving. (There's a parameter *alpha* which tunes the dynamics)
 
