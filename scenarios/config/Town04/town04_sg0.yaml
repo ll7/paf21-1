@@ -21,3 +21,8 @@ competition:
       w: 0.525322
   traffic_rules: true
   ready_for_ego: false
+  town_name: 'Town04'
+  spawn_npc:
+    n: 50
+    w: 50
+    s: 1 # seed
