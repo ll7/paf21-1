@@ -7,9 +7,8 @@ This ROS node launches a given scenario specified by a yaml file.
 It supports features such as
 - loading a CARLA town
 - spawning a vehicle at a given position
-- amount of NPCs (vehicles, pedestrians) spawned
-- specifying the driving rules
-- switching between competition / infinite driving mode
+- spawning a given amount of NPCs (vehicles, pedestrians)
+- specifying whether to obey the driving rules
 
 The yaml file format looks like this:
 
