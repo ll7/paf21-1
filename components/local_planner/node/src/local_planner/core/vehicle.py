@@ -3,7 +3,8 @@
 from dataclasses import dataclass
 from typing import Tuple
 
-# from local_planner.core.geometry import \
+import numpy as np
+from local_planner.core.geometry import rotate_vector, add_vector
 #     unit_vector, scale_vector, add_vector
 
 
@@ -11,7 +12,7 @@ from typing import Tuple
 class VehicleMetadata:
     """Representing construction-specific vehicle features"""
     length_between_axles_m: float = 3.1
-    max_steer_angle_rad: float = 3 #0.4
+    max_steer_angle_rad: float = np.deg2rad(90)
     base_accel_mps2: float = 2.0
     base_brake_mps2: float = -2.0
     vehicle_reaction_time_s: float = 0.1
@@ -46,6 +47,8 @@ class Vehicle:
                              velocity_and_time: Tuple[Tuple[float, float], float]):
         """Update the vehicle's positional and velocity values"""
         self.velocity_mps, self.time = velocity_and_time
+        vector_axle = rotate_vector((1.45, 0), self.orientation_rad)
+        position = add_vector(vector_axle, position)
         self.pos = position
 
     def update_vehicle_orientation(self, orientation: float):

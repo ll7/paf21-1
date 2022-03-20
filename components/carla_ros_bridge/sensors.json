@@ -177,7 +177,7 @@
         },
         {
             "type": "sensor.other.imu",
-            "id": "imu1", "sensor_tick": 0.01,
+            "id": "imu1", "sensor_tick": 0.05,
             "x": 1.5, "y": 0.0, "z": 2.0, "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
             "noise_accel_stddev_x": 0.0, "noise_accel_stddev_y": 0.0, "noise_accel_stddev_z": 0.0,
             "noise_gyro_stddev_x": 0.0, "noise_gyro_stddev_y": 0.0, "noise_gyro_stddev_z": 0.0,

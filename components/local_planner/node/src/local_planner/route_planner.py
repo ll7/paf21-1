@@ -156,7 +156,7 @@ class TrajectoryPlanner:
         speed_obs.curve_target_speed = curve_obs.max_speed
         if len(self.cached_local_ann_route) > 0:
             speed_obs.detected_speed_limit = self.cached_local_ann_route[0].legal_speed
-            speed_obs.detected_speed_limit = 110
+            speed_obs.detected_speed_limit = 130
         return speed_obs
 
     @property
