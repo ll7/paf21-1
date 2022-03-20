@@ -18,6 +18,12 @@ def create_key(road: int, pos: int, link: int) -> str:
     return f"{road}_{pos}_{link}"
 
 
+def split_key(key: str) -> Tuple[int, bool, int]:
+    """Function to split the key of the mapping dictionary."""
+    key_split = key.split('_')
+    return int(key_split[0]), bool(int(key_split[1])), int(key_split[2])
+
+
 def global_pos(road_start: Tuple[float, float], road_end: Tuple[float, float],
                dist_from_road_start: float) -> Tuple[float, float]:
     """Determine the global position based on the offset from the road's start point"""
@@ -157,6 +163,7 @@ class Road:
     geometries: List[Geometry]
     # road_width: float
     lane_widths: Dict[int, float]
+    lane_offsets: Dict[int, float]
     suc: RoadLink = None
     pre: RoadLink = None
 
@@ -173,7 +180,7 @@ class Road:
         self.left_ids, self.right_ids = Road._get_lane_ids(road_xml)
         self.line_type = Road._get_line_type(road_xml)
         self.geometries = Road._get_geometry(road_xml)
-        self.lane_widths = Road._get_lane_widths(road_xml)
+        self.lane_widths, self.lane_offsets = Road._get_lane_widths_and_offsets(road_xml)
         self.traffic_signs = Road._get_traffic_signs(road_xml, self.road_start, self.road_end)
         self.traffic_lights = Road._get_traffic_lights(road_xml, self.road_start, self.road_end)
 
@@ -233,7 +240,7 @@ class Road:
         return left_ids, right_ids
 
     @staticmethod
-    def _get_lane_widths(road: Element) -> Dict[int, float]:
+    def _get_lane_widths_and_offsets(road: Element) -> Tuple[Dict[int, float], Dict[int, float]]:
         """Get the lane widths as dictionary by lane id."""
         lane_widths: Dict[int, float] = {}
         lane_sec = road.find('lanes').find('laneSection')
@@ -247,7 +254,20 @@ class Road:
                 lane_width = float(lane.find('width').get('a'))
                 lane_widths[lane_id] = lane_width
 
-        return lane_widths
+        all_left_ids = list(sorted([key for key in lane_widths if key > 0]))
+        all_right_ids = list(reversed(sorted([key for key in lane_widths if key < 0])))
+
+        lane_offsets = {}
+        cumulated_width = 0.0
+        for lane_id in all_left_ids:
+            cumulated_width += lane_widths[lane_id]
+            lane_offsets[lane_id] = cumulated_width
+        cumulated_width = 0.0
+        for lane_id in all_right_ids:
+            cumulated_width += lane_widths[lane_id]
+            lane_offsets[lane_id] = cumulated_width
+
+        return lane_widths, lane_offsets
 
     @staticmethod
     def _get_traffic_signs(road: Element, road_start: Tuple[float, float],
@@ -301,7 +321,7 @@ class Road:
             if is_last_geometry:
                 angle = float(geo_0.get('hdg'))
                 end = Road._calculate_end_point(start, angle, length, arc_radius)
-                if (euclid_dist(start, end) > length+0.2):
+                if euclid_dist(start, end) > length+0.2:
                     raise Exception("End Point was set incorrectly", start, end, angle, length)
             else:
                 geo_1 = geometries[i+1]

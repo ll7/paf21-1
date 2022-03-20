@@ -23,9 +23,9 @@
   <arg name="spawn_point" default="$(env SPAWN_POINT)"/>
 
   <!-- spectator camera parameter -->
-  <!-- <arg name='resolution_x' default='800'/>
+  <arg name='resolution_x' default='800'/>
   <arg name='resolution_y' default='600'/>
-  <arg name='fov' default='50'/> -->
+  <arg name='fov' default='50'/>
 
   <!-- ===================================================== -->
 
@@ -60,8 +60,7 @@
   </include> -->
 
   <!-- a spectator camera that is attached to the ego vehicle and be controlled from within rviz -->
-  <!-- TODO: figure out whether this camera is required for the dashboard -->
-  <!-- <include file="$(find carla_spectator_camera)/launch/carla_spectator_camera.launch">
+  <include file="$(find carla_spectator_camera)/launch/carla_spectator_camera.launch">
     <arg name='host' value='$(arg host)'/>
     <arg name='port' value='$(arg port)'/>
     <arg name='timeout' value='$(arg timeout)'/>
@@ -69,7 +68,7 @@
     <arg name="resolution_x" value="$(arg resolution_x)"/>
     <arg name="resolution_y" value="$(arg resolution_y)"/>
     <arg name="fov" value="$(arg fov)"/>
-  </include> -->
+  </include>
 
   <!--Convert Ackermann control commands to vehicle commands -->
   <include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch" />

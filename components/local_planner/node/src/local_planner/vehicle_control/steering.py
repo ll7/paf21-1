@@ -36,14 +36,16 @@ class NaiveSteeringController:
 
     @property
     def min_dist_ahead(self) -> float:
-        speed= self.vehicle.velocity_mps
+        speed = self.vehicle.velocity_mps
         if speed < 45.0 / 3.6:
-            return 5.0
-        elif speed < 60.0 / 3.6:
-            return 9.0
-        elif speed < 80.0 / 3.6:
+            return 6.0
+        elif speed < 55.0 / 3.6:
+            return 8.0
+        elif speed < 65.0 / 3.6:
             return 15.0
-        return 20.0
+        elif speed < 75.0 / 3.6:
+            return 17.0
+        return 22.0
 
     def _get_aim_point(self, route: List[Tuple[float, float]]) -> Tuple[float, float] or None:
         if len(route) < 2:

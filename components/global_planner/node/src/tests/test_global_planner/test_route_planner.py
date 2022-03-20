@@ -103,6 +103,19 @@ def test_route_metadata():
 
 # ============================================================
 
+# TODO: enable this regression test
+# def test_path_finding_multilane_highway_town_3():
+#     xodr_map = load_town_03()
+#     start = (-41.71999740600586, 208.92999267578125)
+#     end  = (28.129140173585185, -196.96087987528907)
+#     path = GlobalPlanner.get_shortest_path(start, end, 0.0, xodr_map)
+#     print(path)
+#     route = GlobalPlanner._preplan_route(start, end, path, 0.0, xodr_map)
+
+#     print(route)
+#     assert False
+
+
 def test_path_finding_multilane_highway_town_4():
     xodr_map = load_town_04()
     start = (406.0252685546875, 124.70137786865234)
@@ -166,3 +179,107 @@ def test_path_finding_multilane_highway_town_4():
 
 # test for town 05
 # (-152.083251953125, -154.6916046142578) to (69.37128448486328, 200.74708557128906)
+
+
+def test_lane_change_north_right():
+    points = [(0.0, 0.0), (0.0, 2.0), (0.0, 3.0), (0.0, 6.0),
+              (0.0, 8.0), (0.0, 10.0), (0.0, 12.0), (0.0, 14.0)]
+    ref_point = (4.0, 14.0)
+    new_points = GlobalPlanner._lane_change(points, ref_point, speed=13.0, slope_m=3.0)
+    assert dist(points[0], new_points[0]) < 0.2
+    assert dist(ref_point, new_points[-1]) < 0.9
+    assert 1.5 < dist(points[5], new_points[5]) < 2.5
+
+
+def test_lane_change_north_left():
+    points = [(0.0, 0.0), (0.0, 2.0), (0.0, 3.0), (0.0, 6.0),
+              (0.0, 8.0), (0.0, 10.0), (0.0, 12.0), (0.0, 14.0)]
+    ref_point = (-4.0, 14.0)
+    new_points = GlobalPlanner._lane_change(points, ref_point, speed=13.0, slope_m=3.0)
+    assert dist(points[0], new_points[0]) < 0.2
+    assert dist(ref_point, new_points[-1]) < 0.9
+    assert 1.5 < dist(points[5], new_points[5]) < 2.5
+
+
+def test_lane_change_south_right():
+    points = [(0.0, 0.0), (0.0, -2.0), (0.0, -3.0), (0.0, -6.0),
+              (0.0, -8.0), (0.0, -10.0), (0.0, -12.0), (0.0, -14.0)]
+    ref_point = (4.0, -14.0)
+    new_points = GlobalPlanner._lane_change(points, ref_point, speed=13.0, slope_m=3.0)
+    assert dist(points[0], new_points[0]) < 0.2
+    assert dist(ref_point, new_points[-1]) < 0.9
+    assert 1.5 < dist(points[5], new_points[5]) < 2.5
+
+
+def test_lane_change_south_left():
+    points = [(0.0, 0.0), (0.0, -2.0), (0.0, -3.0), (0.0, -6.0),
+              (0.0, -8.0), (0.0, -10.0), (0.0, -12.0), (0.0, -14.0)]
+    ref_point = (-4.0, -14.0)
+    new_points = GlobalPlanner._lane_change(points, ref_point, speed=13.0, slope_m=3.0)
+    assert dist(points[0], new_points[0]) < 0.2
+    assert dist(ref_point, new_points[-1]) < 0.9
+    assert 1.5 < dist(points[5], new_points[5]) < 2.5
+
+
+def test_lane_change_east_right():
+    points = [(0.0, 0.0), (2.0, 0.0), (3.0, 0.0), (6.0, 0.0),
+              (8.0, 0.0), (10.0, 0.0), (12.0, 0.0), (14.0, 0.0)]
+    ref_point = (14.0, 4.0)
+    new_points = GlobalPlanner._lane_change(points, ref_point, speed=13.0, slope_m=3.0)
+    assert dist(points[0], new_points[0]) < 0.2
+    assert dist(ref_point, new_points[-1]) < 0.9
+    assert 1.5 < dist(points[5], new_points[5]) < 2.5
+
+
+def test_lane_change_east_left():
+    points = [(0.0, 0.0), (2.0, 0.0), (3.0, 0.0), (6.0, 0.0),
+              (8.0, 0.0), (10.0, 0.0), (12.0, 0.0), (14.0, 0.0)]
+    ref_point = (14.0, -4.0)
+    new_points = GlobalPlanner._lane_change(points, ref_point, speed=13.0, slope_m=3.0)
+    assert dist(points[0], new_points[0]) < 0.2
+    assert dist(ref_point, new_points[-1]) < 0.9
+    assert 1.5 < dist(points[5], new_points[5]) < 2.5
+
+
+def test_lane_change_west_right():
+    points = [(0.0, 0.0), (-2.0, 0.0), (-3.0, 0.0), (-6.0, 0.0),
+              (-8.0, 0.0), (-10.0, 0.0), (-12.0, 0.0), (-14.0, 0.0)]
+    ref_point = (-14.0, 4.0)
+    new_points = GlobalPlanner._lane_change(points, ref_point, speed=13.0, slope_m=3.0)
+    assert dist(points[0], new_points[0]) < 0.2
+    assert dist(ref_point, new_points[-1]) < 0.9
+    assert 1.5 < dist(points[5], new_points[5]) < 2.5
+
+
+def test_lane_change_west_left():
+    points = [(0.0, 0.0), (-2.0, 0.0), (-3.0, 0.0), (-6.0, 0.0),
+              (-8.0, 0.0), (-10.0, 0.0), (-12.0, 0.0), (-14.0, 0.0)]
+    ref_point = (-14.0, -4.0)
+    new_points = GlobalPlanner._lane_change(points, ref_point, speed=13.0, slope_m=3.0)
+    assert dist(points[0], new_points[0]) < 0.2
+    assert dist(ref_point, new_points[-1]) < 0.9
+    assert 1.5 < dist(points[5], new_points[5]) < 2.5
+
+
+def test_filter_path1():
+    path = ['0_0_0', '0_0_1', '0_0_2']
+    filtered_path = GlobalPlanner._filter_path(path)
+    assert filtered_path == ['0_0_0', '0_0_2']
+
+
+def test_filter_path2():
+    path = ['0_0_0', '0_0_1', '0_0_2', '0_0_3']
+    filtered_path = GlobalPlanner._filter_path(path)
+    assert filtered_path == ['0_0_0', '0_0_3']
+
+
+def test_filter_path3():
+    path = ['0_0_0', '0_1_1', '0_1_2', '0_1_3']
+    filtered_path = GlobalPlanner._filter_path(path)
+    assert filtered_path == ['0_0_0', '0_1_1', '0_1_3']
+
+
+def test_filter_path4():
+    path = ['-1_0_0', '0_0_1', '1_1_1', '1_0_1']
+    filtered_path = GlobalPlanner._filter_path(path)
+    assert filtered_path == ['-1_0_0', '0_0_1', '1_1_1', '1_0_1']

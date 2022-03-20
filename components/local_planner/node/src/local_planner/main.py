@@ -10,7 +10,7 @@ from nav_msgs.msg import Odometry as OdometryMsg
 from ackermann_msgs.msg import AckermannDrive
 from std_msgs.msg import String as StringMsg
 
-from local_planner.core import Vehicle, AnnRouteWaypoint
+from local_planner.core import Vehicle, AnnRouteWaypoint, visualize_route_rviz
 from local_planner.navigation import CompetitionDrivingService
 from local_planner.route_planner import TrajectoryPlanner
 from local_planner.ros_msg_adapter import RosMessagesAdapter
@@ -68,6 +68,8 @@ class LocalPlannerNode:
         while not rospy.is_shutdown():
             try:
                 local_route = self.route_planner.calculate_trajectory()
+                visualize_route_rviz(local_route)
+
                 self.speed_state_machine.update_state(self.route_planner.latest_speed_observation)
                 velocity = self.speed_state_machine.get_target_speed()
                 self.driving_control.update_route(local_route)
