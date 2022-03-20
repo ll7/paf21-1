@@ -62,7 +62,7 @@ class TrafficLightDetector:
             area_min, area_max = 0.11, 9
             cond = lambda i: distances[i] <= max_dist_m and area_min <= obj_areas[i] <= area_max
             closeby_patches = [(i, patches[i]) for i in range(len(patches)) if cond(i)]
-            print('Closeby pathes: ', closeby_patches)
+            print('Closeby patches: ', len(closeby_patches))
 
             # abort if there are no patches to evaluate
             if not closeby_patches:
@@ -100,9 +100,7 @@ class TrafficLightDetector:
 
         hot_zone_score = min(upper_part_score + right_part_score, 1.0)
         
-        print('IMG HEIGHT x WIDTH : ', img_height, img_width, ' ## X x Y : ', 
-                x_tl, y_tl, '## upper x right', upper_part_score, right_part_score, 
-                ' ## score: ', hot_zone_score)
+        print('IMG HEIGHT x WIDTH : ', img_height, img_width, ' ## score: ', hot_zone_score)
 
         # possible improvement: train a filter using random forests / real adaboost
 
