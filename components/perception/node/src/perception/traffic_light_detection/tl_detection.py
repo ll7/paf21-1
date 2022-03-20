@@ -17,6 +17,7 @@ from perception.traffic_light_detection.tld_info import TrafficLightPhase, Traff
 
 @dataclass
 class TrafficLightMetadata:
+    """Class of Traffic Light Data"""
     distance: float
     patch: List[int]
     rgb_img: np.ndarray
@@ -43,8 +44,13 @@ class TrafficLightDetector:
         patches = self._find_object_patches(semantic_image)
 
         if len(patches) > 0:
+
             distances = TrafficLightDetector._object_distances(patches, depth_image)
             distances = np.array(distances)
+
+            print('Number of patches detected: ', len(patches), 
+                    ' ## Patches:''Patches:', patches, 
+                    ' ## distances:', distances)
 
             # determine the object sizes (as approx. area)
             obj_areas = [TrafficLightDetector._eval_object_areas(distances[i], patches[i])
@@ -53,9 +59,10 @@ class TrafficLightDetector:
             # 1) ignore traffic lights farther away than a given threshold
             # 2) ignore traffic lights that are too small sized (-> filter pedestrian / bicycle TLs)
             max_dist_m = 80
-            area_min, area_max = 1, 1 # TODO: @Pavlo choose appropriate area thresholds
+            area_min, area_max = 0.11, 9
             cond = lambda i: distances[i] <= max_dist_m and area_min <= obj_areas[i] <= area_max
             closeby_patches = [(i, patches[i]) for i in range(len(patches)) if cond(i)]
+            print('Closeby pathes: ', closeby_patches)
 
             # abort if there are no patches to evaluate
             if not closeby_patches:
@@ -81,15 +88,21 @@ class TrafficLightDetector:
 
     @staticmethod
     def _hot_zone_score(input: TrafficLightMetadata) -> float:
-        # check whether the traffic lights are within the expected zones
+        """Check whether the traffic lights are within the expected zones"""
         img_height = input.sem_img.shape[0]
+        img_width = input.sem_img.shape[1]
         x_tl, y_tl, _, _ = input.patch
 
         # info: this score within [0, 1] prefers traffic lights in top and right regions
-        top_th, right_th = 0.80, 0.67 # @Pavlo: choose appropriate thresholds
-        upper_part_score = 1 if y_tl / img_height >= top_th else y_tl / top_th
-        right_part_score = 1 if x_tl / img_height >= right_th else x_tl / right_th
+        top_th, right_th = 0.7, 0.2 
+        upper_part_score = 0.5 if x_tl / img_height >= top_th else y_tl / img_width
+        right_part_score = 0.5 if y_tl / img_width >= right_th else x_tl / img_height
+
         hot_zone_score = min(upper_part_score + right_part_score, 1.0)
+        
+        print('IMG HEIGHT x WIDTH : ', img_height, img_width, ' ## X x Y : ', 
+                x_tl, y_tl, '## upper x right', upper_part_score, right_part_score, 
+                ' ## score: ', hot_zone_score)
 
         # possible improvement: train a filter using random forests / real adaboost
 
@@ -97,16 +110,30 @@ class TrafficLightDetector:
 
     @staticmethod
     def _eval_object_areas(distance: float, patch: List[int]) -> float:
-        x_tl, y_tl, width, height = patch
 
-        # TODO: @Pavlo implement the formula
-        # ======================================
-        # 1) estimate real size in pixels
-        # 2) evaluate the same object on several images (track distances)
-        # 3) create a formula mapping the pixels back to real size
-        # 4) return the area of real pixels (height_real_px * width_real_px)
+        _, _, width, height = patch
+        """
+        Size traffic light: 0.76 m x 0.25 m
+        Perhaps, it is easier to use lookup. Judging by observations, 
+        the distance suitable to make plausible predictions is 
+        app. 30 meters, with pixels values of 1x4
+        
+        Lookup:
+        36,17 - 1x3
+        31,68 - 1x3
+        28,78 - 1x3
+        26,13 - 1x4
+        13,39 - 2x8
+        13,14 - 2x6
+        12,16 - 2x7
+        10,9 - 2x6
+        7,15 - 2x12
+        7,1 - 4x14
+        6,65 5x15
+        6,64 - 4x13
+        """
 
-        return 1
+        return width * height / 10
 
     def _eval_traffic_light(self, tl_meta: TrafficLightMetadata) -> TrafficLightInfo:
         """Evaluate a single traffic light."""
