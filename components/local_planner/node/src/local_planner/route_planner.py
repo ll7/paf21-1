@@ -1,6 +1,6 @@
 """A route planner based on map and sensor data"""
 
-from math import pi
+from math import pi, dist
 from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
 
@@ -150,13 +150,35 @@ class TrajectoryPlanner:
         speed_obs = self.obj_handler.get_speed_observation(self.current_route)
         speed_obs.tl_phase = self.tld_info.phase
         speed_obs.dist_next_traffic_light_m = self.tld_info.distance
-        #speed_obs.dist_next_traffic_light_m = 10000
+        speed_obs.dist_next_traffic_light_m = 10000
         curve_obs = self.curve_detection.find_next_curve(self.current_route)
         speed_obs.dist_next_curve = curve_obs.dist_until_curve
         speed_obs.curve_target_speed = curve_obs.max_speed
         if len(self.cached_local_ann_route) > 0:
-            speed_obs.detected_speed_limit = self.cached_local_ann_route[0].legal_speed
+            speed_obs.detected_speed_limit = self.legalspeed_ahead()
         return speed_obs
+
+    def legalspeed_ahead(self) -> float:
+        legalspeed = self.cached_local_ann_route[0].legal_speed
+        index2 = 0
+        for index, ann_point in enumerate(self.cached_local_ann_route):
+            if ann_point.legal_speed < legalspeed:
+                index2 = index
+                break
+
+        if index2 == 0:
+            return legalspeed
+
+        cached_point = self.cached_local_ann_route[index2]
+        target_velocity = cached_point.legal_speed/3.6
+        accel_mps2 = -2.0
+        maneuver_time_s = (target_velocity -self.vehicle.velocity_mps) / accel_mps2
+        braking_dist = self.vehicle.velocity_mps * maneuver_time_s + \
+                       accel_mps2 * maneuver_time_s ** 2 / 2 + 1
+        print(dist(cached_point.pos, self.cached_local_ann_route[0].pos), braking_dist, "ma:", maneuver_time_s, "ta:", target_velocity, self.vehicle.velocity_mps)
+        if dist(cached_point.pos, self.cached_local_ann_route[0].pos) < braking_dist:
+            return target_velocity*3.6
+        return legalspeed
 
     @property
     def latest_maneuver_observation(self) -> ManeuverObservation:

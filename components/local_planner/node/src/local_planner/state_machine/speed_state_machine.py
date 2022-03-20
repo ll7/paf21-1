@@ -74,7 +74,7 @@ class SpeedStateMachine:
             self._handle_brake(obs)
         else:
             raise ValueError(f'Unsupported speed state {self.current_state}!')
-        print(self.current_state)
+        # print(self.current_state)
         if self.count % 1000 == 0:
             print(f'speed state: {self.current_state},',
                   f'target speed: {self.target_speed_mps:.2f},',

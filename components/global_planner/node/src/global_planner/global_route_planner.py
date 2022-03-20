@@ -493,29 +493,30 @@ class GlobalPlanner:
     def advanced_speed(anno_waypoints: List[AnnRouteWaypoint]):
         """Set legal speed a bit earlier that the car have time to brake"""
         # this logic might be a bit shaky -> disable if it causes trouble
-        brake_dists: Dict[str, int] = {
-            "90_60": 20, "90_50": 25, "90_30": 30,
-            "60_30": 12, "50_30": 7}
 
-        last_speed = -1
-        interpolate_dist = 2.0
-        annotated_waypoints = anno_waypoints
-
-        for index, annotated_waypoint in enumerate(annotated_waypoints):
-            key = f"{int(last_speed)}_{int(annotated_waypoint.legal_speed)}"
-            if key in brake_dists:
-                print("change speed")
-                dist_back = brake_dists[key]
-                target_speed = annotated_waypoint.legal_speed
-                for i in range(int(dist_back/interpolate_dist)):
-                    if index - i > 0:
-                        annotated_waypoints[index-i].legal_speed = target_speed
-            last_speed = annotated_waypoint.legal_speed
+        # brake_dists: Dict[str, int] = {
+        #     "90_60": 20, "90_50": 25, "90_30": 30,
+        #     "60_30": 12, "50_30": 7}
+        #
+        # last_speed = -1
+        # interpolate_dist = 2.0
+        #
+        # for index, annotated_waypoint in enumerate(anno_waypoints):
+        #     key = f"{int(last_speed)}_{int(annotated_waypoint.legal_speed)}"
+        #     if key in brake_dists:
+        #         print("change speed")
+        #         dist_back = brake_dists[key]
+        #         target_speed = annotated_waypoint.legal_speed
+        #         for i in range(int(dist_back/interpolate_dist)):
+        #             if index - i > 0:
+        #                 anno_waypoints[index-i].legal_speed = target_speed
+        #     last_speed = annotated_waypoint.legal_speed
 
         """Set unlimited speed if more then 3 lanes"""
-        for index, annotated_waypoint in enumerate(annotated_waypoints):
+        for index, annotated_waypoint in enumerate(anno_waypoints):
             if len(annotated_waypoint.possible_lanes) > 3 and annotated_waypoint.legal_speed == 50:
                 # TODO find out how fast we are allowed to drive on a highway
-                annotated_waypoints[index].legal_speed = 50
+                anno_waypoints[index].legal_speed = 70
 
-        return annotated_waypoints
+
+        return anno_waypoints
