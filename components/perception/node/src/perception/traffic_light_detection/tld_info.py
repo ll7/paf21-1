@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from enum import IntEnum
+from typing import Tuple
 
 
 class TrafficLightPhase(IntEnum):
@@ -18,4 +19,4 @@ class TrafficLightInfo:
     phase: TrafficLightPhase
     distance: float
     accuracy: float
-    # position: Tuple[float, float]
+    position: Tuple[float, float]
