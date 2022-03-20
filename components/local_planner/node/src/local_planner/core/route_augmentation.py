@@ -13,8 +13,8 @@ def visualize_route_rviz(route: List[Tuple[float, float]]):
     msg.header.frame_id = 'map'
     msg.header.stamp = rospy.get_rostime()
 
-    for x, y in route:
-        pos = Point(x=x, y=y, z=0.5)
+    for x_pos, y_pos in route:
+        pos = Point(x=x_pos, y=y_pos, z=0.5)
         orient = Quaternion(x=0, y=0, z=0, w=1)
         pose = PoseStamped(pose=Pose(position=pos, orientation=orient))
         msg.poses.append(pose)

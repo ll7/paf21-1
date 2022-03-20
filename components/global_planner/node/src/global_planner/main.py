@@ -4,13 +4,14 @@
 import os
 import json
 from dataclasses import dataclass
+from time import sleep
 
 import rospy
 
 from nav_srvs.srv import NavigationRequest, NavigationRequestResponse
 from global_planner.global_route_planner import GlobalPlanner
 from global_planner.xodr_converter import XODRConverter
-from time import sleep
+
 
 
 @dataclass

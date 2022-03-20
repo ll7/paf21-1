@@ -118,6 +118,7 @@ class TrajectoryPlanner:
         return temp_route
 
     def check_passed_waypoints(self, route):
+        """Check if a wp is behind the car"""
         while True:
             prev_wp = route[self.prev_wp_id]
             next_wp = route[self.next_wp_id]
@@ -134,6 +135,7 @@ class TrajectoryPlanner:
             self.prev_wp_id += 1
 
     def check_overtake(self, route):
+        """Check if overtakeing is possibe"""
         curve_obs = self.curve_detection.find_next_curve(self.current_route)
         dist_next_curve = curve_obs.dist_until_curve
         if dist_next_curve > 50 and self.latest_speed_observation.dist_next_traffic_light_m > 50:
@@ -159,6 +161,7 @@ class TrajectoryPlanner:
         return speed_obs
 
     def legalspeed_ahead(self) -> float:
+        """Calculate at witch point the car need to reduce speed to reach legal speed at the sign"""
         legalspeed = self.cached_local_ann_route[0].legal_speed
         index2 = 0
         for index, ann_point in enumerate(self.cached_local_ann_route):
@@ -175,7 +178,8 @@ class TrajectoryPlanner:
         maneuver_time_s = (target_velocity -self.vehicle.velocity_mps) / accel_mps2
         braking_dist = self.vehicle.velocity_mps * maneuver_time_s + \
                        accel_mps2 * maneuver_time_s ** 2 / 2 + 1
-        print(dist(cached_point.pos, self.cached_local_ann_route[0].pos), braking_dist, "ma:", maneuver_time_s, "ta:", target_velocity, self.vehicle.velocity_mps)
+        # print(dist(cached_point.pos, self.cached_local_ann_route[0].pos), braking_dist, "ma:",
+        #       maneuver_time_s, "ta:", target_velocity, self.vehicle.velocity_mps)
         if dist(cached_point.pos, self.cached_local_ann_route[0].pos) < braking_dist:
             return target_velocity*3.6
         return legalspeed

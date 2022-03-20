@@ -129,7 +129,7 @@ class RoadDetection:
 
 
             inner_scale = road.lane_offsets[lane_id] - road.lane_widths[lane_id]
-            outer_scale = road.lane_offsets[lane_id] 
+            outer_scale = road.lane_offsets[lane_id]
 
             inner_offsets = [scale_vector(vec, inner_scale) for vec in uniform_lane_offsets]
             outer_offsets = [scale_vector(vec, outer_scale) for vec in uniform_lane_offsets]
@@ -273,7 +273,7 @@ class GlobalPlanner:
         """Generate route waypoints for the given start / end positions using the map"""
         print ("Startpos:", start_pos, "endpos:", end_pos)
         path = GlobalPlanner.get_shortest_path(start_pos, end_pos, orient_rad, xodr_map)
-        print(f'planned path:', path)
+        print('planned path:', path)
 
         if len(path) < 1:
             road_start = RoadDetection.find_sections(start_pos, xodr_map)
@@ -282,7 +282,8 @@ class GlobalPlanner:
                 Starts with {road_start} and ends with {road_end}.')
 
         route_metadata = RouteAnnotation.preprocess_route_metadata(start_pos, path, xodr_map)
-        route_waypoints = GlobalPlanner._preplan_route(start_pos, end_pos, path, orient_rad, xodr_map)
+        route_waypoints = GlobalPlanner._preplan_route\
+            (start_pos, end_pos, path, orient_rad, xodr_map)
         print("wps:", route_waypoints)
 
         interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
@@ -317,7 +318,7 @@ class GlobalPlanner:
     def _filter_path(path: List[str]) -> List[str]:
         filtered_path = []
         last_road, last_pos, last_lane = (-1, -1, -1)
-        second_last_road, second_last_pos, second_last_lane = (-1, -1, -1)
+        second_last_road, second_last_pos = (-1, -1)
         for index, sec in enumerate(path):
             road, pos, lane = split_key(sec)
             if road != last_road or pos != last_pos or \
@@ -327,13 +328,14 @@ class GlobalPlanner:
                 filtered_path.pop()
                 filtered_path.append(sec)
 
-            second_last_road, second_last_pos, second_last_lane = last_road, last_pos, last_lane
+            second_last_road, second_last_pos = last_road, last_pos
             last_road, last_pos, last_lane = road, pos, lane
         return filtered_path
 
     @staticmethod
     def _preplan_route(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
-                       path: List[str], orient_rad: float, xodr_map: XodrMap) -> List[Tuple[float, float]]:
+                       path: List[str], orient_rad: float, xodr_map: XodrMap)\
+            -> List[Tuple[float, float]]:
         route_waypoints = []
         path = GlobalPlanner._filter_path(path)
         sections = [(path[i], path[i+1]) for i in range(len(path)-1)]
@@ -418,7 +420,7 @@ class GlobalPlanner:
         print('waypoints_whole_lane', waypoints_whole_lane)
 
         waypoints = []
-        for wp1, wp2 in zip(waypoints_whole_lane[:-1], waypoints_whole_lane[1:]): 
+        for wp1, wp2 in zip(waypoints_whole_lane[:-1], waypoints_whole_lane[1:]):
             waypoints.extend(RouteInterpolation.linear_interpolation(wp1, wp2, interval_m=2.0))
         print('waypoints_interpol', waypoints)
 
@@ -491,28 +493,7 @@ class GlobalPlanner:
 
     @staticmethod
     def advanced_speed(anno_waypoints: List[AnnRouteWaypoint]):
-        """Set legal speed a bit earlier that the car have time to brake"""
-        # this logic might be a bit shaky -> disable if it causes trouble
-
-        # brake_dists: Dict[str, int] = {
-        #     "90_60": 20, "90_50": 25, "90_30": 30,
-        #     "60_30": 12, "50_30": 7}
-        #
-        # last_speed = -1
-        # interpolate_dist = 2.0
-        #
-        # for index, annotated_waypoint in enumerate(anno_waypoints):
-        #     key = f"{int(last_speed)}_{int(annotated_waypoint.legal_speed)}"
-        #     if key in brake_dists:
-        #         print("change speed")
-        #         dist_back = brake_dists[key]
-        #         target_speed = annotated_waypoint.legal_speed
-        #         for i in range(int(dist_back/interpolate_dist)):
-        #             if index - i > 0:
-        #                 anno_waypoints[index-i].legal_speed = target_speed
-        #     last_speed = annotated_waypoint.legal_speed
-
-        """Set unlimited speed if more then 3 lanes"""
+        """Set higher speed if more then 3 lanes and no limit is detected"""
         for index, annotated_waypoint in enumerate(anno_waypoints):
             if len(annotated_waypoint.possible_lanes) > 3 and annotated_waypoint.legal_speed == 50:
                 # TODO find out how fast we are allowed to drive on a highway

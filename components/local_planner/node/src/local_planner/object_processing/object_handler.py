@@ -105,6 +105,7 @@ class ObjectHandler:
         return spd_obs
 
     def calculate_min_distance(self, route, until_id, obj_pos):
+        """TODO DOCSTING"""
         distance = 0
         route.insert(0, self.vehicle.pos)
         for point in range(0, len(route)):
@@ -184,9 +185,9 @@ class ObjectHandler:
         """finds blocked points and returns their ids"""
         threshold = threshold ** 2
         # calculate square distance
-        closest_object = None
+        # closest_object = None
         ids = []
-        id = 0
+        identifier = 0
         for point in route:
             for object_coordinates in points:
                 distance = np.sum((np.array(point) - np.array(object_coordinates)) ** 2)
@@ -198,9 +199,9 @@ class ObjectHandler:
                                 self.vehicle.velocity_mps if self.vehicle.velocity_mps != 0 else 999
                     zone_clearence_time = time_self - time_obj
                     if zone_clearence_time < 2:
-                        ids += range(id-1, id+1)
+                        ids += range(identifier-1, identifier+1)
                         break
-            id += 1
+            identifier += 1
         return ids
 
     @staticmethod
@@ -240,7 +241,7 @@ class ObjectHandler:
         angle = np.arccos(dot_product)
         point = np.array(obj.trajectory[-1])
         predicted_trajectory = []
-        for i in range(0, 50):
+        for _ in range(0, 50):
             vector_1 = rotate_vector(vector_1, angle)
             prediction_vector = [vector_1[0] * distance_per_time, vector_1[1] * distance_per_time]
             point = point + np.array(prediction_vector)
@@ -249,8 +250,8 @@ class ObjectHandler:
 
     def sigmoid_smooth(self, object_speed, object_coordinates, point, first_coord):
         """tries to smooth out the overtaking maneuver so it can be driven at higher speeds"""
-        w = self.street_width  # parameter to stop in the  middle of other lane
-        mu = 1  # slope of overtaking
+        street_width = self.street_width  # parameter to stop in the  middle of other lane
+        slope = 1  # slope of overtaking
         relative_velocity = self.vehicle.velocity_mps - object_speed
         relative_distance_to_object = dist(point, object_coordinates[0])
         if relative_distance_to_object > 2:
@@ -262,7 +263,7 @@ class ObjectHandler:
         self.dist_safe = max([relative_velocity * time_to_collision, 0])
         # self.dist_safe = 6
         dist_c = max(dist(object_coordinates[0], object_coordinates[-1]), 0)
-        x_1 = (1 / mu) * (relative_distance_to_object + self.dist_safe)
-        x_2 = (1 / mu) * (relative_distance_to_object - self.dist_safe - dist_c)
-        deviation = (w / (1 + math.exp(-x_1))) + ((-w) / (1 + math.exp(-x_2)))
+        x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)
+        x_2 = (1 / slope) * (relative_distance_to_object - self.dist_safe - dist_c)
+        deviation = (street_width / (1 + math.exp(-x_1))) + ((-street_width) / (1 + math.exp(-x_2)))
         return deviation

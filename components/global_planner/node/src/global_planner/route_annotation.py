@@ -100,7 +100,7 @@ class RouteAnnotation:
         path_sections: List[PathSection] = RouteAnnotation._norm_path(path, road_by_id)
         traffic_lights: List[TrafficLight] = []
         speed_signs: List[TrafficSign] = []
-        inital_speed = 75.0
+        inital_speed = 50.0
 
         for i, section in enumerate(path_sections):
             road = xodr_map.roads_by_id[section.road_id]

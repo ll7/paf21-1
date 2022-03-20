@@ -351,7 +351,7 @@ class Road:
 
         # determine the circular angle of the arc
         angle = asin((euclid_dist(start, end) / 2) / arc_radius) * 2
-        assert(arc_radius > euclid_dist(start, end) / 2)
+        # assert(arc_radius > euclid_dist(start, end) / 2)
 
         # construct the mid-perpendicular of |start, end| to determine the circle's center
         conn_middle = ((start[0] + end[0]) / 2, (start[1] + end[1]) / 2)

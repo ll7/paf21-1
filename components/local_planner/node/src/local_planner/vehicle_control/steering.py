@@ -62,7 +62,7 @@ class NaiveSteeringController:
 class StanleySteeringController:
     """Representing a steering controller implementing the Stanley method."""
     vehicle: Vehicle
-    curvature: float=2 
+    curvature: float=2
     eps: float=1e-6
 
     def compute_steering_angle(self, route: List[Tuple[float, float]]) -> float:
