@@ -44,5 +44,6 @@ The components for driving are the following:
 - **Global Planner**: serves navigation tasks based on map data [Details](https://github.com/ll7/paf21-1/wiki/Global-Planner)
 - **Perception**: preprocesses sensor data into high-level driving information [Details](https://github.com/ll7/paf21-1/wiki/Perception)
   - **Traffic Light Detection**: evaluates traffic lights captured by cameras
+  - **Object Detection**: tracks stationary / moving objects like other cars / pedestrians and predicts their future movement
 - **Local Planner**: serves local decision-making tasks and amplifies the route based on sensor data [Details](https://github.com/ll7/paf21-1/wiki/Local-Planner)
   - **Vehicle Controller**: transforms the planned trajectory into actionable remote-control signals
