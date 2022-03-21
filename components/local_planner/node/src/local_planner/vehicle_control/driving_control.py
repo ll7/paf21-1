@@ -56,7 +56,7 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         vehicle follow the suggested ideal route"""
         # generate logs for each driving signal tick
         #k = [0.4, 0.25, 0.2, 0.1, 0.05]
-        k = [0.8, 0.2]
+        k = [0.5, 0.5]
         steering_angle = self.steer_control.predictive_stanley(self.route_waypoints, len(k), k)
         targetspeed = self.target_velocity_mps  # if self.route_waypoints else 0.0
         signal = DrivingSignal(steering_angle, targetspeed)
