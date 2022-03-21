@@ -35,7 +35,7 @@ class ObjectHandler:
         # TODO: figure out if the vehicle data needs to be cached to avoid weird edge cases
 
         if not self.vehicle.is_ready:
-            return SpeedObservation()
+            return
 
         keys = []
         for obj in object_list:
@@ -56,7 +56,7 @@ class ObjectHandler:
         # TODO: figure out if the vehicle data needs to be cached to avoid weird edge cases
 
         if not self.vehicle.is_ready:
-            return SpeedObservation()
+            return
         keys = []
         cache_limit = 20
 
@@ -105,14 +105,14 @@ class ObjectHandler:
         return spd_obs
 
     def calculate_min_distance(self, route, until_id, obj_pos):
+        """Calculate the minimal distance between the route position and the object position."""
         distance = 0
         route.insert(0, self.vehicle.pos)
-        for point in range(0, len(route)):
-            counter = point
-            if until_id <= point:
-                distance += math.dist(route[counter], obj_pos)
+        for index, point in enumerate(route):
+            if until_id <= index:
+                distance += math.dist(point, obj_pos)
                 break
-            distance += math.dist(route[point], route[point + 1])
+            distance += math.dist(point, route[index + 1])
         return distance
 
     def plan_route_around_objects(self, local_route: List[Tuple[float, float]]):
@@ -120,23 +120,23 @@ class ObjectHandler:
         temp_route = local_route.copy()
         blocked_ids, closest_object = self.get_blocked_ids(temp_route)
         widths = []
-        for i in range(0, len(temp_route)):
-            if i != 0:
-                moving_vector = ObjectHandler.ortho_vector_from_points(temp_route[i - 1],
-                                                                       temp_route[i])
+        for index, tmp_point in enumerate(temp_route):
+            if index != 0:
+                moving_vector = ObjectHandler.ortho_vector_from_points(temp_route[index - 1],
+                                                                       tmp_point)
             else:
-                moving_vector = ObjectHandler.ortho_vector_from_points(temp_route[i],
-                                                                       temp_route[i + 1])
+                moving_vector = ObjectHandler.ortho_vector_from_points(tmp_point,
+                                                                       temp_route[index + 1])
             if closest_object is not None:
-                width = self.sigmoid_smooth(closest_object.velocity,
-                                            [temp_route[u] for u in blocked_ids],
-                                            temp_route[i], temp_route[0])
+                blocked_route = [temp_route[blocked_id] for blocked_id in blocked_ids]
+                width = self.sigmoid_smooth(closest_object.velocity, blocked_route,
+                                            tmp_point, temp_route[0])
             else:
                 width = 0
             widths.append(width)
 
-            temp_route[i] = (temp_route[i][0] + width * moving_vector[0],
-                             temp_route[i][1] + width * moving_vector[1])
+            temp_route[index] = (tmp_point[0] + width * moving_vector[0],
+                                 tmp_point[1] + width * moving_vector[1])
         new_check, _ = self.get_blocked_ids(temp_route)
         print('Second Block', new_check)
         print('Blocked:', blocked_ids)
@@ -152,10 +152,10 @@ class ObjectHandler:
         blocked_ids = []
         min_id = 100
         min_obj = None
-        for obj_id, obj in objects.items():
+        for _, obj in objects.items():
             obj_positions = [obj.trajectory[-1]]
             if len(obj.trajectory) > 3:
-                # obj_positions += objects[obj_id].kalman_filter.predict_points(self.num_predict)
+                # obj_positions += obj.kalman_filter.predict_points(self.num_predict)
                 obj_positions += ObjectHandler.predict_car_movement(obj)
                 blocked = self.find_blocked_points(route, obj_positions, 1.8, obj)
                 if not blocked:
@@ -184,9 +184,8 @@ class ObjectHandler:
         """finds blocked points and returns their ids"""
         threshold = threshold ** 2
         # calculate square distance
-        closest_object = None
-        ids = []
-        id = 0
+        indices = []
+        index = 0
         for point in route:
             for object_coordinates in points:
                 distance = np.sum((np.array(point) - np.array(object_coordinates)) ** 2)
@@ -196,12 +195,12 @@ class ObjectHandler:
                                obj.velocity if obj.velocity != 0 else 999
                     time_self = (dist(self.vehicle.pos, point)-threshold) / \
                                 self.vehicle.velocity_mps if self.vehicle.velocity_mps != 0 else 999
-                    zone_clearence_time = time_self - time_obj
-                    if zone_clearence_time < 2:
-                        ids += range(id-1, id+1)
+                    zone_clearance_time = time_self - time_obj
+                    if zone_clearance_time < 2:
+                        indices += range(index-1, index+1)
                         break
-            id += 1
-        return ids
+            index += 1
+        return indices
 
     @staticmethod
     def _closest_point(point, points, threshold):
@@ -219,7 +218,7 @@ class ObjectHandler:
 
     def _convert_relative_to_world(self, coordinate: Tuple[float, float]) -> Tuple[float, float]:
         """Converts relative coordinates to world coordinates"""
-        coordinate[1] = coordinate[1] + 0.5
+        coordinate = (coordinate[0], coordinate[1] + 0.5)
         theta = self.vehicle.orientation_rad - pi / 2
         coordinate = rotate_vector(coordinate, theta)
         return coordinate[0] + self.vehicle.pos[0], coordinate[1] + self.vehicle.pos[1]
@@ -240,7 +239,7 @@ class ObjectHandler:
         angle = np.arccos(dot_product)
         point = np.array(obj.trajectory[-1])
         predicted_trajectory = []
-        for i in range(0, 50):
+        for _ in range(50):
             vector_1 = rotate_vector(vector_1, angle)
             prediction_vector = [vector_1[0] * distance_per_time, vector_1[1] * distance_per_time]
             point = point + np.array(prediction_vector)
@@ -249,8 +248,8 @@ class ObjectHandler:
 
     def sigmoid_smooth(self, object_speed, object_coordinates, point, first_coord):
         """tries to smooth out the overtaking maneuver so it can be driven at higher speeds"""
-        w = self.street_width  # parameter to stop in the  middle of other lane
-        mu = 1  # slope of overtaking
+        width = self.street_width  # parameter to stop in the  middle of other lane
+        slope_mu = 1  # slope of overtaking
         relative_velocity = self.vehicle.velocity_mps - object_speed
         relative_distance_to_object = dist(point, object_coordinates[0])
         if relative_distance_to_object > 2:
@@ -262,7 +261,7 @@ class ObjectHandler:
         self.dist_safe = max([relative_velocity * time_to_collision, 0])
         # self.dist_safe = 6
         dist_c = max(dist(object_coordinates[0], object_coordinates[-1]), 0)
-        x_1 = (1 / mu) * (relative_distance_to_object + self.dist_safe)
-        x_2 = (1 / mu) * (relative_distance_to_object - self.dist_safe - dist_c)
-        deviation = (w / (1 + math.exp(-x_1))) + ((-w) / (1 + math.exp(-x_2)))
+        x_1 = (1 / slope_mu) * (relative_distance_to_object + self.dist_safe)
+        x_2 = (1 / slope_mu) * (relative_distance_to_object - self.dist_safe - dist_c)
+        deviation = (width / (1 + math.exp(-x_1))) + ((-width) / (1 + math.exp(-x_2)))
         return deviation

@@ -118,6 +118,7 @@ class TrajectoryPlanner:
         return temp_route
 
     def check_passed_waypoints(self, route):
+        """Set the next waypoint index for the not yet passed waypoints"""
         while True:
             prev_wp = route[self.prev_wp_id]
             next_wp = route[self.next_wp_id]
@@ -134,6 +135,7 @@ class TrajectoryPlanner:
             self.prev_wp_id += 1
 
     def check_overtake(self, route):
+        """Checking the route for an overtaking maneuver."""
         curve_obs = self.curve_detection.find_next_curve(self.current_route)
         dist_next_curve = curve_obs.dist_until_curve
         if dist_next_curve > 50 and self.latest_speed_observation.dist_next_traffic_light_m > 50:

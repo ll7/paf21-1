@@ -24,7 +24,7 @@ class NavService(Protocol):
     vehicle: Vehicle
     update_route: Callable[[List[AnnRouteWaypoint]], None]
 
-    def run_routing():
+    def run_routing(self):
         """Start the parallel navigation task that notifies subscribers
         when a route was found by calling self.update_route()."""
         ...
@@ -83,7 +83,6 @@ class LocalPlannerNode:
             rate.sleep()
 
     def _init_ros(self):
-        
         rospy.init_node(f'local_planner_{self.vehicle.name}', anonymous=True)
         self.driving_signal_publisher = self._init_driving_signal_publisher()
         self._init_vehicle_position_subscriber()

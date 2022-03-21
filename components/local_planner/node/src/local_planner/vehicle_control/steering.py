@@ -36,6 +36,7 @@ class NaiveSteeringController:
 
     @property
     def min_dist_ahead(self) -> float:
+        """Specifies the minimum distance ahead as a function of the speed."""
         speed = self.vehicle.velocity_mps
         if speed < 45.0 / 3.6:
             return 6.0

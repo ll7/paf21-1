@@ -5,7 +5,7 @@ from typing import Protocol, Tuple, List
 from dataclasses import dataclass, field
 
 from local_planner.core import Vehicle
-from local_planner.vehicle_control import NaiveSteeringController
+from local_planner.vehicle_control.steering import NaiveSteeringController
 
 
 @dataclass
