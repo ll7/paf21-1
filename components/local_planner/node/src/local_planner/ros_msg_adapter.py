@@ -42,6 +42,7 @@ class RosMessagesAdapter:
         """converts the odometry message to velocity"""
         time_stamp = msg.header.stamp.secs + msg.header.stamp.nsecs * 1e-9
         array = [msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z]
+        # TODO: this is just the distance by euclidean norm over x/y/z coords, but without d time
         return np.linalg.norm(array), time_stamp
 
     @staticmethod
@@ -53,6 +54,7 @@ class RosMessagesAdapter:
     def message_to_vehicle_position(msg: OdometryMsg) -> Tuple[float, float]:
         """Convert a ROS message into the vehicle position"""
         pos = msg.pose.pose.position
+        print(f'Msg.Pos: {pos}')
         return pos.x, pos.y
 
     @staticmethod

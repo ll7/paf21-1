@@ -78,8 +78,8 @@ class LocalPlannerNode:
                 driving_signal = self.driving_control.next_signal()
                 msg = RosMessagesAdapter.signal_to_message(driving_signal)
                 self.driving_signal_publisher.publish(msg)
-            except:
-                print('failed to send driving signal!')
+            except IndexError as index_error:
+                print(f'Error: {index_error}; failed to send driving signal!')
             rate.sleep()
 
     def _init_ros(self):
@@ -129,7 +129,7 @@ def main():
 
     vehicle_name = "ego_vehicle"
     vehicle = Vehicle(vehicle_name)
-    publish_rate_hz = 10
+    publish_rate_hz = 20
     node = LocalPlannerNode(vehicle, publish_rate_hz)
     node.run_node()
 
