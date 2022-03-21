@@ -29,6 +29,7 @@ class NavService(Protocol):
         when a route was found by calling self.update_route()."""
         ...
 
+
 @dataclass
 class LocalPlannerNode:
     """A class representing a ROS node that's processing route and
@@ -75,12 +76,14 @@ class LocalPlannerNode:
                 driving_signal = self.driving_control.next_signal()
                 msg = RosMessagesAdapter.signal_to_message(driving_signal)
                 self.driving_signal_publisher.publish(msg)
-            except:
+
+            except Exception as e:
                 print('failed to send driving signal!')
+                print(e)
             rate.sleep()
 
     def _init_ros(self):
-        
+
         rospy.init_node(f'local_planner_{self.vehicle.name}', anonymous=True)
         self.driving_signal_publisher = self._init_driving_signal_publisher()
         self._init_vehicle_position_subscriber()

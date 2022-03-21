@@ -15,6 +15,7 @@ class VehicleMetadata:
     max_steer_angle_rad: float = np.deg2rad(90)
     base_accel_mps2: float = 2.0
     base_brake_mps2: float = -2.0
+    wheelbase: float = 2.875
     vehicle_reaction_time_s: float = 0.1
 
 
@@ -23,6 +24,7 @@ class Vehicle:
     """Representing a vehicle"""
     name: str
     velocity_mps: float = None
+    steer_angle: float = 0
     pos: Tuple[float, float] = None
     orientation_rad: float = None
     time: float = 0.0
@@ -46,8 +48,10 @@ class Vehicle:
     def update_vehicle_state(self, position: Tuple[float, float],
                              velocity_and_time: Tuple[Tuple[float, float], float]):
         """Update the vehicle's positional and velocity values"""
+
         self.velocity_mps, self.time = velocity_and_time
-        vector_axle = rotate_vector((1.45, 0), self.orientation_rad)
+        axle_length = self.meta.wheelbase / 2
+        vector_axle = rotate_vector((axle_length, 0), self.orientation_rad)
         position = add_vector(vector_axle, position)
         self.pos = position
 
