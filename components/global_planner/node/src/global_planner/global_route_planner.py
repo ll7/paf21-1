@@ -1,6 +1,6 @@
 """A global route planner based on map and hmi data."""
 
-from math import atan2, dist as euclid_dist, pi, radians, sqrt, exp
+from math import atan2, dist as euclid_dist, pi, sqrt, exp
 from typing import Tuple, List, Dict
 
 import numpy as np
@@ -8,9 +8,9 @@ from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
 from global_planner.xodr_converter import XodrMap, Geometry, Road, create_key, split_key
-from global_planner.geometry import add_vector, bounding_box, points_to_vector, rotate_vector, \
-                                    orth_offset_right, orth_offset_left, norm_angle, \
-                                    scale_vector, sub_vector, unit_vector, vec2dir, vector_len
+from global_planner.geometry import add_vector, points_to_vector, rotate_vector, orth_offset_right,\
+                                    orth_offset_left, norm_angle, scale_vector, sub_vector, \
+                                    unit_vector, vec2dir, vector_len
 from global_planner.route_interpolation import RouteInterpolation
 from global_planner.route_annotation import AnnRouteWaypoint, RouteAnnotation
 
@@ -281,7 +281,8 @@ class GlobalPlanner:
                 Starts with {road_start} and ends with {road_end}.')
 
         route_metadata = RouteAnnotation.preprocess_route_metadata(start_pos, path, xodr_map)
-        route_waypoints = GlobalPlanner._preplan_route(start_pos, end_pos, path, orient_rad, xodr_map)
+        route_waypoints = GlobalPlanner._preplan_route(
+            start_pos, end_pos, path, orient_rad, xodr_map)
         print("wps:", route_waypoints)
 
         interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
@@ -315,10 +316,10 @@ class GlobalPlanner:
     @staticmethod
     def _filter_path(path: List[str]) -> List[str]:
         filtered_path = []
-        last_road, last_pos, last_lane = (-1, -1, -1)
-        second_last_road, second_last_pos, second_last_lane = (-1, -1, -1)
-        for index, sec in enumerate(path):
-            road, pos, lane = split_key(sec)
+        last_road, last_pos = (-1, -1)
+        second_last_road, second_last_pos = (-1, -1)
+        for sec in path:
+            road, pos, _ = split_key(sec)
             if road != last_road or pos != last_pos or \
                     road != second_last_road or pos != second_last_pos:
                 filtered_path.append(sec)
@@ -326,20 +327,21 @@ class GlobalPlanner:
                 filtered_path.pop()
                 filtered_path.append(sec)
 
-            second_last_road, second_last_pos, second_last_lane = last_road, last_pos, last_lane
-            last_road, last_pos, last_lane = road, pos, lane
+            second_last_road, second_last_pos = last_road, last_pos
+            last_road, last_pos = road, pos
         return filtered_path
 
     @staticmethod
     def _preplan_route(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
-                       path: List[str], orient_rad: float, xodr_map: XodrMap) -> List[Tuple[float, float]]:
+                       path: List[str], orient_rad: float,
+                       xodr_map: XodrMap) -> List[Tuple[float, float]]:
         route_waypoints = []
         path = GlobalPlanner._filter_path(path)
         sections = [(path[i], path[i+1]) for i in range(len(path)-1)]
 
         for sec_1, sec_2 in sections:
             road_id1, forward_id1, lane_id1 = split_key(sec_1)
-            road_id2, forward_id2, lane_id2 = split_key(sec_2)
+            road_id2, forward_id2, _ = split_key(sec_2)
 
             same_road = road_id1 == road_id2
             drive_road_from_start_to_end = forward_id1 != forward_id2
@@ -415,7 +417,7 @@ class GlobalPlanner:
         waypoints_whole_lane = GlobalPlanner._get_intermed_section_waypoints(road, lane_id, reverse)
 
         waypoints = []
-        for wp1, wp2 in zip(waypoints_whole_lane[:-1], waypoints_whole_lane[1:]): 
+        for wp1, wp2 in zip(waypoints_whole_lane[:-1], waypoints_whole_lane[1:]):
             waypoints.extend(RouteInterpolation.linear_interpolation(wp1, wp2, interval_m=2.0))
 
         # discard waypoints behind the car
@@ -504,7 +506,7 @@ class GlobalPlanner:
                         annotated_waypoints[index-i].legal_speed = target_speed
             last_speed = annotated_waypoint.legal_speed
 
-        """Set unlimited speed if more then 3 lanes"""
+        # Set unlimited speed if more than 3 lanes
         for index, annotated_waypoint in enumerate(annotated_waypoints):
             if len(annotated_waypoint.possible_lanes) > 3 and annotated_waypoint.legal_speed == 50:
                 # TODO find out how fast we are allowed to drive on a highway
