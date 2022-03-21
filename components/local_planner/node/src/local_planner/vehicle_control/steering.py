@@ -53,7 +53,7 @@ class NaiveSteeringController:
 
         has_min_dist = lambda wp: dist(wp, self.vehicle.pos) >= self.min_dist_ahead
         wps_with_min_dist = [wp for wp in route[1:] if has_min_dist(wp)]
-        aim_point = wps_with_min_dist[0] if len(wps_with_min_dist) > 0 else None
+        aim_point = wps_with_min_dist[0] if len(wps_with_min_dist) > 0 else route[-1]
 
         return aim_point
 
@@ -62,8 +62,8 @@ class NaiveSteeringController:
 class StanleySteeringController:
     """Representing a steering controller implementing the Stanley method."""
     vehicle: Vehicle
-    curvature: float=2 
-    eps: float=1e-6
+    curvature: float = 2
+    eps: float = 1e-6
 
     def compute_steering_angle(self, route: List[Tuple[float, float]]) -> float:
         """Compute the steering angle according to the Stanley method."""
