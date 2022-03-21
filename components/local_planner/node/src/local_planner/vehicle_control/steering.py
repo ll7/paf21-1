@@ -76,21 +76,22 @@ class StanleySteeringController:
 
     def predictive_stanley(self, route: List[Tuple[float, float]], n: int, k: List[float]):
         assert len(k) == n
-
+        if not self.vehicle.is_ready or len(route) < 2:
+            print('canceled 1', self.vehicle.is_ready)
+            return 0.0
         theta = self.vehicle.orientation_rad
         velocity = self.vehicle.velocity_mps
         timestep = 1 / 10
         pos = self.vehicle.pos
         self.last_pos = pos
         temp_steering_angle = self.compute_steering_angle(route, pos, theta)
-        steering_angle = k[1] * temp_steering_angle
+        steering_angle = k[0] * temp_steering_angle
         for step in range(1, n):
             theta = theta + ((velocity * np.tan(self.vehicle.steer_angle)) /
                              self.vehicle.meta.wheelbase) * timestep
             x_n = pos[0] + velocity * np.cos(theta + temp_steering_angle) * timestep
             y_n = pos[1] + velocity * np.sin(theta + temp_steering_angle) * timestep
             pos = (x_n, y_n)
-            print('Tuple', pos, theta)
             temp_steering_angle = self.compute_steering_angle(route, pos, theta)
             print(temp_steering_angle, 'steering', step)
             steering_angle += k[step] * temp_steering_angle
@@ -101,9 +102,7 @@ class StanleySteeringController:
                                position: Tuple[float, float], orientation: float) -> float:
         """Compute the steering angle according to the Stanley method."""
 
-        if not self.vehicle.is_ready or len(route) < 2:
-            print('canceled 1')
-            return 0.0
+
 
         prev_wp, next_wp = self._get_prev_and_next_point(route, position)
 
@@ -119,7 +118,7 @@ class StanleySteeringController:
         if len(self.cross_track_errors) > self.cte_count:
             del self.cross_track_errors[-1]
         cross_track_error = sum(self.cross_track_errors) / len(self.cross_track_errors)
-
+        #cross_track_error = self._cross_track_error(prev_wp, next_wp, position)
         print('Errors', heading_error, cross_track_error)
         steer_angle = self.factor * heading_error + cross_track_error
 
@@ -146,8 +145,8 @@ class StanleySteeringController:
         min_dist = self.min_dist_ahead
         for i in range(1, len(route)):
             if dist(route[i], position) >= min_dist:
-                print('first', i)
-                print(dist(route[1], self._get_next_point(route, i)), 'Traj length')
+                if dist(route[i], self.vehicle.pos) < dist(position, self.vehicle.pos):
+                    continue
                 return route[i], self._get_next_point(route, i)
                 # return route[i], route[i]
         return route[-2], route[-1]
@@ -159,7 +158,7 @@ class StanleySteeringController:
         min_dist = self.min_dist_ahead
         for i in range(index + 1, len(route)):
             if dist(route[i], route[index]) >= min_dist:
-                print('second', i)
+                #print('second', i)
                 return route[i]
         return route[-1]
 

@@ -73,11 +73,13 @@ class LocalPlannerNode:
             self.driving_control.update_route(local_route)
             self.driving_control.update_target_velocity(velocity)
             driving_signal = self.driving_control.next_signal()
-            print(driving_signal, "driving signal")
+
             msg = RosMessagesAdapter.signal_to_message(driving_signal)
+            print(msg, "driving signal")
             self.driving_signal_publisher.publish(msg)
-            #except:
-            #    print('failed to send driving signal!')
+            # except Exception as e:
+            #     print('failed to send driving signal!')
+            #     print(e)
             rate.sleep()
 
     def _init_ros(self):

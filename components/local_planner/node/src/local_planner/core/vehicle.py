@@ -33,7 +33,7 @@ class Vehicle:
     @property
     def is_ready(self) -> bool:
         """A boolean indicating whether the vehicle is ready for use"""
-        return self.pos and self.velocity_mps is not None and self.orientation_rad is not None
+        return self.pos is not None and self.velocity_mps is not None and self.orientation_rad is not None
 
     # @property
     # def pos_front(self) -> Tuple[float, float]:
@@ -48,12 +48,12 @@ class Vehicle:
     def update_vehicle_state(self, position: Tuple[float, float],
                              velocity_and_time: Tuple[Tuple[float, float], float]):
         """Update the vehicle's positional and velocity values"""
-
-        self.velocity_mps, self.time = velocity_and_time
-        axle_length = self.meta.wheelbase / 2
-        vector_axle = rotate_vector((axle_length, 0), self.orientation_rad)
-        position = add_vector(vector_axle, position)
-        self.pos = position
+        if self.orientation_rad is not None:
+            self.velocity_mps, self.time = velocity_and_time
+            axle_length = self.meta.wheelbase / 2
+            vector_axle = rotate_vector((axle_length, 0), self.orientation_rad)
+            position = add_vector(vector_axle, position)
+            self.pos = position
 
     def update_vehicle_orientation(self, orientation: float):
         """Update the vehicle's current orientation"""
