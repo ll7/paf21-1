@@ -127,8 +127,9 @@ class RoadDetection:
             vec_id = 1 if lane_id < 0 else 0
             uniform_lane_offsets = [pair[vec_id] for pair in offset_vectors]
 
-            inner_scale = road.lane_widths[lane_id] * (abs(lane_id) - 1)
-            outer_scale = road.lane_widths[lane_id] * abs(lane_id)
+
+            inner_scale = road.lane_offsets[lane_id] - road.lane_widths[lane_id]
+            outer_scale = road.lane_offsets[lane_id]
 
             inner_offsets = [scale_vector(vec, inner_scale) for vec in uniform_lane_offsets]
             outer_offsets = [scale_vector(vec, outer_scale) for vec in uniform_lane_offsets]
@@ -304,7 +305,7 @@ class GlobalPlanner:
             dir_2 = vec2dir(route_input[i+2], route_input[i+1])
 
             # keep point if angle is not too steem
-            # print('Filter Wps', abs(norm_angle(dir_2 - dir_1)))
+            print('Filter Wps', abs(norm_angle(dir_2 - dir_1)))
             if abs(norm_angle(dir_2 - dir_1)) <= pi/8:
                 i += 1
                 continue
@@ -376,7 +377,6 @@ class GlobalPlanner:
                 continue
 
             elif is_final_section:
-                # TODO
                 road = xodr_map.roads_by_id[road_id1]
                 displaced_points = GlobalPlanner._displace_points_end(road, sec_1, end_pos)
                 route_waypoints.extend(displaced_points)
@@ -485,31 +485,10 @@ class GlobalPlanner:
 
     @staticmethod
     def advanced_speed(anno_waypoints: List[AnnRouteWaypoint]):
-        """Set legal speed a bit earlier that the car have time to brake"""
-        # this logic might be a bit shaky -> disable if it causes trouble
-        brake_dists: Dict[str, int] = {
-            "90_60": 20, "90_50": 25, "90_30": 30,
-            "60_30": 12, "50_30": 7}
-
-        last_speed = -1
-        interpolate_dist = 2.0
-        annotated_waypoints = anno_waypoints
-
-        for index, annotated_waypoint in enumerate(annotated_waypoints):
-            key = f"{int(last_speed)}_{int(annotated_waypoint.legal_speed)}"
-            if key in brake_dists:
-                print("change speed")
-                dist_back = brake_dists[key]
-                target_speed = annotated_waypoint.legal_speed
-                for i in range(int(dist_back/interpolate_dist)):
-                    if index - i > 0:
-                        annotated_waypoints[index-i].legal_speed = target_speed
-            last_speed = annotated_waypoint.legal_speed
-
-        # Set unlimited speed if more than 3 lanes
-        for index, annotated_waypoint in enumerate(annotated_waypoints):
+        """Set higher speed if more then 3 lanes and no limit is detected"""
+        for index, annotated_waypoint in enumerate(anno_waypoints):
             if len(annotated_waypoint.possible_lanes) > 3 and annotated_waypoint.legal_speed == 50:
                 # TODO find out how fast we are allowed to drive on a highway
-                annotated_waypoints[index].legal_speed = 50
+                anno_waypoints[index].legal_speed = 70
 
-        return annotated_waypoints
+        return anno_waypoints

@@ -105,7 +105,6 @@ class ObjectHandler:
         return spd_obs
 
     def calculate_min_distance(self, route, until_id, obj_pos):
-        """Calculate the minimal distance between the route position and the object position."""
         distance = 0
         route.insert(0, self.vehicle.pos)
         for index, point in enumerate(route):
@@ -218,7 +217,7 @@ class ObjectHandler:
 
     def _convert_relative_to_world(self, coordinate: Tuple[float, float]) -> Tuple[float, float]:
         """Converts relative coordinates to world coordinates"""
-        coordinate = (coordinate[0], coordinate[1] + 0.5)
+        coordinate[1] = coordinate[1] + 0.5
         theta = self.vehicle.orientation_rad - pi / 2
         coordinate = rotate_vector(coordinate, theta)
         return coordinate[0] + self.vehicle.pos[0], coordinate[1] + self.vehicle.pos[1]
@@ -248,8 +247,8 @@ class ObjectHandler:
 
     def sigmoid_smooth(self, object_speed, object_coordinates, point, first_coord):
         """tries to smooth out the overtaking maneuver so it can be driven at higher speeds"""
-        width = self.street_width  # parameter to stop in the  middle of other lane
-        slope_mu = 1  # slope of overtaking
+        street_width = self.street_width  # parameter to stop in the  middle of other lane
+        slope = 1  # slope of overtaking
         relative_velocity = self.vehicle.velocity_mps - object_speed
         relative_distance_to_object = dist(point, object_coordinates[0])
         if relative_distance_to_object > 2:
@@ -261,7 +260,7 @@ class ObjectHandler:
         self.dist_safe = max([relative_velocity * time_to_collision, 0])
         # self.dist_safe = 6
         dist_c = max(dist(object_coordinates[0], object_coordinates[-1]), 0)
-        x_1 = (1 / slope_mu) * (relative_distance_to_object + self.dist_safe)
-        x_2 = (1 / slope_mu) * (relative_distance_to_object - self.dist_safe - dist_c)
-        deviation = (width / (1 + math.exp(-x_1))) + ((-width) / (1 + math.exp(-x_2)))
+        x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)
+        x_2 = (1 / slope) * (relative_distance_to_object - self.dist_safe - dist_c)
+        deviation = (street_width / (1 + math.exp(-x_1))) + ((-street_width) / (1 + math.exp(-x_2)))
         return deviation
