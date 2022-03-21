@@ -63,7 +63,7 @@ class TrajectoryPlanner:
             return self.global_route_ann
 
         if self.is_last_wp:
-            return self.global_route_ann[-1:]
+            return []
 
         bound = min(self.prev_wp_id + self.length_route, len(self.global_route))
         return self.global_route_ann[self.prev_wp_id:bound]
@@ -76,7 +76,7 @@ class TrajectoryPlanner:
     @property
     def is_last_wp(self) -> bool:
         """Indicates whether the current point is the last point."""
-        return self.next_wp_id == len(self.global_route_ann)
+        return self.next_wp_id == len(self.global_route_ann) - 1
 
     def update_global_route(self, ann_waypoints: List[AnnRouteWaypoint]):
         """Update the global route to follow"""
@@ -104,16 +104,16 @@ class TrajectoryPlanner:
             return route
 
         if self.is_last_wp:
-            return route[-1:]
+            return [route[-1]]
         # delete route waypoints behind car
-        #if len(self.current_route) > 0:
+        # if len(self.current_route) > 0:
         #    route = route[:self.prev_wp_id] + self.current_route \
         #            + route[self.prev_wp_id + self.length_route:]
         self.check_passed_waypoints(route)
 
         bound = min(self.prev_wp_id + self.length_route, len(route))
         temp_route = route[self.prev_wp_id:bound]
-        #temp_route = self.check_overtake(temp_route)
+        # temp_route = self.check_overtake(temp_route)
         self.current_route = temp_route
         return temp_route
 
@@ -154,8 +154,11 @@ class TrajectoryPlanner:
         curve_obs = self.curve_detection.find_next_curve(self.current_route)
         speed_obs.dist_next_curve = curve_obs.dist_until_curve
         speed_obs.curve_target_speed = curve_obs.max_speed
-        if len(self.cached_local_ann_route) > 0:
-            speed_obs.detected_speed_limit = self.cached_local_ann_route[0].legal_speed
+        cache_local_route = self.cached_local_ann_route
+        if len(cache_local_route) > 0:
+            speed_obs.detected_speed_limit = cache_local_route[0].legal_speed
+        else:
+            speed_obs.detected_speed_limit = 0.0
         return speed_obs
 
     @property
