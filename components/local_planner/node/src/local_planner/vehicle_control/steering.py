@@ -1,8 +1,8 @@
 """A module providing steering control implementations"""
 import math
 from typing import Tuple, List, Protocol
-from dataclasses import dataclass
-from math import atan, dist, atan2, ceil
+from dataclasses import dataclass, field
+from math import dist, atan2, ceil
 
 import numpy as np
 
@@ -70,6 +70,9 @@ class StanleySteeringController:
     factor: float = 1
     eps: float = 1e-6
     last_pos: Tuple[float, float] = (0, 0)
+    cross_track_errors: List[float] = field(default_factory=list)
+    cte_count: int = 30
+
 
     def predictive_stanley(self, route: List[Tuple[float, float]], n: int, k: List[float]):
         assert len(k) == n
@@ -111,7 +114,12 @@ class StanleySteeringController:
             return 0.0
 
         heading_error = self._heading_error(prev_wp, next_wp, orientation)
-        cross_track_error = self._cross_track_error(prev_wp, next_wp, position)
+
+        self.cross_track_errors.insert(0, self._cross_track_error(prev_wp, next_wp, position))
+        if len(self.cross_track_errors) > self.cte_count:
+            del self.cross_track_errors[-1]
+        cross_track_error = sum(self.cross_track_errors) / len(self.cross_track_errors)
+
         print('Errors', heading_error, cross_track_error)
         steer_angle = self.factor * heading_error + cross_track_error
 
