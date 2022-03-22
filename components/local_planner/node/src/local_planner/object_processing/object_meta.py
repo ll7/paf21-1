@@ -23,6 +23,6 @@ class ObjectMeta:
         self.trajectory.append(position)
         if len(self.trajectory) > 10:
             self.trajectory = self.trajectory[-10:]
-        self.velocity = min(dist(position, last_position) / delta_time, self.velocity +
-                            self.max_velocity_change_rate)
+        self.velocity = min(dist(position, last_position) / delta_time,
+                            self.velocity + self.max_velocity_change_rate)
         self.kalman_filter.correct(position)

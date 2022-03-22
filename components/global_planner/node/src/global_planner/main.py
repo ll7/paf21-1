@@ -13,7 +13,6 @@ from global_planner.global_route_planner import GlobalPlanner
 from global_planner.xodr_converter import XODRConverter
 
 
-
 @dataclass
 class GlobalPlannerNode:
     """A class representing a ROS node that's planning a global route."""
@@ -66,7 +65,7 @@ class GlobalPlannerNode:
                               'dist_next_tl': wp.dist_next_tl,
                               'end_lane_m': wp.end_lane_m} for wp in global_route]
         except:
-            print(f'request failed!')
+            print('request failed!')
             return NavigationRequestResponse(waypoints_json='[]', success=False)
 
         response = NavigationRequestResponse(

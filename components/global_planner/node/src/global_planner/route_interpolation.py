@@ -22,7 +22,6 @@ class RouteInterpolation:
             waypoints = RouteInterpolation.linear_interpolation(
                 orig_route[index], orig_route[index + 1], interval_m=interval_m)
             route.extend(waypoints)
-        print("linear: ", route)
         #
         # for index in range(len(orig_route) - 1):
         #     # use linear interpolation for first and last segment

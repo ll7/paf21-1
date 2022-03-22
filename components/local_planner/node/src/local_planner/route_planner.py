@@ -63,7 +63,7 @@ class TrajectoryPlanner:
             return self.global_route_ann
 
         if self.is_last_wp:
-            return self.global_route_ann[-1:]
+            return []
 
         bound = min(self.prev_wp_id + self.length_route, len(self.global_route))
         return self.global_route_ann[self.prev_wp_id:bound]
@@ -76,7 +76,7 @@ class TrajectoryPlanner:
     @property
     def is_last_wp(self) -> bool:
         """Indicates whether the current point is the last point."""
-        return self.next_wp_id == len(self.global_route_ann)
+        return self.next_wp_id == len(self.global_route_ann) - 1
 
     def update_global_route(self, ann_waypoints: List[AnnRouteWaypoint]):
         """Update the global route to follow"""
@@ -104,21 +104,21 @@ class TrajectoryPlanner:
             return route
 
         if self.is_last_wp:
-            return route[-1:]
+            return [route[-1]]
         # delete route waypoints behind car
-        #if len(self.current_route) > 0:
+        # if len(self.current_route) > 0:
         #    route = route[:self.prev_wp_id] + self.current_route \
         #            + route[self.prev_wp_id + self.length_route:]
         self.check_passed_waypoints(route)
 
         bound = min(self.prev_wp_id + self.length_route, len(route))
         temp_route = route[self.prev_wp_id:bound]
-        #temp_route = self.check_overtake(temp_route)
+        # temp_route = self.check_overtake(temp_route)
         self.current_route = temp_route
         return temp_route
 
     def check_passed_waypoints(self, route):
-        """Check if a wp is behind the car"""
+        """Set the next waypoint index for the not yet passed waypoints"""
         while True:
             prev_wp = route[self.prev_wp_id]
             next_wp = route[self.next_wp_id]
@@ -135,7 +135,7 @@ class TrajectoryPlanner:
             self.prev_wp_id += 1
 
     def check_overtake(self, route):
-        """Check if overtakeing is possibe"""
+        """Checking the route for an overtaking maneuver."""
         curve_obs = self.curve_detection.find_next_curve(self.current_route)
         dist_next_curve = curve_obs.dist_until_curve
         if dist_next_curve > 50 and self.latest_speed_observation.dist_next_traffic_light_m > 50:
@@ -152,12 +152,14 @@ class TrajectoryPlanner:
         speed_obs = self.obj_handler.get_speed_observation(self.current_route)
         speed_obs.tl_phase = self.tld_info.phase
         speed_obs.dist_next_traffic_light_m = self.tld_info.distance
-        speed_obs.dist_next_traffic_light_m = 10000
+        #speed_obs.dist_next_traffic_light_m = 10000
         curve_obs = self.curve_detection.find_next_curve(self.current_route)
         speed_obs.dist_next_curve = curve_obs.dist_until_curve
         speed_obs.curve_target_speed = curve_obs.max_speed
         if len(self.cached_local_ann_route) > 0:
             speed_obs.detected_speed_limit = self.legalspeed_ahead()
+        else:
+            speed_obs.detected_speed_limit = 0.0
         return speed_obs
 
     def legalspeed_ahead(self) -> float:

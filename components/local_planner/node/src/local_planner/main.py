@@ -24,10 +24,11 @@ class NavService(Protocol):
     vehicle: Vehicle
     update_route: Callable[[List[AnnRouteWaypoint]], None]
 
-    def run_routing():
+    def run_routing(self):
         """Start the parallel navigation task that notifies subscribers
         when a route was found by calling self.update_route()."""
         ...
+
 
 @dataclass
 class LocalPlannerNode:
@@ -77,12 +78,11 @@ class LocalPlannerNode:
                 driving_signal = self.driving_control.next_signal()
                 msg = RosMessagesAdapter.signal_to_message(driving_signal)
                 self.driving_signal_publisher.publish(msg)
-            except:
-                print('failed to send driving signal!')
+            except IndexError as index_error:
+                print(f'Error: {index_error}; failed to send driving signal!')
             rate.sleep()
 
     def _init_ros(self):
-
         rospy.init_node(f'local_planner_{self.vehicle.name}', anonymous=True)
         self.driving_signal_publisher = self._init_driving_signal_publisher()
         self._init_vehicle_position_subscriber()
@@ -128,7 +128,7 @@ def main():
 
     vehicle_name = "ego_vehicle"
     vehicle = Vehicle(vehicle_name)
-    publish_rate_hz = 10
+    publish_rate_hz = 20
     node = LocalPlannerNode(vehicle, publish_rate_hz)
     node.run_node()
 

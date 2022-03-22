@@ -35,7 +35,8 @@ class CompetitionDrivingService:
     update_route: Callable[[List[AnnRouteWaypoint]], None]
 
     def run_routing(self):
-        """Calculate a route once"""
+        """Launch the competition driving service. This will request a new route
+         to the goal from the rosparam service."""
         while True:
             if not self.vehicle.is_ready:
                 print('vehicle not ready yet!')

@@ -5,7 +5,7 @@ from typing import Protocol, Tuple, List
 from dataclasses import dataclass, field
 
 from local_planner.core import Vehicle
-from local_planner.vehicle_control import NaiveSteeringController
+from local_planner.vehicle_control.steering import NaiveSteeringController
 
 
 @dataclass
@@ -53,8 +53,8 @@ class DrivingController:  # pylint: disable=too-many-instance-attributes
         vehicle follow the suggested ideal route"""
         # generate logs for each driving signal tick
         steering_angle = self.steer_control.compute_steering_angle(self.route_waypoints)
-        targetspeed =  self.target_velocity_mps # if self.route_waypoints else 0.0
-        signal = DrivingSignal(steering_angle, targetspeed)
+        target_speed = self.target_velocity_mps  # if self.route_waypoints else 0.0
+        signal = DrivingSignal(steering_angle, target_speed)
         # if self.vehicle.is_ready:
         #     print("Signal. Time : {}, pos[1]: {}, orientation_rad: {}, \
         #         velocity: {}, targetspeed: {}, steering_angle: {}".
