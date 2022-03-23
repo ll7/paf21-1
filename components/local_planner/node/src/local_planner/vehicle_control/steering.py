@@ -71,7 +71,7 @@ class StanleySteeringController:
     eps: float = 1e-6
     last_pos: Tuple[float, float] = (0, 0)
     cross_track_errors: List[float] = field(default_factory=list)
-    cte_count: int = 25
+    cte_count: int = 5
 
 
     def predictive_stanley(self, route: List[Tuple[float, float]], n: int, k: List[float]):
@@ -81,7 +81,7 @@ class StanleySteeringController:
             return 0.0
         theta = self.vehicle.orientation_rad
         velocity = self.vehicle.velocity_mps
-        timestep = 1 / 10
+        timestep = 1 / 20
         temp_steering_angle = self.compute_steering_angle(route, pos, theta)
         steering_angle = k[0] * temp_steering_angle
         # for step in range(1, n):
@@ -119,7 +119,7 @@ class StanleySteeringController:
         cross_track_error = sum(self.cross_track_errors) / len(self.cross_track_errors)
         #cross_track_error = self._cross_track_error(prev_wp, next_wp, position)
 
-        print('Errors', heading_error, cross_track_error)
+        #print('Errors', heading_error, cross_track_error)
 
         steer_angle = self.factor * heading_error + cross_track_error
 
@@ -136,7 +136,7 @@ class StanleySteeringController:
             time = (dist(self.last_pos, self.vehicle.pos) / speed)
             speed = speed
             gate = ceil((speed * time))
-        print(gate, 'Ceiling')
+        #print(gate, 'Ceiling')
         return gate
 
     def _get_prev_and_next_point(self, route: List[Tuple[float, float]],
@@ -175,7 +175,7 @@ class StanleySteeringController:
 
         # print(self.vehicle.pos, pos_front_axle, 'Positions')
         # print(self.vehicle.orientation_rad, 'Orientation')
-        print(dist(self.last_pos, self.vehicle.pos), 'Traveled_Distance')
+        #print(dist(self.last_pos, self.vehicle.pos), 'Traveled_Distance')
 
         prev_to_vehicle = points_to_vector(prev_wp, position)
         cross_prod = -np.cross(prev_to_next, prev_to_vehicle)
