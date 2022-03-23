@@ -157,34 +157,34 @@ class TrajectoryPlanner:
         speed_obs.dist_next_curve = curve_obs.dist_until_curve
         speed_obs.curve_target_speed = curve_obs.max_speed
         if len(self.cached_local_ann_route) > 0:
-            speed_obs.detected_speed_limit = self.legalspeed_ahead()
+            speed_obs.detected_speed_limit = self.legal_speed_ahead()
         else:
             speed_obs.detected_speed_limit = 0.0
         return speed_obs
 
-    def legalspeed_ahead(self) -> float:
+    def legal_speed_ahead(self) -> float:
         """Calculate at witch point the car need to reduce speed to reach legal speed at the sign"""
-        legalspeed = self.cached_local_ann_route[0].legal_speed
+        legal_speed = self.cached_local_ann_route[0].legal_speed
         index2 = 0
         for index, ann_point in enumerate(self.cached_local_ann_route):
-            if ann_point.legal_speed < legalspeed:
+            if ann_point.legal_speed < legal_speed:
                 index2 = index
                 break
 
         if index2 == 0:
-            return legalspeed
+            return legal_speed
 
         cached_point = self.cached_local_ann_route[index2]
         target_velocity = cached_point.legal_speed/3.6
         accel_mps2 = -2.0
-        maneuver_time_s = (target_velocity -self.vehicle.velocity_mps) / accel_mps2
+        maneuver_time_s = (target_velocity - self.vehicle.velocity_mps) / accel_mps2
         braking_dist = self.vehicle.velocity_mps * maneuver_time_s + \
                        accel_mps2 * maneuver_time_s ** 2 / 2 + 1
         # print(dist(cached_point.pos, self.cached_local_ann_route[0].pos), braking_dist, "ma:",
         #       maneuver_time_s, "ta:", target_velocity, self.vehicle.velocity_mps)
         if dist(cached_point.pos, self.cached_local_ann_route[0].pos) < braking_dist:
             return target_velocity*3.6
-        return legalspeed
+        return legal_speed
 
     @property
     def latest_maneuver_observation(self) -> ManeuverObservation:
