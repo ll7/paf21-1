@@ -1,11 +1,10 @@
 """Represents a handler for the detected objects."""
-import math
-from math import pi, dist
+from math import pi, dist, exp
 from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
 
 import numpy as np
-from local_planner.core import Vehicle, visualize_route_rviz
+from local_planner.core import Vehicle
 from local_planner.core.geometry import rotate_vector, orth_offset_left, add_vector, sub_vector
 from local_planner.object_processing.object_meta import ObjectMeta
 from local_planner.state_machine import SpeedObservation
@@ -45,12 +44,7 @@ class ObjectHandler:
                                                   obj_class=obj['obj_class'],
                                                   trajectory=[new_abs_pos])
 
-            print(f'Obj_id {obj_id}; Positions: {self.objects[obj_id].trajectory}')
         self.objects = {k: self.objects[k] for k in keys}
-
-        print(f'Time: {self.vehicle.time}')
-        print(f'object_list: {object_list}')
-        print(f'updated_list: {self.objects}')
 
     def _detect_vehicle_in_lane(self, local_route: List[Tuple[float, float]]) -> SpeedObservation:
         """Detect a vehicle in the same direction."""
@@ -76,7 +70,6 @@ class ObjectHandler:
 
         for obj_id, obj in objects.items():
             blocked = self.find_blocked_points(route, obj, threshold=1.8)
-            print(f'Obj_id {obj_id}: Blocked_ids: {blocked}')
             if not blocked:
                 continue
             if min(blocked) < min_id:
@@ -85,7 +78,6 @@ class ObjectHandler:
                 blocked_ids += blocked
 
         blocked_ids = [num for num in blocked_ids if num >= 0]
-        print(f'All blocked_ids: {blocked_ids}, Min_obj: {min_obj}')
         return blocked_ids, min_obj
 
     def find_blocked_points(self, route: List[Tuple[float, float]],
@@ -96,7 +88,6 @@ class ObjectHandler:
         obj_positions = [obj.trajectory[-1]]
         if len(obj.trajectory) > 2:
             obj_positions = ObjectHandler._predict_movement(obj.trajectory, num_points=100)
-        visualize_route_rviz(obj_positions)
 
         veh_pos = self.vehicle.pos
         veh_vel = self.vehicle.velocity_mps
@@ -108,7 +99,6 @@ class ObjectHandler:
                 continue
             zone_clearance_time = ObjectHandler._calculate_zone_clearance(
                 route_point, obj_positions[-1], obj.velocity, veh_pos, veh_vel, threshold)
-            print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
             if zone_clearance_time < 3.0:
                 indices += [index-1, index]
                 break
@@ -183,7 +173,7 @@ class ObjectHandler:
         dist_c = max(dist(object_coordinates[0], object_coordinates[-1]), 0)
         x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)
         x_2 = (1 / slope) * (relative_distance_to_object - self.dist_safe - dist_c)
-        deviation = (street_width / (1 + math.exp(-x_1))) + ((-street_width) / (1 + math.exp(-x_2)))
+        deviation = (street_width / (1 + exp(-x_1))) + ((-street_width) / (1 + exp(-x_2)))
         return deviation
 
     def plan_route_around_objects(self, local_route: List[Tuple[float, float]]):
