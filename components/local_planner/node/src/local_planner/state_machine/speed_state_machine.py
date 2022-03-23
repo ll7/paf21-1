@@ -186,7 +186,8 @@ class SpeedStateMachine:
         braking_dist = self.vehicle.velocity_mps * maneuver_time_s + \
                        accel_mps2 * maneuver_time_s ** 2 / 2
 
-        object_offset = max(target_velocity * 1.8, 4)
+        # object_offset = max(target_velocity * 1.8, 4)
+        object_offset = 4
         linear_dist = distance_m - object_offset - braking_dist
         time_until_brake = linear_dist / self.vehicle.velocity_mps \
                            if self.vehicle.velocity_mps > 0 else 999

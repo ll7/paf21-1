@@ -64,7 +64,7 @@ class CurveDetection:
         """ Determine the max. speed possible to drive the given curvature
         using a formula that approximates the car's friction given the radius."""
 
-        friction_coeff = 1.0  # 0.6
+        friction_coeff = 0.8  # 0.6
         gravity_accel = 9.81
 
         p_1, p_2, p_3 = wps_curve[0], wps_curve[len(wps_curve) // 2], wps_curve[-1]
