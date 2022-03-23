@@ -109,7 +109,7 @@ class ObjectHandler:
             zone_clearance_time = ObjectHandler._calculate_zone_clearance(
                 route_point, obj_positions[-1], obj.velocity, veh_pos, veh_vel, threshold)
             print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
-            if zone_clearance_time < 1.5:
+            if zone_clearance_time < 3.0:
                 indices += [index-1, index]
                 break
         return indices
@@ -118,7 +118,7 @@ class ObjectHandler:
     def _predict_movement(trajectory: List[Tuple[float, float]],
                           num_points: int) -> List[Tuple[float, float]]:
         """This function estimates the position of the object. """
-        predictions = [trajectory[-2], trajectory[-1]]
+        predictions = trajectory[-2:]
         vec_average = (0.0, 0.0)
 
         for p_1, p_2 in zip(trajectory[:-1], trajectory[1:]):
@@ -136,7 +136,7 @@ class ObjectHandler:
     def _calculate_zone_clearance(route_point, obj_pos, obj_vel, veh_pos, veh_vel, threshold):
         time_obj = (dist(obj_pos, route_point) + threshold) / obj_vel if obj_vel != 0.0 else 999
         time_self = (dist(veh_pos, route_point) - threshold) / veh_vel if veh_vel != 0.0 else 999
-        zone_clearance_time = abs(time_self - time_obj)
+        zone_clearance_time = time_self - time_obj
         return zone_clearance_time
 
     @staticmethod
