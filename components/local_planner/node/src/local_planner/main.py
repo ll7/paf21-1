@@ -69,7 +69,7 @@ class LocalPlannerNode:
         while not rospy.is_shutdown():
             try:
                 local_route = self.route_planner.calculate_trajectory()
-                visualize_route_rviz(local_route)
+                # visualize_route_rviz(local_route)
 
                 self.speed_state_machine.update_state(self.route_planner.latest_speed_observation)
                 velocity = self.speed_state_machine.get_target_speed()

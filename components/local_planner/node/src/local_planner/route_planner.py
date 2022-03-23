@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 from local_planner.core import Vehicle, AnnRouteWaypoint
 from local_planner.vehicle_control import DrivingController
-from local_planner.core.geometry import angle_between_vectors, points_to_vector
+from local_planner.core.geometry import angle_between_vectors, points_to_vector, vector_len
 from local_planner.state_machine import SpeedObservation, TrafficLightInfo, ManeuverObservation
 from local_planner.vehicle_control import CurveDetection
 from local_planner.object_processing import ObjectHandler
@@ -124,6 +124,8 @@ class TrajectoryPlanner:
             next_wp = route[self.next_wp_id]
             vec_route = points_to_vector(prev_wp, next_wp)
             vec_car = points_to_vector(self.vehicle.pos, next_wp)
+            if vector_len(vec_car) == 0 or vector_len(vec_route) == 0:
+                break
             angle = angle_between_vectors(vec_route, vec_car)
 
             is_wp_in_front_of_car = abs(angle) < 0.5 * pi
