@@ -97,6 +97,7 @@ class StanleySteeringController:
         self.vehicle.steer_angle = steering_angle
         return steering_angle
 
+
     def compute_steering_angle(self, route: List[Tuple[float, float]],
                                position: Tuple[float, float], orientation: float) -> float:
         """Compute the steering angle according to the Stanley method."""
