@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 from local_planner.core import Vehicle, visualize_route_rviz
-from local_planner.core.geometry import rotate_vector, orth_offset_left
+from local_planner.core.geometry import rotate_vector, orth_offset_left, add_vector, sub_vector
 from local_planner.object_processing.object_meta import ObjectMeta
 from local_planner.state_machine import SpeedObservation
 
@@ -93,8 +93,9 @@ class ObjectHandler:
         """finds blocked points and returns their ids"""
         threshold = threshold ** 2
         indices = []
-
-        obj_positions = obj.trajectory[-5:] if len(obj.trajectory) > 5 else [obj.trajectory[-1]]
+        obj_positions = [obj.trajectory[-1]]
+        if len(obj.trajectory) > 2:
+            obj_positions = ObjectHandler._predict_movement(obj.trajectory, num_points=100)
         visualize_route_rviz(obj_positions)
 
         veh_pos = self.vehicle.pos
@@ -107,16 +108,35 @@ class ObjectHandler:
                 continue
             zone_clearance_time = ObjectHandler._calculate_zone_clearance(
                 route_point, obj_positions[-1], obj.velocity, veh_pos, veh_vel, threshold)
-            if zone_clearance_time < 2:
+            print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
+            if zone_clearance_time < 1.5:
                 indices += [index-1, index]
                 break
         return indices
 
     @staticmethod
+    def _predict_movement(trajectory: List[Tuple[float, float]],
+                          num_points: int) -> List[Tuple[float, float]]:
+        """This function estimates the position of the object. """
+        predictions = [trajectory[-2], trajectory[-1]]
+        vec_average = (0.0, 0.0)
+
+        for p_1, p_2 in zip(trajectory[:-1], trajectory[1:]):
+            vec_1 = sub_vector(p_2, p_1)
+            vec_average = add_vector(vec_1, vec_average)
+
+        vec_average = (vec_average[0] / len(trajectory), vec_average[1] / len(trajectory))
+        last_point = trajectory[-1]
+        for _ in range(num_points):
+            last_point = add_vector(last_point, vec_average)
+            predictions.append(last_point)
+        return predictions
+
+    @staticmethod
     def _calculate_zone_clearance(route_point, obj_pos, obj_vel, veh_pos, veh_vel, threshold):
         time_obj = (dist(obj_pos, route_point) + threshold) / obj_vel if obj_vel != 0.0 else 999
         time_self = (dist(veh_pos, route_point) - threshold) / veh_vel if veh_vel != 0.0 else 999
-        zone_clearance_time = time_self - time_obj
+        zone_clearance_time = abs(time_self - time_obj)
         return zone_clearance_time
 
     @staticmethod
