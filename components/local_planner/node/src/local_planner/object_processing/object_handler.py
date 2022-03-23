@@ -96,7 +96,6 @@ class ObjectHandler:
         obj_positions = [obj.trajectory[-1]]
         if len(obj.trajectory) > 2:
             obj_positions = ObjectHandler._predict_movement(obj.trajectory, num_points=100)
-        visualize_route_rviz(obj_positions)
 
         veh_pos = self.vehicle.pos
         veh_vel = self.vehicle.velocity_mps
@@ -136,7 +135,7 @@ class ObjectHandler:
     def _calculate_zone_clearance(route_point, obj_pos, obj_vel, veh_pos, veh_vel, threshold):
         time_obj = (dist(obj_pos, route_point) + threshold) / obj_vel if obj_vel != 0.0 else 999
         time_self = (dist(veh_pos, route_point) - threshold) / veh_vel if veh_vel != 0.0 else 999
-        zone_clearance_time = abs(time_self - time_obj)
+        zone_clearance_time = time_self - time_obj
         return zone_clearance_time
 
     @staticmethod
