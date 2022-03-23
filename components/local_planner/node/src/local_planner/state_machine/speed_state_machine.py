@@ -38,7 +38,7 @@ class SpeedObservation:
     detected_speed_limit: int = None
     obj_speed_ms: float = 500
     dist_next_curve: float = 999
-    curve_target_speed: float = 500
+    curve_target_speed: float = 50
 
 
 @dataclass
@@ -90,7 +90,9 @@ class SpeedStateMachine:
     def _handle_keep(self, obs: SpeedObservation):
         needs_brake, target_speed = self._is_brake_required(obs)
         reached_target_speed = self._is_in_speed_tolerance(target_speed)
+
         if reached_target_speed:
+            self.target_speed_mps = target_speed
             return
 
         if needs_brake:
@@ -105,7 +107,9 @@ class SpeedStateMachine:
         needs_brake, target_speed = self._is_brake_required(obs)
         reached_target_speed = self._is_in_speed_tolerance(target_speed)
         keep_accelerating = not reached_target_speed and not needs_brake
+
         if keep_accelerating:
+            self.target_speed_mps = target_speed
             return
 
         if needs_brake:
@@ -122,6 +126,7 @@ class SpeedStateMachine:
         reached_target_speed = self._is_in_speed_tolerance(target_speed)
 
         if needs_brake:
+            self.target_speed_mps = target_speed
             return
 
         if reached_target_speed:
@@ -151,13 +156,10 @@ class SpeedStateMachine:
         #     tl_wait_time_s = self._time_until_brake(obs.dist_next_traffic_light_m, 0)
 
         obj_wait_time_s = self._time_until_brake(obs.dist_next_obstacle_m, obs.obj_speed_ms)
-
         curve_wait_time_s = self._time_until_brake(obs.dist_next_curve, obs.curve_target_speed)
-
         speed_tl = 0 if tl_wait_time_s <= 2 else self.legal_speed_limit_mps
 
         wait_times = [curve_wait_time_s, tl_wait_time_s, obj_wait_time_s]
-
         target_speeds = [obs.curve_target_speed, speed_tl, obs.obj_speed_ms]
 
         crit_id = np.argmin(wait_times)
@@ -192,14 +194,14 @@ class SpeedStateMachine:
 
     def get_target_speed(self) -> float:
         """Retrieve the currently suggested target speed."""
-        action = self.current_state
-        if action == SpeedState.ACCEL:
-            self.target_speed_mps = self.legal_speed_limit_mps
-        elif action == SpeedState.BRAKE:
-            self.target_speed_mps = 0
-        elif action == SpeedState.KEEP:
-            self.target_speed_mps = self.vehicle.velocity_mps
-            # self.target_speed_mps = self.vehicle.actual_velocity_mps
-        else:
-            raise ValueError(f'Unknown speed state {self.current_state} encountered!')
+        # action = self.current_state
+        # if action == SpeedState.ACCEL:
+        #     self.target_speed_mps = self.legal_speed_limit_mps
+        # elif action == SpeedState.BRAKE:
+        #     self.target_speed_mps = 0
+        # elif action == SpeedState.KEEP:
+        #     self.target_speed_mps = self.vehicle.velocity_mps
+        #     # self.target_speed_mps = self.vehicle.actual_velocity_mps
+        # else:
+        #     raise ValueError(f'Unknown speed state {self.current_state} encountered!')
         return self.target_speed_mps

@@ -174,7 +174,6 @@ def test_accel_green():
     assert (target_speed >= 50/3.6)
 
 
-
 def test_accel_static_start():
     vehicle = Vehicle('test_vehicle')
     vehicle.pos = (0, 0)
