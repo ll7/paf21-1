@@ -57,6 +57,9 @@ class SpeedStateMachine:
         """Update the speed state machine with a new observation"""
         # WARNING: only uncomment when intending to ignore traffic lights
         # obs.tl_phase = TrafficLightPhase.GREEN
+
+        print('TL phase : {}, TL in {}, Curve Speed : {}, Next Curve in {}'.
+        format(obs.tl_phase, obs.dist_next_traffic_light_m,  obs.curve_target_speed, obs.dist_next_curve))
         if obs.detected_speed_limit is not None:
             self.legal_speed_limit_mps = obs.detected_speed_limit / 3.6
 
@@ -162,6 +165,9 @@ class SpeedStateMachine:
         target_speeds = [obs.curve_target_speed, speed_tl, obs.obj_speed_ms]
 
         crit_id = np.argmin(wait_times)
+
+        print('Curve, Tl and object WAIT times {}, Curve, TL and object SPEEDS {}'.format(wait_times, target_speeds))
+
         crit_wait_time_s, target_speed = wait_times[crit_id], target_speeds[crit_id]
 
         needs_brake = crit_wait_time_s <= self.vehicle.meta.vehicle_reaction_time_s

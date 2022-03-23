@@ -77,7 +77,7 @@ class TrafficLightDetector:
 
             # ignore traffic lights of opposing side (for american case)
             results = [r for r in results if r.phase != TrafficLightPhase.BACKSIDE]
-
+            print('results: ', len(results), results)
             # choose the best fit
             tl_info = results[np.argmax([r.accuracy for r in results])] if results else None
 
@@ -91,17 +91,16 @@ class TrafficLightDetector:
         """Check whether the traffic lights are within the expected zones"""
         img_height = input.sem_img.shape[0] #200
         img_width = input.sem_img.shape[1] #300
-        y_tl, x_tl, _, _ = input.patch # (y/x) related to the top-left corner
+        coord_width, coord_height, _, _ = input.patch # related to the top-left corner
 
         # info: this score within [0, 1] prefers traffic lights in top and right regions
-        top_th, right_th = 0.45, 0.7
-        upper_part_score = 1 if x_tl / img_height <= top_th else y_tl / img_width
-        right_part_score = 1 if y_tl / img_width >= right_th else x_tl / img_height
+        top_th, right_th = 0.5, 0.5
+        upper_part_score = 0.5 if coord_height / img_height <= top_th else 1 - (coord_height / img_height)
+        right_part_score = 0.5 if coord_width / img_width >= right_th else coord_width / img_width
 
         hot_zone_score = min(upper_part_score + right_part_score, 1.0)
         
-        print('IMG H x W from top-left : ', y_tl, x_tl, ' ## score: ', hot_zone_score)
-
+        print('IMG Width and Height from top-left : ', coord_width, coord_height, ' ## score: ', hot_zone_score)
         # possible improvement: train a filter using random forests / real adaboost
 
         return hot_zone_score
