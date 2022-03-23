@@ -247,7 +247,7 @@ def test_accel_moving_obstacle_in_range():
     speed_o = SpeedObservation()
     speed_o.tl_phase = TrafficLightPhase.GREEN
     speed_o.is_trajectory_free = False
-    speed_o.dist_next_obstacle_m = 10
+    speed_o.dist_next_obstacle_m = 16
     speed_o.detected_speed_limit = 50
     speed_o.obj_speed_ms = 30 / 3.6
 
