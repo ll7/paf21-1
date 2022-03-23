@@ -28,8 +28,11 @@ def sub_vector(v_1: Tuple[float, float], v_2: Tuple[float, float]) -> Tuple[floa
 def scale_vector(vector: Tuple[float, float], new_len: float) -> Tuple[float, float]:
     """Amplify the length of the given vector"""
     old_len = vector_len(vector)
-    scaled_vector = (vector[0] * new_len / old_len,
-                     vector[1] * new_len / old_len)
+    try:
+        scaled_vector = (vector[0] * new_len / old_len,
+                         vector[1] * new_len / old_len)
+    except ZeroDivisionError:
+        scaled_vector = vector
     return scaled_vector
 
 
@@ -78,6 +81,20 @@ def unit_vector(orient_rad: float) -> Tuple[float, float]:
     """Retrieve the unit vector pointing in the given direction"""
     orient_rad = norm_angle(orient_rad)
     return rotate_vector((1, 0), orient_rad)
+
+
+def orth_offset_right(start_point: Tuple[float, float], end_point: Tuple[float, float],
+                      offset: float) -> Tuple[float, float]:
+    """Calculate the orthogonal offset according the road width in right direction"""
+    vector = points_to_vector(start_point, end_point)
+    scaled_vector = scale_vector(vector, offset)
+    return rotate_vector(scaled_vector, -pi / 2)
+
+
+def orth_offset_left(start_point: Tuple[float, float], end_point: Tuple[float, float],
+                     offset: float) -> Tuple[float, float]:
+    """Calculate the orthogonal offset according the road width in left direction"""
+    return sub_vector((0, 0), orth_offset_right(start_point, end_point, offset))
 
 
 def approx_curvature_radius(p_start: Tuple[float, float],
