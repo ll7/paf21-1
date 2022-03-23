@@ -41,7 +41,7 @@ class RosMessagesAdapter:
         """converts the odometry message to velocity"""
         time_stamp = msg.header.stamp.secs + msg.header.stamp.nsecs * 1e-9
         # the twist message expresses the velocity in free space
-        return vector_len(msg.twist.twist.linear.x, msg.twist.twist.linear.y), time_stamp
+        return vector_len((msg.twist.twist.linear.x, msg.twist.twist.linear.y)), time_stamp
 
     @staticmethod
     def message_to_target_velocity(msg: FloatMsg) -> float:
