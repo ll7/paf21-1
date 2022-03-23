@@ -66,13 +66,14 @@ class NaiveSteeringController:
 class StanleySteeringController:
     """Representing a steering controller implementing the Stanley method."""
     vehicle: Vehicle
-    curvature: float = 2.2
+    curvature_value: float = 2.1
+    curvature: float = 0.0
     factor: float = 1
     eps: float = 1e-6
     last_pos: Tuple[float, float] = (0, 0)
     cross_track_errors: List[float] = field(default_factory=list)
-    cte_count: int = 25
-
+    cte_count: int = 27
+    init = False
 
     def predictive_stanley(self, route: List[Tuple[float, float]], n: int, k: List[float]):
         assert len(k) == n
@@ -82,7 +83,7 @@ class StanleySteeringController:
         theta = self.vehicle.orientation_rad
         velocity = self.vehicle.velocity_mps
         timestep = 1 / 10
-        temp_steering_angle = self.compute_steering_angle(route, pos, theta)
+        temp_steering_angle = self.compute_steering_angle(route, self.vehicle.pos, theta)
         steering_angle = k[0] * temp_steering_angle
         # for step in range(1, n):
         #     theta = theta + ((velocity * np.tan(self.vehicle.steer_angle)) /
@@ -96,14 +97,17 @@ class StanleySteeringController:
         self.vehicle.steer_angle = steering_angle
         return steering_angle
 
-
     def compute_steering_angle(self, route: List[Tuple[float, float]],
                                position: Tuple[float, float], orientation: float) -> float:
         """Compute the steering angle according to the Stanley method."""
 
         prev_wp, next_wp = self._get_prev_and_next_point(route, position)
-        pos = self.vehicle.pos
-        self.last_pos = pos
+
+        traveled_distance = 0
+        if (self.last_pos is not None) and (position is not None):
+            traveled_distance = dist(self.last_pos, position)
+            print(traveled_distance, 'Traveled_Distance')
+        self.last_pos = position
 
         if not prev_wp or not next_wp or prev_wp == next_wp:
             # TODO: think of a better fallback case
@@ -113,12 +117,17 @@ class StanleySteeringController:
 
         heading_error = self._heading_error(prev_wp, next_wp, orientation)
 
-        self.cross_track_errors.insert(0, self._cross_track_error(prev_wp, next_wp, position))
-        if len(self.cross_track_errors) > self.cte_count:
-            del self.cross_track_errors[-1]
-        cross_track_error = sum(self.cross_track_errors) / len(self.cross_track_errors)
-        #cross_track_error = self._cross_track_error(prev_wp, next_wp, position)
-
+        if self.init:
+            self.cross_track_errors.insert(0, self._cross_track_error(prev_wp, next_wp, position))
+            if len(self.cross_track_errors) > self.cte_count:
+                del self.cross_track_errors[-1]
+            cross_track_error = sum(self.cross_track_errors) / len(self.cross_track_errors)
+        else:
+            cross_track_error = self._cross_track_error(prev_wp, next_wp, position)
+            if traveled_distance > 0 and self.vehicle.velocity_mps > 1:
+                self.init = True
+                self.curvature = self.curvature_value
+        print(self.vehicle.velocity_mps, 'speed')
         print('Errors', heading_error, cross_track_error)
 
         steer_angle = self.factor * heading_error + cross_track_error
@@ -175,7 +184,7 @@ class StanleySteeringController:
 
         # print(self.vehicle.pos, pos_front_axle, 'Positions')
         # print(self.vehicle.orientation_rad, 'Orientation')
-        print(dist(self.last_pos, self.vehicle.pos), 'Traveled_Distance')
+
 
         prev_to_vehicle = points_to_vector(prev_wp, position)
         cross_prod = -np.cross(prev_to_next, prev_to_vehicle)
