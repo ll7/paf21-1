@@ -67,7 +67,7 @@ class StanleySteeringController:
     """Representing a steering controller implementing the Stanley method."""
     vehicle: Vehicle
     curvature_value: float = 2.1
-    curvature: float = 0.0
+    curvature: float = 2.1
     factor: float = 1
     eps: float = 1e-6
     last_pos: Tuple[float, float] = (0, 0)
@@ -123,11 +123,11 @@ class StanleySteeringController:
             if len(self.cross_track_errors) > self.cte_count:
                 del self.cross_track_errors[-1]
             cross_track_error = sum(self.cross_track_errors) / len(self.cross_track_errors)
-        else:
-            cross_track_error = self._cross_track_error(prev_wp, next_wp, position)
-            if traveled_distance > 0 and self.vehicle.velocity_mps > 1:
-                self.init = True
-                self.curvature = self.curvature_value
+        #else:
+        #    cross_track_error = self._cross_track_error(prev_wp, next_wp, position)
+        #    if traveled_distance > 0 and self.vehicle.velocity_mps > 1:
+        #        self.init = True
+        #        self.curvature = self.curvature_value
         print(self.vehicle.velocity_mps, 'speed')
         print('Errors', heading_error, cross_track_error)
 
