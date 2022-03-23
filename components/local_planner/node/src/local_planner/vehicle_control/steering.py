@@ -71,7 +71,7 @@ class StanleySteeringController:
     eps: float = 1e-6
     last_pos: Tuple[float, float] = (0, 0)
     cross_track_errors: List[float] = field(default_factory=list)
-    cte_count: int = 25
+    cte_count: int = 5
 
 
     def predictive_stanley(self, route: List[Tuple[float, float]], n: int, k: List[float]):
