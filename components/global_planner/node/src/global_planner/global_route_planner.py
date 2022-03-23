@@ -353,7 +353,7 @@ class GlobalPlanner:
 
         for sec_1, sec_2 in sections:
             road_id1, forward_id1, lane_id1 = split_key(sec_1)
-            road_id2, forward_id2, _ = split_key(sec_2)
+            road_id2, forward_id2, lane_id2 = split_key(sec_2)
 
             same_road = road_id1 == road_id2
             drive_road_from_start_to_end = forward_id1 != forward_id2
