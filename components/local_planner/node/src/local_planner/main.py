@@ -77,8 +77,8 @@ class LocalPlannerNode:
                 driving_signal = self.driving_control.next_signal()
                 msg = RosMessagesAdapter.signal_to_message(driving_signal)
                 self.driving_signal_publisher.publish(msg)
-            except:
-                print('failed to send driving signal!')
+            except Exception as err:
+                print(f'failed to send driving signal! error was: {err}')
             rate.sleep()
             
 

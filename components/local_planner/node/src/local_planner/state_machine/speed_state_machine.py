@@ -58,8 +58,8 @@ class SpeedStateMachine:
         # WARNING: only uncomment when intending to ignore traffic lights
         # obs.tl_phase = TrafficLightPhase.GREEN
 
-        print('TL phase : {}, TL in {}, Curve Speed : {}, Next Curve in {}'.
-        format(obs.tl_phase, obs.dist_next_traffic_light_m,  obs.curve_target_speed, obs.dist_next_curve))
+        # print('TL phase : {}, TL in {}, Curve Speed : {}, Next Curve in {}'.
+        # format(obs.tl_phase, obs.dist_next_traffic_light_m,  obs.curve_target_speed, obs.dist_next_curve))
         if obs.detected_speed_limit is not None:
             self.legal_speed_limit_mps = obs.detected_speed_limit / 3.6
 
@@ -78,14 +78,14 @@ class SpeedStateMachine:
             self._handle_brake(obs)
         else:
             raise ValueError(f'Unsupported speed state {self.current_state}!')
-        print(self.current_state)
-        if self.count % 1000 == 0:
-            print(f'speed state: {self.current_state},',
-                  f'target speed: {self.target_speed_mps:.2f},',
-                  f'legal speed: {self.legal_speed_limit_mps:.2f},',
-                  f'obs speed {obs.obj_speed_ms:.2f},'
-                  f'actual speed: {self.vehicle.velocity_mps:.2f}')
-        self.count += 1
+        # print(self.current_state)
+        # if self.count % 1000 == 0:
+        #     print(f'speed state: {self.current_state},',
+        #           f'target speed: {self.target_speed_mps:.2f},',
+        #           f'legal speed: {self.legal_speed_limit_mps:.2f},',
+        #           f'obs speed {obs.obj_speed_ms:.2f},'
+        #           f'actual speed: {self.vehicle.velocity_mps:.2f}')
+        # self.count += 1
 
     def _is_in_speed_tolerance(self, speed_limit: float):
         speed_diff = self.vehicle.velocity_mps - speed_limit
@@ -165,8 +165,6 @@ class SpeedStateMachine:
         target_speeds = [obs.curve_target_speed, speed_tl, obs.obj_speed_ms]
 
         crit_id = np.argmin(wait_times)
-
-        print('Curve, Tl and object WAIT times {}, Curve, TL and object SPEEDS {}'.format(wait_times, target_speeds))
 
         crit_wait_time_s, target_speed = wait_times[crit_id], target_speeds[crit_id]
 

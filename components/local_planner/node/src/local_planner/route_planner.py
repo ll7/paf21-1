@@ -7,8 +7,8 @@ from dataclasses import dataclass, field
 from local_planner.core import Vehicle, AnnRouteWaypoint
 from local_planner.vehicle_control import DrivingController
 from local_planner.core.geometry import angle_between_vectors, points_to_vector
-from local_planner.state_machine import SpeedObservation, TrafficLightInfo, ManeuverObservation
-from local_planner.vehicle_control import CurveDetection
+from local_planner.state_machine import SpeedObservation, TrafficLightInfo, TrafficLightPhase#, ManeuverObservation
+from local_planner.vehicle_control import CurveDetection, CurveObservation
 from local_planner.object_processing import ObjectHandler
 
 
@@ -23,6 +23,7 @@ class TrajectoryPlanner:
     global_route_ann: List[AnnRouteWaypoint] = field(default_factory=list)
     next_wp_id: int = -1
     prev_wp_id: int = -1
+    end_curve_id = None
     length_route: int = 100
     obj_handler: ObjectHandler = None
     tld_info: TrafficLightInfo = TrafficLightInfo()
@@ -146,27 +147,60 @@ class TrajectoryPlanner:
 
         if not self.current_route:
             return SpeedObservation()
-        # fuse object detection with traffic light detection
+
         speed_obs = self.obj_handler.get_speed_observation(self.current_route)
-        speed_obs.tl_phase = self.tld_info.phase
-        speed_obs.dist_next_traffic_light_m = self.tld_info.distance
-        #speed_obs.dist_next_traffic_light_m = 10000
+
         curve_obs = self.curve_detection.find_next_curve(self.current_route)
         speed_obs.dist_next_curve = curve_obs.dist_until_curve
         speed_obs.curve_target_speed = curve_obs.max_speed
+
+        if self.tld_info:
+            speed_obs.tl_phase = self.tld_info.phase
+            speed_obs.dist_next_traffic_light_m = self.tld_info.distance
+
         if len(self.cached_local_ann_route) > 0:
             speed_obs.detected_speed_limit = self.cached_local_ann_route[0].legal_speed
+
+        self._handle_american_traffic_lights(speed_obs, curve_obs)
+
+        #print('Speed Obs ', speed_obs)
+        
         return speed_obs
 
-    @property
-    def latest_maneuver_observation(self) -> ManeuverObservation:
-        """Retrieve the latest speed observation"""
-        if not self.current_route:
-            return ManeuverObservation()
-        man_obs = ManeuverObservation()
-        curve_obs = self.curve_detection.find_next_curve(self.current_route)
-        man_obs.dist_next_curve = curve_obs.dist_until_curve
-        return man_obs
+    def _handle_american_traffic_lights(self, speed_obs: SpeedObservation, curve_obs: CurveObservation):
+        print('tl in m {}, dist till curve in m {}'.format(speed_obs.dist_next_traffic_light_m, curve_obs.dist_until_curve))
+        print('Cashed ann route end lane m ', self.cached_local_ann_route[0].end_lane_m)
+        print('curve obs end id: ', curve_obs.end_id)
+        # ignore the traffic lights of orthogonal lanes until the curve is over
+        if self.end_curve_id:
+            speed_obs.tl_phase = TrafficLightPhase.GREEN
+            speed_obs.dist_next_traffic_light_m = 9999
+            if self.end_curve_id < self.prev_wp_id:
+                self.end_curve_id = None
+
+        # stop before the traffic light if it is just a regular one and not american
+        elif abs(speed_obs.dist_next_traffic_light_m - curve_obs.dist_until_curve) < 5: # and curve_obs.end_id < 20:
+            print('Stop at the TL')
+
+        # stop at the end of lane
+        elif len(self.cached_local_ann_route) > 0:
+            dist_end_lane = self.cached_local_ann_route[0].end_lane_m
+            turn_at_crossroad = curve_obs.end_id != -1 and \
+                abs(curve_obs.dist_until_curve - dist_end_lane) < 5
+
+            speed_obs.dist_next_traffic_light_m = self.cached_local_ann_route[0].end_lane_m
+            if turn_at_crossroad:
+                self.end_curve_id = curve_obs.end_id
+
+    # @property
+    # def latest_maneuver_observation(self) -> ManeuverObservation:
+    #     """Retrieve the latest speed observation"""
+    #     if not self.current_route:
+    #         return ManeuverObservation()
+    #     man_obs = ManeuverObservation()
+    #     curve_obs = self.curve_detection.find_next_curve(self.current_route)
+    #     man_obs.dist_next_curve = curve_obs.dist_until_curve
+    #     return man_obs
 
     def update_tld_info(self, tld_info: TrafficLightInfo):
         """Update the latest information on the traffic lights ahead"""
