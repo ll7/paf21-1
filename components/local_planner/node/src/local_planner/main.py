@@ -69,33 +69,18 @@ class LocalPlannerNode:
         while not rospy.is_shutdown():
             try:
                 if self.vehicle.is_ready:
-
                     local_route = self.route_planner.calculate_trajectory()
                     self.speed_state_machine.update_state(self.route_planner.latest_speed_observation)
                     velocity = self.speed_state_machine.get_target_speed()
                     self.driving_control.update_route(local_route)
                     self.driving_control.update_target_velocity(velocity)
-                    print('sending')
                     driving_signal = self.driving_control.next_signal()
-                    for i in range(100):
-                        print('a')
                     msg = RosMessagesAdapter.signal_to_message(driving_signal)
-                    #print(msg, "driving signal")
                     self.driving_signal_publisher.publish(msg)
-                    print('published')
-                    self.counter += 1
-
-                    print(self.counter, ' Iteration')
-                    print(msg, "driving signal")
-                    for i in range(100):
-                        print('a')
-
             except Exception as e:
                 print('failed to send driving signal!')
                 print(e)
-            print('sleep')
             rate.sleep()
-            print('wake')
 
 
     def _init_ros(self):
@@ -145,7 +130,7 @@ def main():
 
     vehicle_name = "ego_vehicle"
     vehicle = Vehicle(vehicle_name)
-    publish_rate_hz = 10
+    publish_rate_hz = 40
     node = LocalPlannerNode(vehicle, publish_rate_hz)
     node.run_node()
 

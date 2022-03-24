@@ -66,13 +66,13 @@ class NaiveSteeringController:
 class StanleySteeringController:
     """Representing a steering controller implementing the Stanley method."""
     vehicle: Vehicle
-    curvature_value: float = 2.1
+    curvature_value: float = 2.2
     curvature: float = 0.0
     factor: float = 1
     eps: float = 1e-6
     last_pos: Tuple[float, float] = (0, 0)
     cross_track_errors: List[float] = field(default_factory=list)
-    cte_count: int = 27
+    cte_count: int = 25
     init = False
 
     def predictive_stanley(self, route: List[Tuple[float, float]], n: int, k: List[float]):
