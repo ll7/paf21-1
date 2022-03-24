@@ -45,13 +45,7 @@ class ObjectHandler:
                 self.objects[obj_id] = ObjectMeta(identifier=obj_id,
                                                   obj_class=obj['obj_class'],
                                                   trajectory=[new_abs_pos])
-
-            # print(f'Obj_id {obj_id}; Positions: {self.objects[obj_id].trajectory}')
         self.objects = {k: self.objects[k] for k in keys}
-
-        # print(f'Time: {self.vehicle.time}')
-        # print(f'object_list: {object_list}')
-        # print(f'updated_list: {self.objects}')
 
     def _detect_vehicle_in_lane(self, local_route: List[Tuple[float, float]]) -> SpeedObservation:
         """Detect a vehicle in the same direction."""

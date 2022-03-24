@@ -77,7 +77,6 @@ class LocalPlannerNode:
                 self.driving_control.update_target_velocity(velocity)
                 driving_signal = self.driving_control.next_signal()
                 msg = RosMessagesAdapter.signal_to_message(driving_signal)
-                print(msg)
                 self.driving_signal_publisher.publish(msg)
             except IndexError as index_error:
                 print(f'Error: {index_error}; failed to send driving signal!')
@@ -130,7 +129,7 @@ def main():
 
     vehicle_name = "ego_vehicle"
     vehicle = Vehicle(vehicle_name)
-    publish_rate_hz = 30
+    publish_rate_hz = 20
     node = LocalPlannerNode(vehicle, publish_rate_hz)
     node.run_node()
 

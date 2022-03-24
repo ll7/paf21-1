@@ -48,6 +48,7 @@ class NaiveSteeringController:
 
     @property
     def min_dist_ahead(self) -> float:
+        """Specifies the minimum distance ahead as a function of the speed."""
         speed = self.vehicle.velocity_mps
         return ceil((speed * (dist(self.last_pos, self.vehicle.pos) / speed)))
 
@@ -57,7 +58,7 @@ class NaiveSteeringController:
 
         has_min_dist = lambda wp: dist(wp, self.vehicle.pos) >= self.min_dist_ahead
         wps_with_min_dist = [wp for wp in route[1:] if has_min_dist(wp)]
-        aim_point = wps_with_min_dist[0] if len(wps_with_min_dist) > 0 else None
+        aim_point = wps_with_min_dist[0] if len(wps_with_min_dist) > 0 else route[-1]
 
         return aim_point
 
