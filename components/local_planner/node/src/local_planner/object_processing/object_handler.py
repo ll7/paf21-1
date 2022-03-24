@@ -19,7 +19,7 @@ class ObjectHandler:
     objects: Dict[int, ObjectMeta] = field(default_factory=dict)
     delta_time: float = 0.1
     max_velocity_change_rate: float = 2.0
-    street_width: float = 4.0
+    street_width: float = 4
     dist_safe: int = 10
 
     def get_speed_observation(self, local_route: List[Tuple[float, float]]) -> SpeedObservation:
@@ -46,12 +46,12 @@ class ObjectHandler:
                                                   obj_class=obj['obj_class'],
                                                   trajectory=[new_abs_pos])
 
-            print(f'Obj_id {obj_id}; Positions: {self.objects[obj_id].trajectory}')
+            # print(f'Obj_id {obj_id}; Positions: {self.objects[obj_id].trajectory}')
         self.objects = {k: self.objects[k] for k in keys}
 
-        print(f'Time: {self.vehicle.time}')
-        print(f'object_list: {object_list}')
-        print(f'updated_list: {self.objects}')
+        # print(f'Time: {self.vehicle.time}')
+        # print(f'object_list: {object_list}')
+        # print(f'updated_list: {self.objects}')
 
     def _detect_vehicle_in_lane(self, local_route: List[Tuple[float, float]]) -> SpeedObservation:
         """Detect a vehicle in the same direction."""
@@ -77,7 +77,8 @@ class ObjectHandler:
 
         for obj_id, obj in objects.items():
             blocked = self.find_blocked_points(route, obj, threshold=1.8)
-            print(f'Obj_id {obj_id}: Blocked_ids: {blocked}')
+
+
             if not blocked:
                 continue
             if min(blocked) < min_id:
@@ -86,7 +87,8 @@ class ObjectHandler:
                 blocked_ids += blocked
 
         blocked_ids = [num for num in blocked_ids if num >= 0]
-        print(f'All blocked_ids: {blocked_ids}, Min_obj: {min_obj}')
+        if len(blocked_ids) > 0:
+            print(f'All blocked_ids: {blocked_ids}, Min_obj: {min_obj}')
         return blocked_ids, min_obj
 
     def find_blocked_points(self, route: List[Tuple[float, float]],
@@ -142,8 +144,8 @@ class ObjectHandler:
                           veh_vel if veh_vel != 0.0 else 999
         time_self_leave = (dist(veh_pos, route_point) - threshold) / \
                           veh_vel if veh_vel != 0.0 else 999
-        zone_clearance_time = min(abs(time_self_enter - time_obj_leave),
-                                  abs(time_obj_enter - time_self_leave))
+        zone_clearance_time = min(time_obj_leave - time_self_enter,
+                                  time_self_leave - time_obj_enter)
         return zone_clearance_time
 
     @staticmethod
@@ -176,23 +178,25 @@ class ObjectHandler:
     def sigmoid_smooth(self, object_speed, object_coordinates, point, first_coord):
         """tries to smooth out the overtaking maneuver so it can be driven at higher speeds"""
         street_width = self.street_width  # parameter to stop in the  middle of other lane
-        slope = 1/2  # slope of overtaking
+        slope = 2  # slope of overtaking
         relative_velocity = self.vehicle.velocity_mps - object_speed
-        relative_distance_to_object = dist(point, object_coordinates[0])
-        if dist(point, first_coord) > \
-                min([dist(first_coord, obj) for obj in object_coordinates]):
+        if relative_velocity <= 10/3.6:
+            return 0
+        relative_distance_to_object = -dist(point, object_coordinates[0])
+        if dist(point, first_coord) > dist(first_coord, object_coordinates[0]):
             relative_distance_to_object = -relative_distance_to_object
         time_to_collision = 2
         self.dist_safe = max([relative_velocity * time_to_collision, 0])
         # self.dist_safe = 6
-        dist_c = max(dist(object_coordinates[0], object_coordinates[-1]), 0)
+        dist_c = dist(object_coordinates[0], object_coordinates[-1]) + 20
         x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)
         x_2 = (1 / slope) * (relative_distance_to_object - self.dist_safe - dist_c)
         deviation = (street_width / (1 + math.exp(-x_1))) + ((-street_width) / (1 + math.exp(-x_2)))
         return deviation
 
-    def plan_route_around_objects(self, local_route: List[Tuple[float, float]]):
+    def plan_route_around_objects(self, local_route: List[Tuple[float, float]], annotations):
         """calculates a route on the left side of the obstacle"""
+        ann = annotations
         temp_route = local_route.copy()
         enum_route = local_route.copy()
         blocked_ids, closest_object = self.get_blocked_ids(enum_route)
@@ -214,9 +218,9 @@ class ObjectHandler:
             temp_route[index] = (tmp_point[0] + width * moving_vector[0],
                                  tmp_point[1] + width * moving_vector[1])
         new_check, _ = self.get_blocked_ids(temp_route)
+        print(widths)
         print('Second Block', new_check)
         print('Blocked:', blocked_ids)
-        print(widths)
         if closest_object is not None:
             print('Distance to object', dist(self.vehicle.pos, closest_object.trajectory[-1]))
             if len(new_check) == 0:

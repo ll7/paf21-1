@@ -39,6 +39,11 @@ class TrajectoryPlanner:
         return [wp.pos for wp in self.global_route_ann]
 
     @property
+    def global_lane_and_possible(self):
+        """Retrieve the list of the actual lane and the possible lanes"""
+        return [(wp.actual_lane, wp.possible_lanes) for wp in self.global_route_ann]
+
+    @property
     def cached_local_route(self) -> List[Tuple[float, float]]:
         """Retrieve the x/y coordinates of the global route"""
         if self.prev_wp_id < 0 or not self.vehicle.is_ready:
@@ -99,7 +104,7 @@ class TrajectoryPlanner:
         # cache the route to avoid concurrency bugs because
         # the route might be overwritten by the navigation task
         route = self.global_route
-
+        lanes = self.global_lane_and_possible
         if not self.is_navigation_ready:
             return route
 
@@ -113,9 +118,10 @@ class TrajectoryPlanner:
 
         bound = min(self.prev_wp_id + self.length_route, len(route))
         temp_route = route[self.prev_wp_id:bound]
-        #temp_route = self.check_overtake(temp_route)
+        temp_ann = lanes[self.prev_wp_id:bound]
+        temp_route = self.check_overtake(temp_route, temp_ann)
         self.insert_into_gloabal_route(temp_route, self.prev_wp_id, bound)
-        self.global_route[self.prev_wp_id:bound] = temp_route
+
         self.current_route = temp_route
         return temp_route
 
@@ -143,12 +149,12 @@ class TrajectoryPlanner:
             self.next_wp_id += 1
             self.prev_wp_id += 1
 
-    def check_overtake(self, route):
+    def check_overtake(self, route, annotations):
         """Checking the route for an overtaking maneuver."""
         curve_obs = self.curve_detection.find_next_curve(self.current_route)
         dist_next_curve = curve_obs.dist_until_curve
         #if dist_next_curve > 50 and self.latest_speed_observation.dist_next_traffic_light_m > 50:
-        route = self.obj_handler.plan_route_around_objects(route)
+        route = self.obj_handler.plan_route_around_objects(route, annotations)
         return route
 
     @property
@@ -167,7 +173,7 @@ class TrajectoryPlanner:
         speed_obs.curve_target_speed = curve_obs.max_speed
         if len(self.cached_local_ann_route) > 0:
             speed_obs.detected_speed_limit = self.legal_speed_ahead()
-            speed_obs.detected_speed_limit = 130
+            #speed_obs.detected_speed_limit = 130
         else:
             speed_obs.detected_speed_limit = 0.0
         print(speed_obs)
