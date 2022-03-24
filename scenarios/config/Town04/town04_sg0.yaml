@@ -23,6 +23,6 @@ competition:
   ready_for_ego: false
   town_name: 'Town04'
   spawn_npc:
-    n: 50
-    w: 50
+    n: 0
+    w: 0
     s: 123 # seed

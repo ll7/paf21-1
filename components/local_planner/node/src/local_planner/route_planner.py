@@ -113,7 +113,7 @@ class TrajectoryPlanner:
 
         bound = min(self.prev_wp_id + self.length_route, len(route))
         temp_route = route[self.prev_wp_id:bound]
-        temp_route = self.check_overtake(temp_route)
+        #temp_route = self.check_overtake(temp_route)
         self.insert_into_gloabal_route(temp_route, self.prev_wp_id, bound)
         self.global_route[self.prev_wp_id:bound] = temp_route
         self.current_route = temp_route
@@ -161,12 +161,13 @@ class TrajectoryPlanner:
         speed_obs = self.obj_handler.get_speed_observation(self.current_route)
         speed_obs.tl_phase = self.tld_info.phase
         speed_obs.dist_next_traffic_light_m = self.tld_info.distance
-        #speed_obs.dist_next_traffic_light_m = 10000
+        speed_obs.dist_next_traffic_light_m = 10000
         curve_obs = self.curve_detection.find_next_curve(self.current_route)
         speed_obs.dist_next_curve = curve_obs.dist_until_curve
         speed_obs.curve_target_speed = curve_obs.max_speed
         if len(self.cached_local_ann_route) > 0:
             speed_obs.detected_speed_limit = self.legal_speed_ahead()
+            #speed_obs.detected_speed_limit = 130
         else:
             speed_obs.detected_speed_limit = 0.0
         return speed_obs

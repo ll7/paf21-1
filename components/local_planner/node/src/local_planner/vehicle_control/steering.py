@@ -80,13 +80,14 @@ class StanleySteeringController:
         if not self.vehicle.is_ready or len(route) < 2:
             print('canceled 1', self.vehicle.is_ready)
             return 0.0
+        pos = self.vehicle.pos
         theta = self.vehicle.orientation_rad
         velocity = self.vehicle.velocity_mps
-        timestep = 1 / 20
+        timestep = 1 / 40
         temp_steering_angle = self.compute_steering_angle(route, pos, theta)
         steering_angle = k[0] * temp_steering_angle
         for step in range(1, n):
-            theta = theta + ((velocity * np.tan(self.vehicle.steer_angle)) /
+            theta = theta + ((velocity * np.tan(temp_steering_angle)) /
                              self.vehicle.meta.wheelbase) * timestep
             x_n = pos[0] + velocity * np.cos(theta + temp_steering_angle) * timestep
             y_n = pos[1] + velocity * np.sin(theta + temp_steering_angle) * timestep
