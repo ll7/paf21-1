@@ -82,6 +82,7 @@ class LocalPlannerNode:
                 print(f'Error: {index_error}; failed to send driving signal!')
             rate.sleep()
 
+
     def _init_ros(self):
         rospy.init_node(f'local_planner_{self.vehicle.name}', anonymous=True)
         self.driving_signal_publisher = self._init_driving_signal_publisher()
