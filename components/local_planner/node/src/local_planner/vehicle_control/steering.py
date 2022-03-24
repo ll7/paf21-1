@@ -65,15 +65,19 @@ class NaiveSteeringController:
 @dataclass
 class StanleySteeringController:
     """Representing a steering controller implementing the Stanley method."""
+    refresh_rate: int
     vehicle: Vehicle
-    curvature_value: float = 2.8
+    curvature_value: float = 2.5
     curvature: float = 0.0
     factor: float = 1
     eps: float = 1e-6
     last_pos: Tuple[float, float] = (0, 0)
     cross_track_errors: List[float] = field(default_factory=list)
-    cte_count: int = 35
+    cte_count: int = 1
     init = False
+
+    def __post_init__(self):
+        self.cte_count = ceil(self.refresh_rate / 2)
 
     def predictive_stanley(self, route: List[Tuple[float, float]], n: int, k: List[float]):
         assert len(k) == n
@@ -83,7 +87,7 @@ class StanleySteeringController:
         pos = self.vehicle.pos
         theta = self.vehicle.orientation_rad
         velocity = self.vehicle.velocity_mps
-        timestep = 1 / 40
+        timestep = 1 / self.refresh_rate
         temp_steering_angle = self.compute_steering_angle(route, pos, theta)
         steering_angle = k[0] * temp_steering_angle
         for step in range(1, n):

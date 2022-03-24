@@ -166,7 +166,7 @@ class SpeedStateMachine:
         crit_wait_time_s, target_speed = wait_times[crit_id], target_speeds[crit_id]
 
         needs_brake = crit_wait_time_s <= self.vehicle.meta.vehicle_reaction_time_s
-        return needs_brake, target_speed
+        return needs_brake, min(target_speed, self.legal_speed_limit_mps)
 
     def _time_until_brake(self, distance_m: float, target_velocity: float = 0) -> float:
         """Compute the braking distance and based on that the time until brake.

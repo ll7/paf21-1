@@ -161,15 +161,16 @@ class TrajectoryPlanner:
         speed_obs = self.obj_handler.get_speed_observation(self.current_route)
         speed_obs.tl_phase = self.tld_info.phase
         speed_obs.dist_next_traffic_light_m = self.tld_info.distance
-        speed_obs.dist_next_traffic_light_m = 10000
+        #speed_obs.dist_next_traffic_light_m = 10000
         curve_obs = self.curve_detection.find_next_curve(self.current_route)
         speed_obs.dist_next_curve = curve_obs.dist_until_curve
         speed_obs.curve_target_speed = curve_obs.max_speed
         if len(self.cached_local_ann_route) > 0:
             speed_obs.detected_speed_limit = self.legal_speed_ahead()
-            #speed_obs.detected_speed_limit = 130
+            speed_obs.detected_speed_limit = 130
         else:
             speed_obs.detected_speed_limit = 0.0
+        print(speed_obs)
         return speed_obs
 
     def legal_speed_ahead(self) -> float:
