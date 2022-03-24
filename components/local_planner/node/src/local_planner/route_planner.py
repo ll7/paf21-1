@@ -113,9 +113,16 @@ class TrajectoryPlanner:
 
         bound = min(self.prev_wp_id + self.length_route, len(route))
         temp_route = route[self.prev_wp_id:bound]
-        # temp_route = self.check_overtake(temp_route)
+        temp_route = self.check_overtake(temp_route)
+        self.insert_into_gloabal_route(temp_route, self.prev_wp_id, bound)
+        self.global_route[self.prev_wp_id:bound] = temp_route
         self.current_route = temp_route
         return temp_route
+
+    def insert_into_gloabal_route(self, route, lower_bound, upper_bound):
+        """function to insert updated path into global an_route"""
+        for i in range(lower_bound, upper_bound):
+            self.global_route_ann[i].pos = route[i-lower_bound]
 
     def check_passed_waypoints(self, route):
         """Set the next waypoint index for the not yet passed waypoints"""
@@ -140,8 +147,8 @@ class TrajectoryPlanner:
         """Checking the route for an overtaking maneuver."""
         curve_obs = self.curve_detection.find_next_curve(self.current_route)
         dist_next_curve = curve_obs.dist_until_curve
-        if dist_next_curve > 50 and self.latest_speed_observation.dist_next_traffic_light_m > 50:
-            route = self.obj_handler.plan_route_around_objects(route)
+        #if dist_next_curve > 50 and self.latest_speed_observation.dist_next_traffic_light_m > 50:
+        route = self.obj_handler.plan_route_around_objects(route)
         return route
 
     @property

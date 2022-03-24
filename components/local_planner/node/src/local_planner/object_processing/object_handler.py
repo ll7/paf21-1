@@ -6,7 +6,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 from local_planner.core import Vehicle, visualize_route_rviz
-from local_planner.core.geometry import rotate_vector, orth_offset_left, add_vector, sub_vector
+from local_planner.core.geometry import rotate_vector, orth_offset_left, add_vector, sub_vector, \
+    angle_between_vectors
 from local_planner.object_processing.object_meta import ObjectMeta
 from local_planner.state_machine import SpeedObservation
 
@@ -107,9 +108,9 @@ class ObjectHandler:
                 continue
             zone_clearance_time = ObjectHandler._calculate_zone_clearance(
                 route_point, obj_positions[-1], obj.velocity, veh_pos, veh_vel, threshold)
-            print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
+            # print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
             if zone_clearance_time < 3.0:
-                indices += [index-1, index]
+                indices += [index - 1, index]
                 break
         return indices
 
@@ -133,9 +134,16 @@ class ObjectHandler:
 
     @staticmethod
     def _calculate_zone_clearance(route_point, obj_pos, obj_vel, veh_pos, veh_vel, threshold):
-        time_obj = (dist(obj_pos, route_point) + threshold) / obj_vel if obj_vel != 0.0 else 999
-        time_self = (dist(veh_pos, route_point) - threshold) / veh_vel if veh_vel != 0.0 else 999
-        zone_clearance_time = time_self - time_obj
+        time_obj_leave = (dist(obj_pos, route_point) + threshold) / \
+                         obj_vel if obj_vel != 0.0 else 999
+        time_obj_enter = (dist(obj_pos, route_point) - threshold) / \
+                         obj_vel if obj_vel != 0.0 else 999
+        time_self_enter = (dist(veh_pos, route_point) - threshold) / \
+                          veh_vel if veh_vel != 0.0 else 999
+        time_self_leave = (dist(veh_pos, route_point) - threshold) / \
+                          veh_vel if veh_vel != 0.0 else 999
+        zone_clearance_time = min(abs(time_self_enter - time_obj_leave),
+                                  abs(time_obj_enter - time_self_leave))
         return zone_clearance_time
 
     @staticmethod
@@ -168,11 +176,9 @@ class ObjectHandler:
     def sigmoid_smooth(self, object_speed, object_coordinates, point, first_coord):
         """tries to smooth out the overtaking maneuver so it can be driven at higher speeds"""
         street_width = self.street_width  # parameter to stop in the  middle of other lane
-        slope = 1  # slope of overtaking
+        slope = 1/2  # slope of overtaking
         relative_velocity = self.vehicle.velocity_mps - object_speed
         relative_distance_to_object = dist(point, object_coordinates[0])
-        if relative_distance_to_object > 2:
-            relative_distance_to_object -= 2
         if dist(point, first_coord) > \
                 min([dist(first_coord, obj) for obj in object_coordinates]):
             relative_distance_to_object = -relative_distance_to_object
@@ -188,19 +194,20 @@ class ObjectHandler:
     def plan_route_around_objects(self, local_route: List[Tuple[float, float]]):
         """calculates a route on the left side of the obstacle"""
         temp_route = local_route.copy()
-        blocked_ids, closest_object = self.get_blocked_ids(temp_route)
+        enum_route = local_route.copy()
+        blocked_ids, closest_object = self.get_blocked_ids(enum_route)
         widths = []
-        for index, tmp_point in enumerate(temp_route):
+        for index, tmp_point in enumerate(enum_route):
             if index != 0:
-                moving_vector = orth_offset_left(temp_route[index - 1], tmp_point, 1.0)
+                moving_vector = orth_offset_left(enum_route[index - 1], tmp_point, 1.0)
             else:
-                moving_vector = orth_offset_left(tmp_point, temp_route[index + 1], 1.0)
+                moving_vector = orth_offset_left(tmp_point, enum_route[index + 1], 1.0)
 
             width = 0.0
             if closest_object is not None:
-                blocked_route = [temp_route[blocked_id] for blocked_id in blocked_ids]
+                blocked_route = [enum_route[blocked_id] for blocked_id in blocked_ids]
                 width = self.sigmoid_smooth(closest_object.velocity, blocked_route,
-                                            tmp_point, temp_route[0])
+                                            tmp_point, enum_route[0])
 
             widths.append(width)
 
@@ -209,6 +216,7 @@ class ObjectHandler:
         new_check, _ = self.get_blocked_ids(temp_route)
         print('Second Block', new_check)
         print('Blocked:', blocked_ids)
+        print(widths)
         if closest_object is not None:
             print('Distance to object', dist(self.vehicle.pos, closest_object.trajectory[-1]))
             if len(new_check) == 0:

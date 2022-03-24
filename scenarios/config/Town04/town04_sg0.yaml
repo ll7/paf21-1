@@ -25,4 +25,4 @@ competition:
   spawn_npc:
     n: 50
     w: 50
-    s: 1 # seed
+    s: 123 # seed

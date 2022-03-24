@@ -132,6 +132,7 @@ def angle_triangle(p_a: Tuple[float, float],
     return angle_between_vectors(vec_ab, vec_ac)
 
 
+
 # def find_curvature(waypoints : List[Tuple[float, float]]) -> List[Tuple[float, float]]:
 #     """Find the curvature using assumptions that it has triangular shape"""
 
