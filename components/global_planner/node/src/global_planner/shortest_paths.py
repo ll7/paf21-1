@@ -38,33 +38,34 @@ def _naive_dijkstra(matrix: np.ndarray, start_pos: int) -> np.ndarray:
     queue = list(range(num_nodes))
 
     # relax edges until there's no further relaxation
-    # info: this simple list-based queue could be replaced by a prio queue
     while queue:
-        edge_relax = _next_edge_to_relax(queue, dist)
-        if edge_relax == -1:
+        current_node = _next_node(queue, dist)
+        if current_node == -1:
             break
-        queue.remove(edge_relax)
+        queue.remove(current_node)
 
-        # find nodes connected to the relaxed edge
-        conn_nodes = [i for i in list(range(num_nodes)) if matrix[edge_relax][i]]
+        # find all nodes connected to the current node by an outgoing edge
+        conn_nodes = [i for i in list(range(num_nodes)) if matrix[current_node][i]]
 
-        # override dist / backtrace array where using the relaxed edge leads to a shorter path
+        # allow the shortest paths to use the current node
+        # -> update dist / backtrace array if there's a shorter path
         for index in conn_nodes:
-            new_dist = dist[edge_relax] + matrix[edge_relax][index]
+            new_dist = dist[current_node] + matrix[current_node][index]
             if new_dist < dist[index]:
                 dist[index] = new_dist
-                backtrace[index] = edge_relax
+                backtrace[index] = current_node
 
     return backtrace
 
 
-def _next_edge_to_relax(queue: List[int], dist: np.ndarray) -> int:
+def _next_node(queue: List[int], dist: np.ndarray) -> int:
     """Determine the index of the next edge to relax,
     defaulting to -1 when there are no further relaxations possible."""
 
     minimum = np.inf
     min_index = -1
 
+    # info: this min_key search could be implemented by a prio queue
     for index in queue:
         if dist[index] < minimum:
             minimum = dist[index]
