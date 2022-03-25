@@ -1,5 +1,5 @@
 import numpy as np
-from global_planner.global_route_planner import ShortestPath
+from global_planner.shortest_paths import shortest_path
 
 
 def test_shortest_path():
@@ -14,11 +14,11 @@ def test_shortest_path():
     graph[0, 2] = 20
     graph[0, 1] = 10
 
-    path = ShortestPath.shortest_path(0, 0, graph)
+    path = shortest_path(0, 0, graph)
     assert(path == [0])
 
-    path = ShortestPath.shortest_path(2, 5, graph)
+    path = shortest_path(2, 5, graph)
     assert(path == [2, 3, 5])
 
-    path = ShortestPath.shortest_path(5, 1, graph)
+    path = shortest_path(5, 1, graph)
     assert(path == [5])
