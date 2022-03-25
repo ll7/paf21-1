@@ -9,8 +9,10 @@ from local_planner.core.geometry import approx_curvature_radius
 @dataclass
 class CurveObservation:
     """Representing the next curve ahead"""
-    dist_until_curve: float = 1000
-    max_speed: float = 500
+    dist_until_curve: float=1000
+    dist_end_curve: float=1000
+    max_speed: float=500
+    end_id: int=-1
 
 
 class CurveDetection:
@@ -32,9 +34,9 @@ class CurveDetection:
         wps_curve = route_wps[curve_start_id:curve_end_id]
 
         dist_until_curve = CurveDetection._route_dist(wps_until_curve)
+        dist_end_curve = dist_until_curve + CurveDetection._route_dist(wps_curve)
         max_curve_speed = CurveDetection._curve_target_speed(wps_curve)
-        print(max_curve_speed, 'Max Curve Speed')
-        return CurveObservation(dist_until_curve, max_curve_speed)
+        return CurveObservation(dist_until_curve, dist_end_curve, max_curve_speed, curve_end_id)
 
     @staticmethod
     def _route_dist(wps: List[Tuple[float, float]]):

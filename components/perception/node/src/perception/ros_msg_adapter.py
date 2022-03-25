@@ -24,7 +24,9 @@ class RosMessagesAdapter:
     @staticmethod
     def tld_info_to_json_message(tld_info: TrafficLightInfo) -> StringMsg:
         """Convert a traffic light info into a ROS message"""
-        json_msg = f'{{ "phase": "{tld_info.phase}", "distance": {tld_info.distance} }}'
+        json_msg = f'{{ "phase": "{tld_info.phase}", \
+            "distance": {tld_info.distance}, \
+            "accuracy": {tld_info.accuracy} }}'
         return StringMsg(data=json_msg)
 
     @staticmethod
