@@ -7,11 +7,8 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Point
 
 
-def get_distance(p_1: Point, p_2_: Point):
-    """
-    return distance of two points
-    """
-    return ((p_1.x - p_2_.x) ** 2 + (p_1.y - p_2_.y) ** 2 + (p_1.z - p_2_.z) ** 2) ** 0.5
+def euclid_dist_3d(p_1: Point, p_2: Point):
+    return ((p_1.x - p_2.x) ** 2 + (p_1.y - p_2.y) ** 2 + (p_1.z - p_2.z) ** 2) ** 0.5
 
 
 @dataclass
@@ -43,10 +40,16 @@ class CompetitionManagerNode:
         rospy.logdebug(data)
         current_position = data.pose.pose.position
         print(f'Current_pos_competition: {current_position}')
-        distance_to_goal = get_distance(current_position, self.goal_position)
-        distance_to_start = get_distance(current_position, self.start_position)
+
+        if self.start_position is None or self.goal_position is None:
+            print('Start / goal position not initialized yet! Waiting for rosparam ...')
+            return
+
+        distance_to_goal = euclid_dist_3d(current_position, self.goal_position)
+        distance_to_start = euclid_dist_3d(current_position, self.start_position)
 
         if self.finished:
+            # TODO: add logic to receive the next route's goal
             return
 
         print(f'distance to goal: {distance_to_goal}')

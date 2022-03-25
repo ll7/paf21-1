@@ -3,14 +3,20 @@ from abc import ABC
 from enum import IntEnum
 from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
-from math import dist as euclid_dist, sqrt, pi, asin
+from math import dist as euclid_dist, pi
 
 from xml.etree import ElementTree as eTree
 from xml.etree.ElementTree import Element
+
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
+
 import numpy as np
 
-from global_planner.geometry import rotate_vector, unit_vector, points_to_vector, \
-    vector_len, scale_vector, add_vector, vec2dir
+from global_planner.geometry import unit_vector, points_to_vector, vector_len, \
+                                    scale_vector, add_vector, vec2dir, sub_vector, \
+                                    orth_offset_left, orth_offset_right
+from global_planner.route_interpolation import circular_interpolation, end_of_circular_arc
 
 
 def create_key(road: int, pos: int, link: int) -> str:
@@ -77,14 +83,11 @@ class TrafficSignal(ABC):
 class TrafficLight(TrafficSignal):
     # pylint: disable=too-few-public-methods
     """Represents the data of a traffic sign object."""
+    # remove this class because it doesn't add anything to the model
 
 
 class TrafficSign(TrafficSignal):
     """Represents the data of a traffic sign object."""
-
-    # def __init__(self, node_xml: Element, road_start: Tuple[float, float],
-    #              road_end: Tuple[float, float]):
-    #     super(TrafficSign, self).__init__(node_xml, road_start, road_end)
 
     @property
     def sign_type(self) -> TrafficSignType or None:
@@ -95,11 +98,6 @@ class TrafficSign(TrafficSignal):
             return TrafficSignType.STOP
         if self.name.startswith('SimpleCrosswalk'):
             return TrafficSignType.CROSSWALK
-
-        # LadderCrosswalk
-        # StopLine
-        # SolidSingleWhite
-        # print("parsing unknown object: ", self.name)
         return None
 
     @property
@@ -161,9 +159,9 @@ class Road:
     traffic_signs: List[TrafficSign]
     traffic_lights: List[TrafficLight]
     geometries: List[Geometry]
-    # road_width: float
     lane_widths: Dict[int, float]
     lane_offsets: Dict[int, float]
+    lane_polygons: Dict[int, List[Tuple[float, float]]]
     suc: RoadLink = None
     pre: RoadLink = None
 
@@ -181,6 +179,7 @@ class Road:
         self.line_type = Road._get_line_type(road_xml)
         self.geometries = Road._get_geometry(road_xml)
         self.lane_widths, self.lane_offsets = Road._get_lane_widths_and_offsets(road_xml)
+        self.lane_polygons = self._compute_polygons()
         self.traffic_signs = Road._get_traffic_signs(road_xml, self.road_start, self.road_end)
         self.traffic_lights = Road._get_traffic_lights(road_xml, self.road_start, self.road_end)
 
@@ -254,6 +253,7 @@ class Road:
                 lane_width = float(lane.find('width').get('a'))
                 lane_widths[lane_id] = lane_width
 
+        # all lanes are required, also ones that are non-drivable like shoulders, etc.
         all_left_ids = list(sorted([key for key in lane_widths if key > 0]))
         all_right_ids = list(reversed(sorted([key for key in lane_widths if key < 0])))
 
@@ -319,79 +319,99 @@ class Road:
             arc_radius = 1 / arc[0] if arc else 0
 
             if is_last_geometry:
-                angle = float(geo_0.get('hdg'))
-                end = Road._calculate_end_point(start, angle, length, arc_radius)
-                if euclid_dist(start, end) > length+0.2:
-                    raise Exception("End Point was set incorrectly", start, end, angle, length)
+                geo_orient = float(geo_0.get('hdg'))
+                diff_vec = scale_vector(unit_vector(geo_orient), length)
+                end = add_vector(start, diff_vec) if arc_radius == 0.0 \
+                    else end_of_circular_arc(start, geo_orient, length, arc_radius)
             else:
                 geo_1 = geometries[i+1]
                 end = (float(geo_1.get('x')), float(geo_1.get('y')))
 
             offset = offsets[i] if offsets and i < len(offsets) else 0
 
-            circular_interpolation = arc_radius != 0
-            if not circular_interpolation:
+            is_circular_arc = arc_radius != 0
+            if not is_circular_arc:
                 objects.append(Geometry(start, end, length, offset))
                 continue
 
-            points = Road._circular_interpolation(start, end, arc_radius)
+            points = circular_interpolation(start, end, arc_radius)
             geo_vecs = zip(points[:-1], points[1:])
             vec_len = euclid_dist(points[0], points[1])
             objects.extend([Geometry(start, end, vec_len, offset) for (start, end) in geo_vecs])
 
         return objects
 
+    def _compute_polygons(self) -> Dict[int, List[Tuple[float, float]]]:
+        """Compute the polygons representing the road bounds."""
+
+        # compute intermediate offset vectors for curved road sections
+        offset_vectors = self._compute_offset_vectors()
+
+        # compute the middle of lane (line of geometries without offset)
+        middle = [geo.start_point for geo in self.geometries] + [self.geometries[-1].end_point]
+
+        # shift the middle by the lane offset
+        # assumption: all lane offsets of a road are the same
+        lane_offset = self.geometries[0].offset
+        middle = [add_vector(middle[i], scale_vector(offset_vectors[i][0], lane_offset))
+                    for i in range(len(middle))]
+
+        all_polygons: Dict[int, List[Tuple[float, float]]] = {}
+
+        # compute the inner / outer bounds for each lane and create the lane polygon from it
+        for lane_id in self.left_ids + self.right_ids:
+            vec_id = 1 if lane_id < 0 else 0
+            uniform_lane_offsets = [pair[vec_id] for pair in offset_vectors]
+
+            inner_scale = self.lane_offsets[lane_id] - self.lane_widths[lane_id]
+            outer_scale = self.lane_offsets[lane_id]
+
+            inner_offsets = [scale_vector(vec, inner_scale) for vec in uniform_lane_offsets]
+            outer_offsets = [scale_vector(vec, outer_scale) for vec in uniform_lane_offsets]
+
+            inner_bound = [add_vector(middle[i], inner_offsets[i]) for i in range(len(middle))]
+            outer_bound = [add_vector(middle[i], outer_offsets[i]) for i in range(len(middle))]
+
+            poly_points = inner_bound + list(reversed(outer_bound))
+            all_polygons[lane_id] = poly_points
+
+        return all_polygons
+
+    def _compute_offset_vectors(self) -> List[Tuple[Tuple[float, float], Tuple[float, float]]]:
+        offsets_vectors = []
+        if len(self.geometries) > 1:
+            geo_pairs = zip(self.geometries[:-1], self.geometries[1:])
+            offsets_vectors = [Road._compute_intermediate_offset_vectors(p[0], p[1])
+                               for p in geo_pairs]
+
+        # compute offset vectors for first / last geometry
+        start_0, end_0 = self.geometries[0].start_point, self.geometries[0].end_point
+        start_n, end_n = self.geometries[-1].start_point, self.geometries[-1].end_point
+        offsets_start = (orth_offset_left(start_0, end_0, 1),
+                         orth_offset_right(start_0, end_0, 1))
+        offsets_end = (orth_offset_left(start_n, end_n, 1),
+                       orth_offset_right(start_n, end_n, 1))
+        offsets_vectors.insert(0, offsets_start)
+        offsets_vectors.append(offsets_end)
+
+        return offsets_vectors
+
     @staticmethod
-    def _circular_interpolation(start: Tuple[float, float], end: Tuple[float, float],
-                                arc_radius: float) -> List[Tuple[float, float]]:
+    def _compute_intermediate_offset_vectors(geo_0: Geometry, geo_1: Geometry) \
+            -> Tuple[Tuple[float, float], Tuple[float, float]]:
 
-        step_size = 2.0
-        sign = -1 if arc_radius < 0 else 1
-        arc_radius = abs(arc_radius)
+        # directions of vectors, geo_0 pointing forward, geo_1 pointing backward
+        dir_0 = vec2dir(geo_0.start_point, geo_0.end_point)
+        dir_1 = vec2dir(geo_1.end_point, geo_0.end_point)
 
-        # determine the circular angle of the arc
-        angle = asin((euclid_dist(start, end) / 2) / arc_radius) * 2
-        # assert(arc_radius > euclid_dist(start, end) / 2)
+        # halving angle between vectors for right / left side
+        diff_angle = (dir_1 - dir_0) % (2 * pi)
+        offset_left = diff_angle / 2
 
-        # construct the mid-perpendicular of |start, end| to determine the circle's center
-        conn_middle = ((start[0] + end[0]) / 2, (start[1] + end[1]) / 2)
-        center_offset = sqrt(pow(arc_radius, 2) - pow(euclid_dist(start, end) / 2, 2))
-        mid_perpend = rotate_vector(points_to_vector(start, end), pi/2 * sign)
-        circle_center = add_vector(conn_middle, scale_vector(mid_perpend, center_offset))
+        vec_left = unit_vector(dir_0 + offset_left)
+        vec_right = sub_vector((0, 0), vec_left)
 
-        # partition the arc into steps (-> interpol. geometries)
-        arc_circumference = arc_radius * angle # (r * 2 pi) * (angle / 2 pi)
-        num_steps = int(arc_circumference / step_size) + 1 # each step < step size
-
-        # compute the interpolated points on the circle arc
-        vec_to_p = points_to_vector(circle_center, start)
-        rot_angles = [angle * (i / num_steps) for i in range(num_steps+1)]
-        points = [add_vector(circle_center, rotate_vector(vec_to_p, rot * sign))
-                    for rot in rot_angles]
-
-        return points
-
-    @staticmethod
-    def _calculate_end_point(start_point: Tuple[float, float], angle: float,
-                             length: float, radius: float) -> Tuple[float, float]:
-
-        # simple case for no arc
-        if radius == 0.0:
-            diff_vec = scale_vector(unit_vector(angle), length)
-            return add_vector(start_point, diff_vec)
-
-        # determine the length of |start, end|
-        alpha = length / radius
-        diff_vec = scale_vector(unit_vector(alpha), radius)
-        dist_start_end = euclid_dist(diff_vec, (radius, 0))
-
-        # determine the direction of |start, end| and apply it
-        dir_start_end = unit_vector(alpha / 2 + angle)
-        # TODO: figure out why the direction is actually 'alpha / 2 + angle'
-
-        # apply vector |start --> end| to the start point to retrieve the end point
-        diff_vec = scale_vector(dir_start_end, dist_start_end)
-        return add_vector(start_point, diff_vec)
+        return vec_left, vec_right
 
 
 @dataclass
@@ -437,7 +457,6 @@ class Junction:
         for lane_link in lane_links:
             from_lane, to_lane = int(lane_link.get('from')), int(lane_link.get('to'))
 
-            # TODO: is pos = 0 appropriate for multi-lane navigation? how are roads modeled?
             key_from = create_key(connection.incoming_road, 0, from_lane)
             key_to = create_key(connection.connecting_road, 0, to_lane)
 
@@ -452,13 +471,37 @@ class XodrMap:
     roads_by_id: Dict[int, Road]
     junctions_by_id: Dict[int, Junction]
     mapping: Dict[str, int]
-    matrix: np.ndarray = None
+    nav_graph: np.ndarray = None
 
     def __post_init__(self):
         if self.roads_by_id is None:
             self.roads_by_id = {}
-        if self.matrix is None:
-            self.matrix = self._create_links()
+        if self.nav_graph is None:
+            self.nav_graph = self._create_links()
+
+    def find_sections(self, pos: Tuple[float, float]) -> List[Tuple[int, bool, Road]]:
+        """Find the neighboring road sections related to the given position on the map"""
+        sections = []
+
+        for road in self.roads_by_id.values():
+
+            if not road.geometries:
+                print('road without geometries, this should never happen!')
+                continue
+
+            # determine whether the road contains the point
+            # and if so, get the lane id and side of road
+            point = Point(pos)
+
+            for lane_id in road.lane_polygons:
+                poly = Polygon(road.lane_polygons[lane_id])
+
+                if poly.contains(point):
+                    is_right_road_side = lane_id < 0
+                    sections.append((lane_id, is_right_road_side, road))
+                    break # polygons don't intersect -> only 1 hit per road
+
+        return sections
 
     def _create_links(self):
         """Link geometry, predecessor and successor in the weighted matrix."""
@@ -549,17 +592,9 @@ class XodrMap:
 
         diff = len(conn_lane_link_ids) - len(lane_link_ids)
         if diff > 0:
-            # if len(lane_link_ids) == 0:
-            #     print(f'link {road_id} to {link.road_id} has no
-            #            driving lanes. should never happen')
-            #     print(f'{lane_link_ids}, {conn_lane_link_ids}')
             fill_ids = [lane_link_ids[-1] for _ in range(abs(diff))]
             lane_link_ids.extend(fill_ids)
         elif diff < 0:
-            # if len(conn_lane_link_ids) == 0:
-            #     print(f'link {road_id} to {link.road_id} has
-            #               no driving lanes. should never happen')
-            #     print(f'{lane_link_ids}, {conn_lane_link_ids}')
             fill_ids = [conn_lane_link_ids[-1] for _ in range(abs(diff))]
             conn_lane_link_ids.extend(fill_ids)
 
@@ -614,6 +649,7 @@ class XODRConverter:
 
         lanelets = {r.road_id: r for r in lanelets}
         junctions = {j.junction_id:j for j in junctions}
+
         return XodrMap(lanelets, junctions, mapping)
 
     @staticmethod
@@ -630,5 +666,10 @@ class XODRConverter:
                 mapping[create_key(road.road_id, 0, link)] = counter
                 mapping[create_key(road.road_id, 1, link)] = counter + 1
                 counter += 2
+
+        # insert generic start / end node for navigation
+        num_nodes = len(mapping)
+        mapping['-1_0_0'] = num_nodes
+        mapping['-2_0_0'] = num_nodes + 1
 
         return mapping

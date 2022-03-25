@@ -62,7 +62,7 @@ ENV EGO_VEHICLE_SENSORS=/config/sensors.json
 
 COPY ./rosbridge_with_rviz_scenario.launch /rosbridge_with_rviz_scenario.launch
 COPY ./ros_entrypoint.sh /ros_entrypoint.sh
-ADD ./scripts /scripts
+ADD ./load_env_config.py /scripts/load_env_config.py
 
 ENTRYPOINT [ "/ros_entrypoint.sh" ]
 CMD ["/rosbridge_with_rviz_scenario.launch", "--wait"]

@@ -9,7 +9,7 @@ from time import sleep
 import rospy
 
 from nav_srvs.srv import NavigationRequest, NavigationRequestResponse
-from global_planner.global_route_planner import GlobalPlanner
+from global_planner.route_planner import RoutePlanner
 from global_planner.xodr_converter import XODRConverter
 
 
@@ -39,22 +39,24 @@ class GlobalPlannerNode:
         rospy.spin()
 
     def _handle_navigation_request(self, nav_request):
+        # pylint: disable=broad-except
         try:
             start_pos = (nav_request.start_x, nav_request.start_y)
             end_pos = (nav_request.end_x, nav_request.end_y)
             orient_rad = nav_request.orientation_rad
             print(f'creating route from {start_pos} to {end_pos}')
-        except:
-            print('malformed request!')
+        except Exception as err:
+            print(f'malformed request! Error {err}')
             return NavigationRequestResponse(waypoints_json='[]', success=False)
 
         if not os.path.exists(self.map_path) or not os.path.isfile(self.map_path):
-            print('XODR not initialized!')
+            print('XODR not initialized! Error')
             return NavigationRequestResponse(waypoints_json='[]', success=False)
 
         try:
+            print(f'Start-Pos: {start_pos}  End-Pos: {end_pos}')
             xodr_map = XODRConverter.read_xodr(self.map_path)
-            global_route = GlobalPlanner.generate_waypoints(
+            global_route = RoutePlanner.generate_waypoints(
                 start_pos, end_pos, orient_rad, xodr_map)
             print("Route generated!")
 
@@ -64,16 +66,12 @@ class GlobalPlannerNode:
                               'legal_speed': wp.legal_speed,
                               'dist_next_tl': wp.dist_next_tl,
                               'end_lane_m': wp.end_lane_m} for wp in global_route]
-        except:
-            print('request failed!')
+        except Exception as err:
+            print(f'request failed! Error {err}')
             return NavigationRequestResponse(waypoints_json='[]', success=False)
 
-        response = NavigationRequestResponse(
-            waypoints_json=json.dumps(route_as_json),
-            success=True
-        )
-
-        return response
+        wps_json = json.dumps(route_as_json)
+        return NavigationRequestResponse(waypoints_json=wps_json, success=True)
 
 
 def main():
