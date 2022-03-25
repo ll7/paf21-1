@@ -161,8 +161,8 @@ class RouteAnnotation:
                 drive_reverse = is_road_end
                 norm_lane_id = abs(lane_id)
                 poss_lanes = RouteAnnotation._get_poss_lanes(road, drive_reverse)
-                # TODO: use lane offset instead of scaled lane widths
-                lane_offset = road.lane_widths[lane_id] * (norm_lane_id - 0.5)
+                lane_offset = road.lane_offsets[lane_id] - road.lane_widths[lane_id]/2
+                # lane_offset = road.lane_widths[lane_id] * (norm_lane_id - 0.5)
                 road_bounds = bounding_box(road.road_start, road.road_end, lane_offset)
                 end_pos = road_bounds[1] if drive_reverse else road_bounds[3]
                 section = PathSection(road_id, norm_lane_id, drive_reverse, poss_lanes, end_pos)

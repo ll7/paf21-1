@@ -4,13 +4,13 @@
 import os
 import json
 from dataclasses import dataclass
+from time import sleep
 
 import rospy
 
 from nav_srvs.srv import NavigationRequest, NavigationRequestResponse
 from global_planner.global_route_planner import GlobalPlanner
 from global_planner.xodr_converter import XODRConverter
-from time import sleep
 
 
 @dataclass
@@ -65,7 +65,7 @@ class GlobalPlannerNode:
                               'dist_next_tl': wp.dist_next_tl,
                               'end_lane_m': wp.end_lane_m} for wp in global_route]
         except:
-            print(f'request failed!')
+            print('request failed!')
             return NavigationRequestResponse(waypoints_json='[]', success=False)
 
         response = NavigationRequestResponse(

@@ -9,9 +9,8 @@ RUN apt-get update && apt-get install -y \
     rm -rf /var/lib/apt/lists/*
 
 # copy / download source code
-WORKDIR /app/src/competition_manager
-ARG CM_GITHUB_URL=https://github.com/ll7/paf_competition_manager
-RUN git clone $CM_GITHUB_URL .
+WORKDIR /app/src/competition_manager/src
+ADD simple_competition_manager.py ./simple_competition_manager.py
 
 # register a startup procedure to launch the ROS node
 ADD ./ros_entrypoint.sh /ros_entrypoint.sh

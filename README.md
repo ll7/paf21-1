@@ -59,12 +59,3 @@ See the [wiki](https://github.com/ll7/paf21-1/wiki/Architecture-Models) for furt
 The scenarios section contains a set of scenario definitions. It's supposed the be self-contained,
 meaning that each scenario can be run in an infrastructure-as-code like manner. This allows to run
 the exact same scenario over and over again on various PCs.
-
-### Imgs
-Contains all images and models we used to develop  
-
-### launch.sh 
-Executable for build and run our project. 
-
-### shutdown.sh
-Executable to shut down all docker container and save all logs. 

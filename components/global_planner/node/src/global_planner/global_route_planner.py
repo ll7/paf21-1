@@ -1,6 +1,6 @@
 """A global route planner based on map and hmi data."""
 
-from math import atan2, dist as euclid_dist, pi, radians, sqrt, exp
+from math import atan2, dist as euclid_dist, pi, sqrt, exp
 from typing import Tuple, List, Dict
 
 import numpy as np
@@ -8,9 +8,9 @@ from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
 from global_planner.xodr_converter import XodrMap, Geometry, Road, create_key, split_key
-from global_planner.geometry import add_vector, bounding_box, points_to_vector, rotate_vector, \
-                                    orth_offset_right, orth_offset_left, norm_angle, \
-                                    scale_vector, sub_vector, unit_vector, vec2dir, vector_len
+from global_planner.geometry import add_vector, points_to_vector, rotate_vector, orth_offset_right,\
+                                    orth_offset_left, norm_angle, scale_vector, sub_vector, \
+                                    unit_vector, vec2dir, vector_len
 from global_planner.route_interpolation import RouteInterpolation
 from global_planner.route_annotation import AnnRouteWaypoint, RouteAnnotation
 
@@ -129,7 +129,7 @@ class RoadDetection:
 
 
             inner_scale = road.lane_offsets[lane_id] - road.lane_widths[lane_id]
-            outer_scale = road.lane_offsets[lane_id] 
+            outer_scale = road.lane_offsets[lane_id]
 
             inner_offsets = [scale_vector(vec, inner_scale) for vec in uniform_lane_offsets]
             outer_offsets = [scale_vector(vec, outer_scale) for vec in uniform_lane_offsets]
@@ -271,9 +271,9 @@ class GlobalPlanner:
     def generate_waypoints(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
                            orient_rad: float, xodr_map: XodrMap) -> List[AnnRouteWaypoint]:
         """Generate route waypoints for the given start / end positions using the map"""
-        print ("Startpos:", start_pos, "endpos:", end_pos)
+        print(f'Start-Pos: {start_pos}  End-Pos: {end_pos}')
         path = GlobalPlanner.get_shortest_path(start_pos, end_pos, orient_rad, xodr_map)
-        print(f'planned path:', path)
+        print(f'planned path: {path}')
 
         if len(path) < 1:
             road_start = RoadDetection.find_sections(start_pos, xodr_map)
@@ -282,18 +282,30 @@ class GlobalPlanner:
                 Starts with {road_start} and ends with {road_end}.')
 
         route_metadata = RouteAnnotation.preprocess_route_metadata(start_pos, path, xodr_map)
-        route_waypoints = GlobalPlanner._preplan_route(start_pos, end_pos, path, orient_rad, xodr_map)
+        route_waypoints = GlobalPlanner._preplan_route(
+            start_pos, end_pos, path, orient_rad, xodr_map)
         print("wps:", route_waypoints)
 
         interpol_route = RouteInterpolation.interpolate_route(route_waypoints, interval_m=2.0)
-        # print("interpol_route:", interpol_route)
+        print("wps_interpol:", interpol_route)
         interpol_route = GlobalPlanner._filter_waypoints(interpol_route)
-        print("new wps:", interpol_route)
+        print("wps_filtered:", interpol_route)
 
         ann_route = RouteAnnotation.annotate_waypoints(interpol_route, route_metadata)
         ann_route = GlobalPlanner.advanced_speed(ann_route)
-
+        print(print("route_annotated", ann_route))
         return ann_route
+
+    @staticmethod
+    def get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
+                          orient_rad: float, xodr_map: XodrMap) -> List[str]:
+        """Calculate the shortest path with a given xodr map and return
+        a list of keys (road_id, direction, lane_id)."""
+        AdjMatrixPrep.extend_matrix(start_pos, end_pos, orient_rad, xodr_map)
+        start_id, end_id = xodr_map.mapping['-1_0_0'], xodr_map.mapping['-2_0_0']
+        path_ids = ShortestPath.shortest_path(start_id, end_id, xodr_map.matrix)
+        key_list = list(xodr_map.mapping.keys())
+        return [key_list[p_id] for p_id in path_ids]
 
     @staticmethod
     def _filter_waypoints(route_input):
@@ -316,10 +328,10 @@ class GlobalPlanner:
     @staticmethod
     def _filter_path(path: List[str]) -> List[str]:
         filtered_path = []
-        last_road, last_pos, last_lane = (-1, -1, -1)
-        second_last_road, second_last_pos, second_last_lane = (-1, -1, -1)
-        for index, sec in enumerate(path):
-            road, pos, lane = split_key(sec)
+        last_road, last_pos = (-1, -1)
+        second_last_road, second_last_pos = (-1, -1)
+        for sec in path:
+            road, pos, _ = split_key(sec)
             if road != last_road or pos != last_pos or \
                     road != second_last_road or pos != second_last_pos:
                 filtered_path.append(sec)
@@ -327,13 +339,14 @@ class GlobalPlanner:
                 filtered_path.pop()
                 filtered_path.append(sec)
 
-            second_last_road, second_last_pos, second_last_lane = last_road, last_pos, last_lane
-            last_road, last_pos, last_lane = road, pos, lane
+            second_last_road, second_last_pos = last_road, last_pos
+            last_road, last_pos = road, pos
         return filtered_path
 
     @staticmethod
     def _preplan_route(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
-                       path: List[str], orient_rad: float, xodr_map: XodrMap) -> List[Tuple[float, float]]:
+                       path: List[str], orient_rad: float,
+                       xodr_map: XodrMap) -> List[Tuple[float, float]]:
         route_waypoints = []
         path = GlobalPlanner._filter_path(path)
         sections = [(path[i], path[i+1]) for i in range(len(path)-1)]
@@ -344,27 +357,19 @@ class GlobalPlanner:
 
             same_road = road_id1 == road_id2
             drive_road_from_start_to_end = forward_id1 != forward_id2
+            same_lane = lane_id1 == lane_id2
             is_initial_section = road_id1 == -1
             is_final_section = road_id2 == -2
 
-            if same_road:
+            if same_road and drive_road_from_start_to_end and same_lane:
                 road_1 = xodr_map.roads_by_id[road_id1]
                 interm_wps_1 = GlobalPlanner._get_intermed_section_waypoints(
                     road_1, lane_id1, forward_id1)
                 interpolated_wps = []
                 for i in range(len(interm_wps_1[:-1])):
                     interpolated_wps.extend(RouteInterpolation.linear_interpolation(
-                        interm_wps_1[i], interm_wps_1[i + 1], interval_m=1.0))
-                if drive_road_from_start_to_end:
-                    route_waypoints += interpolated_wps
-                else:
-                    pass
-                    # lane change
-                    # speed = max([sign.legal_speed for sign in road_1.speed_signs])
-                    # interpolated_wps = GlobalPlanner._lane_change(
-                    #     interpolated_wps, interpolated_wps[0], speed, slope_m=5)
-                    # route_waypoints.extend(interpolated_wps)
-                    # # route_waypoints.append(interpolated_wps[0])
+                        interm_wps_1[i], interm_wps_1[i + 1], interval_m=2.0))
+                route_waypoints.extend(interpolated_wps)
 
             elif is_initial_section:
                 route_waypoints.append(start_pos)
@@ -372,16 +377,27 @@ class GlobalPlanner:
                 displaced_points = GlobalPlanner._displace_points_start(
                     road, sec_2, start_pos, orient_rad)
                 route_waypoints.extend(displaced_points)
-                continue
 
             elif is_final_section:
-                # TODO
-                # road = xodr_map.roads_by_id[road_id1]
-                # displaced_points = GlobalPlanner._displace_points_end(
-                #     road, sec_1, end_pos, orient_rad)
-                # route_waypoints.extend(displaced_points)
+                road = xodr_map.roads_by_id[road_id1]
+                displaced_points = GlobalPlanner._displace_points_end(road, sec_1, end_pos)
+                route_waypoints.extend(displaced_points)
                 route_waypoints.append(end_pos)
-                continue
+
+            else:
+                # lane change
+                road_1 = xodr_map.roads_by_id[road_id1]
+                interm_wps_1 = GlobalPlanner._get_intermed_section_waypoints(
+                    road_1, lane_id1, not forward_id1)
+                road_2 = xodr_map.roads_by_id[road_id2]
+                interm_wps_2 = GlobalPlanner._get_intermed_section_waypoints(
+                    road_2, lane_id2, forward_id2)
+                if euclid_dist(interm_wps_1[-1], interm_wps_2[0]) < 0.5:
+                    continue
+                speed_signs = [sign.legal_speed for sign in road_1.speed_signs]
+                displaced_points = GlobalPlanner._lane_change(interm_wps_1, interm_wps_2[0],
+                                                              speed_signs, slope_m=8.0)
+                route_waypoints[-len(displaced_points):] = displaced_points
         return route_waypoints
 
     @staticmethod
@@ -398,29 +414,16 @@ class GlobalPlanner:
         return list(reversed(road_waypoints)) if reverse else road_waypoints
 
     @staticmethod
-    def get_shortest_path(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
-                          orient_rad: float, xodr_map: XodrMap) -> List[str]:
-        """Calculate the shortest path with a given xodr map and return
-        a list of keys (road_id, direction, lane_id)."""
-        AdjMatrixPrep.extend_matrix(start_pos, end_pos, orient_rad, xodr_map)
-        start_id, end_id = xodr_map.mapping['-1_0_0'], xodr_map.mapping['-2_0_0']
-        path_ids = ShortestPath.shortest_path(start_id, end_id, xodr_map.matrix)
-        key_list = list(xodr_map.mapping.keys())
-        return [key_list[p_id] for p_id in path_ids]
-
-    @staticmethod
     def _displace_points_start(road: Road, sec: str, pos: Tuple[float, float],
                                orient_rad: float) -> List[Tuple[float, float]]:
         """Determine the waypoints from the spawn position onto the planned route"""
         _, forward, lane_id = split_key(sec)
         reverse = not forward
         waypoints_whole_lane = GlobalPlanner._get_intermed_section_waypoints(road, lane_id, reverse)
-        print('waypoints_whole_lane', waypoints_whole_lane)
 
         waypoints = []
-        for wp1, wp2 in zip(waypoints_whole_lane[:-1], waypoints_whole_lane[1:]): 
+        for wp1, wp2 in zip(waypoints_whole_lane[:-1], waypoints_whole_lane[1:]):
             waypoints.extend(RouteInterpolation.linear_interpolation(wp1, wp2, interval_m=2.0))
-        print('waypoints_interpol', waypoints)
 
         # discard waypoints behind the car
         reachable_index = -1
@@ -437,28 +440,24 @@ class GlobalPlanner:
         return waypoints[reachable_index:] if reachable_index > -1 else []
 
     @staticmethod
-    def _displace_points_end(road: Road, sec: str, pos: Tuple[float, float],
-                             orient_rad: float) -> List[Tuple[float, float]]:
+    def _displace_points_end(road: Road, sec: str,
+                             pos: Tuple[float, float]) -> List[Tuple[float, float]]:
         """Determine the waypoints from the spawn position onto the planned route"""
         _, forward, lane_id = split_key(sec)
-        reverse = not forward
-        waypoints_whole_lane = GlobalPlanner._get_intermed_section_waypoints(road, lane_id, reverse)
-        print('waypoints_whole_lane', waypoints_whole_lane)
+        waypoints_whole_lane = GlobalPlanner._get_intermed_section_waypoints(road, lane_id, forward)
 
         waypoints = []
         for wp1, wp2 in zip(waypoints_whole_lane[:-1], waypoints_whole_lane[1:]):
             waypoints.extend(RouteInterpolation.linear_interpolation(wp1, wp2, interval_m=2.0))
-        print('waypoints_interpol', waypoints)
 
-        # discard waypoints behind the car
+        # discard waypoints before the car
         reachable_index = -1
-        threshold = pi/4
+        threshold = pi/2
         for index, waypoint in enumerate(waypoints):
-            vec = points_to_vector(pos, waypoint)
-            vec_dir = atan2(vec[1], vec[0])
-            norm_diff = norm_angle(vec_dir - orient_rad)
+            vec_dir = vec2dir(pos, waypoint)
+            norm_diff = norm_angle(vec_dir)
             if abs(norm_diff) <= threshold:
-                reachable_index = index
+                reachable_index = index - 1
                 break
 
         print("reachable_index", reachable_index)
@@ -466,16 +465,23 @@ class GlobalPlanner:
 
     @staticmethod
     def _lane_change(points: List[Tuple[float, float]], ref_point: Tuple[float, float],
-                     speed: float, slope_m=3.0) -> List[Tuple[float, float]]:
-        """Tries change the lane smooth"""
+                     speed_signs: List[float], slope_m=3.0) -> List[Tuple[float, float]]:
+        interpolated_wps = []
+        for i in range(len(points[:-1])):
+            interpolated_wps.extend(RouteInterpolation.linear_interpolation(
+                points[i], points[i + 1], interval_m=2.0))
+        interpolated_wps.append(points[-1])
+        speed = max(speed_signs) if speed_signs else 50
+
         time_to_collision = 0.3
-        dist_safe = max(speed * time_to_collision, 0)
+        dist_safe = max(speed * time_to_collision, 5.0)
         street_width_vec = sub_vector(ref_point, points[-1])
         displaced_points = []
         for point in points:
             displaced_point = GlobalPlanner._sigmoid_displace(ref_point, point, street_width_vec,
                                                               slope_m, dist_safe)
             displaced_points.append(displaced_point)
+
         return displaced_points
 
     @staticmethod
@@ -484,38 +490,21 @@ class GlobalPlanner:
                           dist_safe: float) -> Tuple[float, float]:
         distance_to_ref = euclid_dist(point, ref_point)
         street_width = vector_len(street_width_vec)
-        rel_dist = -sqrt(distance_to_ref**2 - street_width ** 2)
+        try:
+            rel_dist = -sqrt(distance_to_ref**2 - street_width ** 2)
+        except ValueError:
+            print('Value Error')
+            rel_dist = street_width
         x_1 = (1 / slope_m) * (rel_dist + dist_safe)
         deviation = (street_width / (1 + exp(-x_1)))
         return add_vector(point, scale_vector(street_width_vec, deviation))
 
     @staticmethod
     def advanced_speed(anno_waypoints: List[AnnRouteWaypoint]):
-        """Set legal speed a bit earlier that the car have time to brake"""
-        # this logic might be a bit shaky -> disable if it causes trouble
-        brake_dists: Dict[str, int] = {
-            "90_60": 20, "90_50": 25, "90_30": 30,
-            "60_30": 12, "50_30": 7}
-
-        last_speed = -1
-        interpolate_dist = 2.0
-        annotated_waypoints = anno_waypoints
-
-        for index, annotated_waypoint in enumerate(annotated_waypoints):
-            key = f"{int(last_speed)}_{int(annotated_waypoint.legal_speed)}"
-            if key in brake_dists:
-                print("change speed")
-                dist_back = brake_dists[key]
-                target_speed = annotated_waypoint.legal_speed
-                for i in range(int(dist_back/interpolate_dist)):
-                    if index - i > 0:
-                        annotated_waypoints[index-i].legal_speed = target_speed
-            last_speed = annotated_waypoint.legal_speed
-
-        """Set unlimited speed if more then 3 lanes"""
-        for index, annotated_waypoint in enumerate(annotated_waypoints):
+        """Set higher speed if more then 3 lanes and no limit is detected"""
+        for index, annotated_waypoint in enumerate(anno_waypoints):
             if len(annotated_waypoint.possible_lanes) > 3 and annotated_waypoint.legal_speed == 50:
                 # TODO find out how fast we are allowed to drive on a highway
-                annotated_waypoints[index].legal_speed = 50
+                anno_waypoints[index].legal_speed = 70
 
-        return annotated_waypoints
+        return anno_waypoints

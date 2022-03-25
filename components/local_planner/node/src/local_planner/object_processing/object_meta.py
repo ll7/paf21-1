@@ -4,8 +4,6 @@ from dataclasses import dataclass
 from typing import List, Tuple
 from math import dist
 
-from local_planner.object_processing.kalman_filter import KalmanFilter
-
 
 @dataclass
 class ObjectMeta:
@@ -13,15 +11,17 @@ class ObjectMeta:
     identifier: int
     obj_class: str
     trajectory: List[Tuple[float, float]]
-    velocity: float = 900.0
-    kalman_filter: KalmanFilter = KalmanFilter()
-    max_velocity_change_rate = 2.0
+    velocity: float = 0.0
+    max_vel_change_rate = 2.0
+    max_trajectory_entries: int = 10
 
-    def update_object_meta(self, position: Tuple[float, float], delta_time: float):
+    def update_object_meta(self, point: Tuple[float, float], delta_time: float):
         """Update the object meta with a new position"""
         last_position = self.trajectory[-1]
-        self.trajectory.append(position)
+        self.trajectory.append(point)
         if len(self.trajectory) > 10:
             self.trajectory = self.trajectory[-10:]
-        self.velocity = min(dist(position, last_position) / delta_time, self.velocity + self.max_velocity_change_rate)
-        self.kalman_filter.correct(position)
+
+        velocity = dist(point, last_position) / delta_time
+        self.velocity = min(velocity, self.velocity + self.max_vel_change_rate)
+

@@ -2,8 +2,6 @@
 
 import json
 from typing import Tuple, List
-from math import atan2
-import numpy as np
 
 from ackermann_msgs.msg import AckermannDrive
 from std_msgs.msg import String as StringMsg, Float32 as FloatMsg
@@ -14,6 +12,7 @@ from sensor_msgs.msg import Imu as ImuMsg
 from local_planner.state_machine import TrafficLightInfo, TrafficLightPhase
 from local_planner.vehicle_control import DrivingSignal
 from local_planner.object_processing import ObjectMeta
+from local_planner.core.geometry import vector_to_dir, vector_len
 
 
 class RosMessagesAdapter:
@@ -40,11 +39,11 @@ class RosMessagesAdapter:
         return waypoints
 
     @staticmethod
-    def message_to_vehicle_velocity_and_timestamp(msg: OdometryMsg):
+    def message_to_vehicle_velocity_and_timestamp(msg: OdometryMsg) -> Tuple[float, float]:
         """converts the odometry message to velocity"""
         time_stamp = msg.header.stamp.secs + msg.header.stamp.nsecs * 1e-9
-        array = [msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z]
-        return np.linalg.norm(array), time_stamp
+        # the twist message expresses the velocity in free space
+        return vector_len((msg.twist.twist.linear.x, msg.twist.twist.linear.y)), time_stamp
 
     @staticmethod
     def message_to_target_velocity(msg: FloatMsg) -> float:
@@ -55,6 +54,7 @@ class RosMessagesAdapter:
     def message_to_vehicle_position(msg: OdometryMsg) -> Tuple[float, float]:
         """Convert a ROS message into the vehicle position"""
         pos = msg.pose.pose.position
+        print(f'Msg.Pos: {pos}')
         return pos.x, pos.y
 
     @staticmethod
@@ -63,8 +63,7 @@ class RosMessagesAdapter:
         quaternion = msg.orientation
         q_x = 1.0 - 2.0 * (quaternion.y * quaternion.y + quaternion.z * quaternion.z)
         q_y = 2.0 * (quaternion.w * quaternion.z + quaternion.x * quaternion.y)
-        orientation = atan2(q_y, q_x)
-        return orientation
+        return vector_to_dir((q_x, q_y))
 
     @staticmethod
     def signal_to_message(signal: DrivingSignal) -> AckermannDrive:

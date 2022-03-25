@@ -1,13 +1,14 @@
 """A route planner based on map and sensor data"""
 
-from math import pi
+from math import pi, dist
 from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
 
 from local_planner.core import Vehicle, AnnRouteWaypoint
 from local_planner.vehicle_control import DrivingController
-from local_planner.core.geometry import angle_between_vectors, points_to_vector
-from local_planner.state_machine import SpeedObservation, TrafficLightInfo, TrafficLightPhase#, ManeuverObservation
+from local_planner.core.geometry import angle_between_vectors, points_to_vector, vector_len
+from local_planner.state_machine import SpeedObservation, TrafficLightInfo, \
+                                        TrafficLightPhase, ManeuverObservation
 from local_planner.vehicle_control import CurveDetection, CurveObservation
 from local_planner.object_processing import ObjectHandler
 
@@ -64,7 +65,7 @@ class TrajectoryPlanner:
             return self.global_route_ann
 
         if self.is_last_wp:
-            return self.global_route_ann[-1:]
+            return []
 
         bound = min(self.prev_wp_id + self.length_route, len(self.global_route))
         return self.global_route_ann[self.prev_wp_id:bound]
@@ -77,7 +78,7 @@ class TrajectoryPlanner:
     @property
     def is_last_wp(self) -> bool:
         """Indicates whether the current point is the last point."""
-        return self.next_wp_id == len(self.global_route_ann)
+        return self.next_wp_id == len(self.global_route_ann) - 1
 
     def update_global_route(self, ann_waypoints: List[AnnRouteWaypoint]):
         """Update the global route to follow"""
@@ -105,25 +106,28 @@ class TrajectoryPlanner:
             return route
 
         if self.is_last_wp:
-            return route[-1:]
+            return [route[-1]]
         # delete route waypoints behind car
-        #if len(self.current_route) > 0:
+        # if len(self.current_route) > 0:
         #    route = route[:self.prev_wp_id] + self.current_route \
         #            + route[self.prev_wp_id + self.length_route:]
         self.check_passed_waypoints(route)
 
         bound = min(self.prev_wp_id + self.length_route, len(route))
         temp_route = route[self.prev_wp_id:bound]
-        #temp_route = self.check_overtake(temp_route)
+        # temp_route = self.check_overtake(temp_route)
         self.current_route = temp_route
         return temp_route
 
     def check_passed_waypoints(self, route):
+        """Set the next waypoint index for the not yet passed waypoints"""
         while True:
             prev_wp = route[self.prev_wp_id]
             next_wp = route[self.next_wp_id]
             vec_route = points_to_vector(prev_wp, next_wp)
             vec_car = points_to_vector(self.vehicle.pos, next_wp)
+            if vector_len(vec_car) == 0 or vector_len(vec_route) == 0:
+                break
             angle = angle_between_vectors(vec_route, vec_car)
 
             is_wp_in_front_of_car = abs(angle) < 0.5 * pi
@@ -135,6 +139,7 @@ class TrajectoryPlanner:
             self.prev_wp_id += 1
 
     def check_overtake(self, route):
+        """Checking the route for an overtaking maneuver."""
         curve_obs = self.curve_detection.find_next_curve(self.current_route)
         dist_next_curve = curve_obs.dist_until_curve
         if dist_next_curve > 50 and self.latest_speed_observation.dist_next_traffic_light_m > 50:
@@ -158,8 +163,8 @@ class TrajectoryPlanner:
             speed_obs.tl_phase = self.tld_info.phase
             speed_obs.dist_next_traffic_light_m = self.tld_info.distance
 
-        if len(self.cached_local_ann_route) > 0:
-            speed_obs.detected_speed_limit = self.cached_local_ann_route[0].legal_speed
+        speed_obs.detected_speed_limit = self.legal_speed_ahead() \
+            if len(self.cached_local_ann_route) > 0 else 0.0
 
         self._handle_american_traffic_lights(speed_obs, curve_obs)
 
@@ -192,15 +197,29 @@ class TrajectoryPlanner:
             if turn_at_crossroad:
                 self.end_curve_id = curve_obs.end_id
 
-    # @property
-    # def latest_maneuver_observation(self) -> ManeuverObservation:
-    #     """Retrieve the latest speed observation"""
-    #     if not self.current_route:
-    #         return ManeuverObservation()
-    #     man_obs = ManeuverObservation()
-    #     curve_obs = self.curve_detection.find_next_curve(self.current_route)
-    #     man_obs.dist_next_curve = curve_obs.dist_until_curve
-    #     return man_obs
+    def legal_speed_ahead(self) -> float:
+        """Calculate at witch point the car need to reduce speed to reach legal speed at the sign"""
+        legal_speed = self.cached_local_ann_route[0].legal_speed
+        index2 = 0
+        for index, ann_point in enumerate(self.cached_local_ann_route):
+            if ann_point.legal_speed < legal_speed:
+                index2 = index
+                break
+
+        if index2 == 0:
+            return legal_speed
+
+        cached_point = self.cached_local_ann_route[index2]
+        target_velocity = cached_point.legal_speed/3.6
+        accel_mps2 = -2.0
+        maneuver_time_s = (target_velocity - self.vehicle.velocity_mps) / accel_mps2
+        braking_dist = self.vehicle.velocity_mps * maneuver_time_s + \
+                       accel_mps2 * maneuver_time_s ** 2 / 2 + 1
+        # print(dist(cached_point.pos, self.cached_local_ann_route[0].pos), braking_dist, "ma:",
+        #       maneuver_time_s, "ta:", target_velocity, self.vehicle.velocity_mps)
+        if dist(cached_point.pos, self.cached_local_ann_route[0].pos) < braking_dist:
+            return target_velocity*3.6
+        return legal_speed
 
     def update_tld_info(self, tld_info: TrafficLightInfo):
         """Update the latest information on the traffic lights ahead"""
