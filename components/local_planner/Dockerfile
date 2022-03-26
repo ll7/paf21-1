@@ -18,6 +18,7 @@ RUN python -m pip install -r /app/requirements.txt
 
 # copy source code
 ADD ./node /app/src/local_planner
+ADD ./xodr /app/res/xodr
 
 # deploy the source code to ROS using catkin
 WORKDIR /app/catkin_ws/src

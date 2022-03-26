@@ -4,8 +4,9 @@ from math import dist as euclid_dist
 from dataclasses import dataclass
 from typing import Tuple, List, Callable
 
-from global_planner.geometry import bounding_box
-from global_planner.xodr_converter import XodrMap, Road, TrafficLight, TrafficSign, TrafficSignal
+from local_planner.core.geometry import bounding_box
+from local_planner.route_planning.xodr_converter import \
+    XodrMap, Road, TrafficLight, TrafficSign, TrafficSignal
 
 
 @dataclass

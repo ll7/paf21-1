@@ -1,5 +1,5 @@
 import numpy as np
-from global_planner.shortest_paths import shortest_path
+from local_planner.route_planning.shortest_paths import shortest_path
 
 
 def test_shortest_path():

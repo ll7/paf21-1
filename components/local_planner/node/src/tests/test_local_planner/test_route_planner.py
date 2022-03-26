@@ -1,8 +1,8 @@
 from math import dist
 
-from global_planner.route_annotation import RouteAnnotation
-from global_planner.route_planner import RoutePlanner
-from global_planner.xodr_converter import XODRConverter
+from local_planner.route_planning.route_annotation import RouteAnnotation
+from local_planner.route_planning.route_planner import RoutePlanner
+from local_planner.route_planning.xodr_converter import XODRConverter
 
 
 def load_town_01():

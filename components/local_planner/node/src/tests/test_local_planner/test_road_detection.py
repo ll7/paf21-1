@@ -1,4 +1,4 @@
-from global_planner.xodr_converter import XODRConverter
+from local_planner.route_planning.xodr_converter import XODRConverter
 
 
 def load_town_01():

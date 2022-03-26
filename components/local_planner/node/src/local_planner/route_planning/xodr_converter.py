@@ -13,10 +13,12 @@ from shapely.geometry.polygon import Polygon
 
 import numpy as np
 
-from global_planner.geometry import unit_vector, points_to_vector, vector_len, \
-                                    scale_vector, add_vector, vec2dir, sub_vector, \
-                                    orth_offset_left, orth_offset_right
-from global_planner.route_interpolation import circular_interpolation, end_of_circular_arc
+from local_planner.core.geometry import \
+    unit_vector, points_to_vector, vector_len, \
+    scale_vector, add_vector, vec2dir, sub_vector, \
+    orth_offset_left, orth_offset_right
+from local_planner.route_planning.route_interpolation import \
+    circular_interpolation, end_of_circular_arc
 
 
 def create_key(road: int, pos: int, link: int) -> str:

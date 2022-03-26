@@ -1,8 +1,0 @@
-float32 start_x
-float32 start_y
-float32 end_x
-float32 end_y
-float32 orientation_rad
----
-bool success
-string waypoints_json

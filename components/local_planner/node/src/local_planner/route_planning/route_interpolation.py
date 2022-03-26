@@ -3,7 +3,7 @@
 from math import dist as euclid_dist, floor, asin, sqrt, pi
 from typing import List, Tuple
 
-from global_planner.geometry import \
+from local_planner.core.geometry import \
     rotate_vector, points_to_vector, add_vector, scale_vector, unit_vector
 
 
