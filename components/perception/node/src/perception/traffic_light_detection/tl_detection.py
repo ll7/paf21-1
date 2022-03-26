@@ -48,8 +48,8 @@ class TrafficLightDetector:
             distances = TrafficLightDetector._object_distances(patches, depth_image)
             distances = np.array(distances)
 
-            print('Number of patches detected: ', len(patches), 
-                    ' ## Patches:''Patches:', patches, 
+            print('Number of patches detected: ', len(patches),
+                    ' ## Patches:''Patches:', patches,
                     ' ## distances:', distances)
 
             # determine the object sizes (as approx. area)
@@ -81,55 +81,51 @@ class TrafficLightDetector:
             # choose the best fit
             tl_info = results[np.argmax([r.accuracy for r in results])] if results else None
 
-            # TODO: think of delegating the choice to the Local Planner (-> more context info)
-            #       e.g. map data where the traffic lights are expected, etc.
-
         return tl_info
 
     @staticmethod
-    def _hot_zone_score(input: TrafficLightMetadata) -> float:
+    def _hot_zone_score(meta: TrafficLightMetadata) -> float:
         """Check whether the traffic lights are within the expected zones"""
-        img_height = input.sem_img.shape[0] #200
-        img_width = input.sem_img.shape[1] #300
-        coord_width, coord_height, _, _ = input.patch # related to the top-left corner
+        img_height = meta.sem_img.shape[0] #200
+        img_width = meta.sem_img.shape[1] #300
+        coord_width, coord_height, _, _ = meta.patch # related to the top-left corner
 
         # info: this score within [0, 1] prefers traffic lights in top and right regions
         top_th, right_th = 0.5, 0.5
-        upper_part_score = 0.5 if coord_height / img_height <= top_th else 1 - (coord_height / img_height)
-        right_part_score = 0.5 if coord_width / img_width >= right_th else coord_width / img_width
+        upper_part_score = 0.5 if coord_height / img_height <= top_th \
+            else 1 - (coord_height / img_height)
+        right_part_score = 0.5 if coord_width / img_width >= right_th \
+            else coord_width / img_width
 
         hot_zone_score = min(upper_part_score + right_part_score, 1.0)
-        
-        print('IMG Width and Height from top-left : ', coord_width, coord_height, ' ## score: ', hot_zone_score)
+
+        print('IMG Width and Height from top-left : ', coord_width, coord_height,
+              ' ## score: ', hot_zone_score)
         # possible improvement: train a filter using random forests / real adaboost
 
         return hot_zone_score
 
     @staticmethod
     def _eval_object_areas(distance: float, patch: List[int]) -> float:
+        # Size traffic light: 0.76 m x 0.25 m
+        # Perhaps, it is easier to use lookup. Judging by observations,
+        # the distance suitable to make plausible predictions is
+        # app. 30 meters, with pixels values of 1x4
 
+        # Lookup:
+        # 36,17 - 1x3
+        # 31,68 - 1x3
+        # 28,78 - 1x3
+        # 26,13 - 1x4
+        # 13,39 - 2x8
+        # 13,14 - 2x6
+        # 12,16 - 2x7
+        # 10,9 - 2x6
+        # 7,15 - 2x12
+        # 7,1 - 4x14
+        # 6,65 5x15
+        # 6,64 - 4x13
         _, _, width, height = patch
-        """
-        Size traffic light: 0.76 m x 0.25 m
-        Perhaps, it is easier to use lookup. Judging by observations, 
-        the distance suitable to make plausible predictions is 
-        app. 30 meters, with pixels values of 1x4
-        
-        Lookup:
-        36,17 - 1x3
-        31,68 - 1x3
-        28,78 - 1x3
-        26,13 - 1x4
-        13,39 - 2x8
-        13,14 - 2x6
-        12,16 - 2x7
-        10,9 - 2x6
-        7,15 - 2x12
-        7,1 - 4x14
-        6,65 5x15
-        6,64 - 4x13
-        """
-
         return width * height / 10
 
     def _eval_traffic_light(self, tl_meta: TrafficLightMetadata) -> TrafficLightInfo:
@@ -142,7 +138,7 @@ class TrafficLightDetector:
         cut_rgb_image = TrafficLightDetector._cut_image_patch(rgb_patch, tl_meta.rgb_img)
         tl_phase = self._classify_tl_phase(cut_rgb_image)
         tl_score = TrafficLightDetector._hot_zone_score(tl_meta)
-        tl_info = TrafficLightInfo(phase=tl_phase, distance=tl_meta.distance, accuracy=tl_score, position=tl_meta.patch)
+        tl_info = TrafficLightInfo(tl_phase, tl_meta.distance, tl_score, tl_meta.patch)
         return tl_info
 
     def _find_object_patches(self, semantic_image: np.ndarray) -> List[List[int]]:
