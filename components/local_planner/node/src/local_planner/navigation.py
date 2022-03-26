@@ -1,44 +1,18 @@
 """A module providing navigation services"""
 
-import json
 from time import sleep
 from math import dist
 from random import choice
 from typing import Callable, List, Tuple
-from dataclasses import dataclass, field
 
 import rospy
 
 from local_planner.core import Vehicle
 from local_planner.route_planning.route_annotation import AnnRouteWaypoint
 from local_planner.config import town_spawns
-from local_planner.route_planning.xodr_converter import XODRConverter, XodrMap
+from local_planner.route_planning.xodr_converter import XodrMap
+from local_planner.map_provider import load_xodr_map, load_town_param
 from local_planner.route_planning.route_planner import RoutePlanner
-
-
-def load_town_param() -> str:
-    while True:
-        try:
-            town = rospy.get_param('competition/town_name')
-            print("Town is: ", town)
-            break
-        except KeyError:
-            print('waiting for town rosparam')
-            sleep(0.1)
-    return town
-
-
-def load_spawn_positions() -> List[Tuple[float, float]]:
-    """Retrieve a list of possible spawn positions"""
-    active_town = load_town_param()
-    print("Is unknown town:", active_town not in town_spawns.spawns)
-    return town_spawns.spawns[active_town]
-
-
-def load_xodr_map() -> XodrMap:
-    active_town = load_town_param()
-    map_path = f"/app/res/xodr/{active_town}.xodr"
-    return XODRConverter.read_xodr(map_path)
 
 
 @dataclass
@@ -92,7 +66,9 @@ class InfiniteDrivingService:
 
     def __post_init__(self):
         if self.destinations is None:
-            self.destinations = load_spawn_positions()
+            active_town = load_town_param()
+            print("Is unknown town:", active_town not in town_spawns.spawns)
+            self.destinations = town_spawns.spawns[active_town]
         if not self.map:
             self.map = load_xodr_map()
 

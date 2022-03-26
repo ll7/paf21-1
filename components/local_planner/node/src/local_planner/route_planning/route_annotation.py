@@ -163,7 +163,6 @@ class RouteAnnotation:
                 norm_lane_id = abs(lane_id)
                 poss_lanes = RouteAnnotation._get_poss_lanes(road, drive_reverse)
                 lane_offset = road.lane_offsets[lane_id] - road.lane_widths[lane_id]/2
-                # lane_offset = road.lane_widths[lane_id] * (norm_lane_id - 0.5)
                 road_bounds = bounding_box(road.road_start, road.road_end, lane_offset)
                 end_pos = road_bounds[1] if drive_reverse else road_bounds[3]
                 section = PathSection(road_id, norm_lane_id, road, drive_reverse, poss_lanes, end_pos)
@@ -180,6 +179,4 @@ class RouteAnnotation:
         can_use_oncoming_lanes = road.line_type == "broken"
         if not can_use_oncoming_lanes:
             poss_lanes = road.left_ids if drive_reverse else road.right_ids
-
-        poss_lanes = list(sorted([id * (1 if drive_reverse else -1) for id in poss_lanes]))
         return poss_lanes
