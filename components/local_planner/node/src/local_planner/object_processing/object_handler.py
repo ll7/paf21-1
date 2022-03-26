@@ -5,9 +5,11 @@ from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
 
 import numpy as np
-from local_planner.core import Vehicle, visualize_route_rviz
-from local_planner.core.geometry import rotate_vector, orth_offset_left, add_vector, sub_vector, \
-    angle_between_vectors
+
+from local_planner.core import Vehicle#, visualize_route_rviz
+from local_planner.core.geometry import rotate_vector, orth_offset_left, add_vector, sub_vector
+from local_planner.route_planning.xodr_converter import XodrMap
+from local_planner.map_provider import load_xodr_map
 from local_planner.object_processing.object_meta import ObjectMeta
 from local_planner.state_machine import SpeedObservation
 
@@ -17,11 +19,16 @@ class ObjectHandler:
     """Represents a handler for the detected objects."""
     vehicle: Vehicle
     objects: Dict[int, ObjectMeta] = field(default_factory=dict)
+    map: XodrMap = None
     delta_time: float = 0.1
     max_velocity_change_rate: float = 2.0
     street_width: float = 4
     dist_safe: int = 10
     side: int = 0
+
+    def __post_init__(self):
+        if not self.map:
+            self.map = load_xodr_map()
 
     def get_speed_observation(self, local_route: List[Tuple[float, float]]) -> SpeedObservation:
         """Retrieve the speed observation."""
@@ -72,7 +79,6 @@ class ObjectHandler:
 
         for obj_id, obj in objects.items():
             blocked = self.find_blocked_points(route, obj, threshold=1)
-
 
             if not blocked:
                 continue
@@ -199,6 +205,18 @@ class ObjectHandler:
         deviation = (street_width / (1 + math.exp(-x_1))) + ((-street_width) / (1 + math.exp(-x_2)))
         return deviation
 
+    def plan_lane_change(self):
+        # 1) check if overtake even required
+        # 2) decide whether overtake on left / right side
+        # 3) determine the bounds where to overtake
+        # 4) re-plan the overtaking trajectory
+        #    - shift each trajectory point if possible
+        #    - update lane assignments for shifted points
+        # 5) check whether the new trajectory is drivable
+        #    - if yes: apply the trajectory
+        #    - if no: keep the old trajectory (car will brake)
+        pass
+
     def plan_route_around_objects(self, local_route: List[Tuple[float, float]], annotations):
         """calculates a route on the left side of the obstacle"""
         ann = annotations
@@ -208,6 +226,7 @@ class ObjectHandler:
 
         if not blocked_ids:
             return temp_route, ann[:0]
+
         lane, possible_lanes = ann[min(blocked_ids)]
         possible_lanes = np.abs(possible_lanes)
         if lane - 1 in possible_lanes:
@@ -243,6 +262,7 @@ class ObjectHandler:
             lanes.append(lane)
             temp_route[index] = (tmp_point[0] + width * moving_vector[0],
                                  tmp_point[1] + width * moving_vector[1])
+
         new_check, _ = self.get_blocked_ids(temp_route)
         print(widths)
         if np.sum(widths) > 50:
