@@ -29,14 +29,6 @@ services:
     networks:
       - ros
 
-  global-planner:
-    image: global_planner
-    environment:
-      ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: global-planner
-    networks:
-      - ros
-
   perception:
     image: perception
     environment:

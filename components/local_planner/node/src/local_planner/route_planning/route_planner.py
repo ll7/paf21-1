@@ -4,12 +4,12 @@ from math import atan2, dist as euclid_dist, pi, sqrt, exp
 from typing import Tuple, List, Dict
 import numpy as np
 
-from global_planner.geometry import add_vector, points_to_vector, rotate_vector, norm_angle, \
+from local_planner.core.geometry import add_vector, points_to_vector, rotate_vector, norm_angle, \
                                     scale_vector, sub_vector, unit_vector, vec2dir, vector_len
-from global_planner.xodr_converter import XodrMap, Road, create_key, split_key
-from global_planner.route_interpolation import interpolate_route, linear_interpolation
-from global_planner.route_annotation import AnnRouteWaypoint, RouteAnnotation
-from global_planner.shortest_paths import shortest_path
+from local_planner.route_planning.xodr_converter import XodrMap, Road, create_key, split_key
+from local_planner.route_planning.route_interpolation import interpolate_route, linear_interpolation
+from local_planner.route_planning.route_annotation import AnnRouteWaypoint, RouteAnnotation
+from local_planner.route_planning.shortest_paths import shortest_path
 
 
 class AdjMatrixPrep:

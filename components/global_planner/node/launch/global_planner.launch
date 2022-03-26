@@ -1,5 +1,0 @@
-<!-- -->
-<launch>
-  <node pkg="global_planner" name="global_planner"
-        type="main.py" output="screen" required="true" />
-</launch>

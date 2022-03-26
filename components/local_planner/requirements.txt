@@ -3,3 +3,5 @@ pytest
 pylint
 numpy
 opencv-python
+networkx
+shapely

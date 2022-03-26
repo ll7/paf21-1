@@ -1,8 +1,7 @@
 """This module contains a collection of geometric helper functions"""
 
 from math import dist as euclid_dist, atan2, pi, sqrt, sin, cos
-from typing import Tuple
-import numpy as np
+from typing import Tuple, List
 
 
 def points_to_vector(p_1: Tuple[float, float], p_2: Tuple[float, float]) -> Tuple[float, float]:
@@ -25,20 +24,39 @@ def sub_vector(v_1: Tuple[float, float], v_2: Tuple[float, float]) -> Tuple[floa
     return v_1[0] - v_2[0], v_1[1] - v_2[1]
 
 
+def rotate_vector(vector: Tuple[float, float], angle_rad: float) -> Tuple[float, float]:
+    """Rotate the given vector by an angle"""
+    return (cos(angle_rad) * vector[0] - sin(angle_rad) * vector[1],
+            sin(angle_rad) * vector[0] + cos(angle_rad) * vector[1])
+
+
 def scale_vector(vector: Tuple[float, float], new_len: float) -> Tuple[float, float]:
     """Amplify the length of the given vector"""
     old_len = vector_len(vector)
-    try:
-        scaled_vector = (vector[0] * new_len / old_len,
-                         vector[1] * new_len / old_len)
-    except ZeroDivisionError:
-        scaled_vector = vector
+    if old_len == 0:
+        return (0, 0)
+    scaled_vector = (vector[0] * new_len / old_len,
+                     vector[1] * new_len / old_len)
     return scaled_vector
 
 
-def norm_vector(vector: Tuple[float, float]):
-    """Normalize the given vector to a proportional vector of length 1"""
-    return scale_vector(vector, 1.0)
+def unit_vector(angle_rad: float) -> Tuple[float, float]:
+    """Retrieve the unit vector representing the given direction."""
+    return (cos(angle_rad), sin(angle_rad))
+
+
+def vec2dir(start: Tuple[float, float], end: Tuple[float, float]) -> float:
+    """Retrieve the given vector's direction in radians."""
+    # TODO: think of removing this one
+    vec_dir = sub_vector(end, start)
+    return atan2(vec_dir[1], vec_dir[0])
+
+
+def vector_to_dir(vector: Tuple[float, float]):
+    """Get the given vector's direction in radians within [-pi, pi)"""
+    normed_vector = norm_vector(vector)
+    angle = atan2(normed_vector[1], normed_vector[0])
+    return norm_angle(angle)
 
 
 def norm_angle(angle_rad: float) -> float:
@@ -56,31 +74,9 @@ def norm_angle(angle_rad: float) -> float:
     return angle_rad
 
 
-def vector_to_dir(vector: Tuple[float, float]):
-    """Get the given vector's direction in radians within [-pi, pi)"""
-    normed_vector = norm_vector(vector)
-    angle = atan2(normed_vector[1], normed_vector[0])
-    return norm_angle(angle)
-
-
-def rotate_vector(vector: Tuple[float, float], angle_rad: float) -> Tuple[float, float]:
-    """Rotate the given vector by an angle"""
-    return (cos(angle_rad) * vector[0] - sin(angle_rad) * vector[1],
-            sin(angle_rad) * vector[0] + cos(angle_rad) * vector[1])
-
-
-def rotate_vectors(vectors: np.ndarray, angle_rad: float) -> np.ndarray:
-    """Rotate a set of vectors by a given angle (in radians).
-    The vectors are expected to be of shape (num_vectors, 2)."""
-    lin_transform = np.array([[cos(angle_rad), sin(angle_rad)],
-                              [-sin(angle_rad), cos(angle_rad)]])
-    return np.matmul(vectors, lin_transform)
-
-
-def unit_vector(orient_rad: float) -> Tuple[float, float]:
-    """Retrieve the unit vector pointing in the given direction"""
-    orient_rad = norm_angle(orient_rad)
-    return rotate_vector((1, 0), orient_rad)
+def norm_vector(vector: Tuple[float, float]):
+    """Normalize the given vector to a proportional vector of length 1"""
+    return scale_vector(vector, 1.0)
 
 
 def orth_offset_right(start_point: Tuple[float, float], end_point: Tuple[float, float],
@@ -132,41 +128,9 @@ def angle_triangle(p_a: Tuple[float, float],
     return angle_between_vectors(vec_ab, vec_ac)
 
 
-
-# def find_curvature(waypoints : List[Tuple[float, float]]) -> List[Tuple[float, float]]:
-#     """Find the curvature using assumptions that it has triangular shape"""
-
-#     # if we move on x-axis, mirror the points
-#     inverted = False
-#     if abs(abs(waypoints[0][0]) - abs(waypoints[1][0])) > 1:
-#         waypoints = [(wp[1], wp[0]) for wp in waypoints]
-#         inverted = True
-
-#     # search for the start of  the curvature
-#     triangle = [waypoints[0]]
-#     for i in range(len(waypoints) - 1):
-#         if abs(abs(waypoints[0][0]) - abs(waypoints[i][0])) > 1:
-#             triangle.insert(1, waypoints[i])
-#             break
-
-#     # if it's curvature, then determine triangle / search for the end of the curvature
-#     if len(triangle) == 2:
-#         curve_start_ind = waypoints.index(triangle[1])
-#         for i in range(curve_start_ind, len(waypoints) - 2):
-#             if abs( abs(waypoints[curve_start_ind] [1]) - abs(waypoints[i+1][1]) ) > 2:
-#                 triangle.insert(2, waypoints[i+1])
-#                 break
-
-#     if inverted:
-#         triangle = [(tr[1], tr[0]) for tr in triangle]
-
-#     return triangle
-
-# def angle_direction(waypoints : List[Tuple[float, float]]) -> float:
-#     """Find the angle direction using waypoints"""
-#     triangle = find_curvature(waypoints)
-#     if len(triangle) == 3:
-#         angle_between_vec = angle_triangle(triangle[0], triangle[1], triangle[2])
-#         return angle_between_vec
-#     else:
-#         return 0.0
+def bounding_box(start_point: Tuple[float, float], end_point: Tuple[float, float],
+                 road_width: float) -> List[Tuple[float, float]]:
+    """Calculate a bounding box around the start and end point with a given offset to the side."""
+    offset = orth_offset_right(start_point, end_point, road_width)
+    return [add_vector(start_point, offset), sub_vector(start_point, offset),
+            sub_vector(end_point, offset), add_vector(end_point, offset)]

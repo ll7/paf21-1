@@ -4,7 +4,8 @@ from math import pi, dist
 from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
 
-from local_planner.core import Vehicle, AnnRouteWaypoint
+from local_planner.core import Vehicle
+from local_planner.route_planning.route_annotation import AnnRouteWaypoint
 from local_planner.vehicle_control import DrivingController
 from local_planner.core.geometry import angle_between_vectors, points_to_vector, vector_len
 from local_planner.state_machine import SpeedObservation, TrafficLightInfo, \
