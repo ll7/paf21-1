@@ -47,7 +47,7 @@ class LocalPlannerNode:
         if self.route_planner is None:
             self.route_planner = TrajectoryPlanner(self.vehicle)
         if self.driving_control is None:
-            self.driving_control = DrivingController(self.vehicle)
+            self.driving_control = DrivingController(self.vehicle, refresh=self.publish_rate_in_hz)
         if self.speed_state_machine is None:
             self.speed_state_machine = SpeedStateMachine(self.vehicle)
         if self.maneuver_state_machine is None:
@@ -67,7 +67,8 @@ class LocalPlannerNode:
         nav_thread.start()
 
         while not rospy.is_shutdown():
-            try:
+            # try:
+            if self.vehicle.is_ready:
                 local_route = self.route_planner.calculate_trajectory()
                 visualize_route_rviz(local_route)
 
@@ -78,10 +79,11 @@ class LocalPlannerNode:
                 driving_signal = self.driving_control.next_signal()
                 msg = RosMessagesAdapter.signal_to_message(driving_signal)
                 self.driving_signal_publisher.publish(msg)
-            except IndexError as index_error:
-                print(f'Error: {index_error}; failed to send driving signal!')
+            # except IndexError as index_error:
+            #     print(f'Error: {index_error}; failed to send driving signal!')
             rate.sleep()
             
+
 
     def _init_ros(self):
         rospy.init_node(f'local_planner_{self.vehicle.name}', anonymous=True)
