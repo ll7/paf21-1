@@ -18,7 +18,8 @@ class AnnRouteWaypoint:
     possible_lanes: List[int]
     legal_speed: float
     dist_next_tl: float
-    end_lane_m: float
+    end_lane_m: float # TODO: needs to be reworked to concat multiple road sections
+                      #       without a crossroad / highway exit between them
 
 
 @dataclass
@@ -26,6 +27,7 @@ class PathSection:
     """Representing a path section"""
     road_id: int
     lane_id: int
+    road: Road
     drive_reversed: bool
     possible_lanes: List[int]
     end_pos: Tuple[float, float]
@@ -72,7 +74,8 @@ class RouteAnnotation:
             ss_dist = euclid_dist(waypoint, ss_pos) if ss_pos else max_dist
             sec_dist = euclid_dist(waypoint, sec_end_pos) if sec_end_pos else max_dist
 
-            actual_lane = metadata.sections_ahead[sec_id].lane_id
+            current_road = metadata.sections_ahead[sec_id].road
+            actual_lane = current_road.detect_lane(waypoint)
             poss_lanes = metadata.sections_ahead[sec_id].possible_lanes
 
             ann_wp = AnnRouteWaypoint(
@@ -103,14 +106,12 @@ class RouteAnnotation:
         inital_speed = 50.0
 
         for i, section in enumerate(path_sections):
-            road = xodr_map.roads_by_id[section.road_id]
-
-            sec_traffic_lights = RouteAnnotation._filter_items(road.traffic_lights, section)
-            sec_speed_signs = RouteAnnotation._filter_items(road.speed_signs, section)
+            sec_traffic_lights = RouteAnnotation._filter_items(section.road.traffic_lights, section)
+            sec_speed_signs = RouteAnnotation._filter_items(section.road.speed_signs, section)
 
             is_first_section = i == 0
             if is_first_section:
-                road_len = road.approx_road_length
+                road_len = section.road.approx_road_length
                 dist_spawn_end = euclid_dist(section.end_pos, spawn_pos)
                 s_value_car = road_len - dist_spawn_end
 
@@ -165,7 +166,7 @@ class RouteAnnotation:
                 # lane_offset = road.lane_widths[lane_id] * (norm_lane_id - 0.5)
                 road_bounds = bounding_box(road.road_start, road.road_end, lane_offset)
                 end_pos = road_bounds[1] if drive_reverse else road_bounds[3]
-                section = PathSection(road_id, norm_lane_id, drive_reverse, poss_lanes, end_pos)
+                section = PathSection(road_id, norm_lane_id, road, drive_reverse, poss_lanes, end_pos)
                 path_sections.append(section)
 
             last_road_id = road_id
