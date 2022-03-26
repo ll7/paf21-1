@@ -1,7 +1,7 @@
 """A module for annotating routes with valuable metadata"""
 
 from math import dist as euclid_dist
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Tuple, List, Callable
 
 from local_planner.core.geometry import bounding_box
@@ -14,6 +14,7 @@ class AnnRouteWaypoint:
     """Representing a route waypoint including
     annotations regarding the driving context"""
     pos: Tuple[float, float]
+    road_id: int
     actual_lane: int
     possible_lanes: List[int]
     legal_speed: float
@@ -27,10 +28,10 @@ class PathSection:
     """Representing a path section"""
     road_id: int
     lane_id: int
-    road: Road
     drive_reversed: bool
     possible_lanes: List[int]
     end_pos: Tuple[float, float]
+    road: Road = field(repr=False)
     # length: float
 
 
@@ -78,8 +79,8 @@ class RouteAnnotation:
             actual_lane = current_road.detect_lane(waypoint)
             poss_lanes = metadata.sections_ahead[sec_id].possible_lanes
 
-            ann_wp = AnnRouteWaypoint(
-                waypoint, actual_lane, poss_lanes, legal_speed, tl_dist, sec_dist)
+            ann_wp = AnnRouteWaypoint(waypoint, current_road.road_id, actual_lane,
+                                      poss_lanes, legal_speed, tl_dist, sec_dist)
             ann_waypoints.append(ann_wp)
 
             if tl_dist < radius_handled:
@@ -160,12 +161,11 @@ class RouteAnnotation:
             if is_entering_new_section:
                 road = road_by_id(road_id)
                 drive_reverse = is_road_end
-                norm_lane_id = abs(lane_id)
                 poss_lanes = RouteAnnotation._get_poss_lanes(road, drive_reverse)
                 lane_offset = road.lane_offsets[lane_id] - road.lane_widths[lane_id]/2
                 road_bounds = bounding_box(road.road_start, road.road_end, lane_offset)
                 end_pos = road_bounds[1] if drive_reverse else road_bounds[3]
-                section = PathSection(road_id, norm_lane_id, road, drive_reverse, poss_lanes, end_pos)
+                section = PathSection(road_id, lane_id, drive_reverse, poss_lanes, end_pos, road)
                 path_sections.append(section)
 
             last_road_id = road_id

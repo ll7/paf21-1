@@ -29,7 +29,6 @@ class TrajectoryPlanner:
     length_route: int = 100
     obj_handler: ObjectHandler = None
     tld_info: TrafficLightInfo = TrafficLightInfo()
-    current_route: List[Tuple[float, float]] = field(default_factory=list)
     curve_detection: CurveDetection = CurveDetection()
 
     def __post_init__(self):
@@ -107,7 +106,7 @@ class TrajectoryPlanner:
         # cache the route to avoid concurrency bugs because
         # the route might be overwritten by the navigation task
         route = self.global_route
-        lanes = self.global_lane_and_possible
+        ann_route = self.global_route_ann
         if not self.is_navigation_ready:
             return route
 
@@ -120,25 +119,15 @@ class TrajectoryPlanner:
         self.check_passed_waypoints(route)
 
         bound = min(self.prev_wp_id + self.length_route, len(route))
-        temp_route = route[self.prev_wp_id:bound]
-        temp_ann = lanes[self.prev_wp_id:bound]
-        temp_route, new_lanes = self.check_overtake(temp_route, temp_ann)
-        if temp_route:
-            self.insert_into_global_route(temp_route, self.prev_wp_id, bound)
-        if new_lanes:
-            self.insert_new_lanes_into_global_route(new_lanes, self.prev_wp_id, bound)
-        self.current_route = temp_route
-        return temp_route
+        temp_global_ann = self.global_route_ann
+        temp_route = ann_route[self.prev_wp_id:bound]
+        overtaking_trajectory = self.obj_handler.plan_overtaking_maneuver(temp_route)
 
-    def insert_into_global_route(self, route, lower_bound, upper_bound):
-        """function to insert updated path into global an_route"""
-        for i in range(lower_bound, upper_bound):
-            self.global_route_ann[i].pos = route[i-lower_bound]
-
-    def insert_new_lanes_into_global_route(self, lanes, lower_bound, upper_bound):
-        """function to insert updated path into global an_route"""
-        for i in range(lower_bound, upper_bound):
-            self.global_route_ann[i].actual_lane = lanes[i-lower_bound]
+        if overtaking_trajectory:
+            self.global_route_ann = temp_global_ann[:self.prev_wp_id] \
+                                       + overtaking_trajectory + temp_global_ann[bound:]
+            print('changed_route')                
+        return self.cached_local_route
 
     def check_passed_waypoints(self, route):
         """Set the next waypoint index for the not yet passed waypoints"""
@@ -159,31 +148,22 @@ class TrajectoryPlanner:
             self.next_wp_id += 1
             self.prev_wp_id += 1
 
-    def check_overtake(self, route, annotations):
-        """Checking the route for an overtaking maneuver."""
-        curve_obs = self.curve_detection.find_next_curve(self.current_route)
-        dist_next_curve = curve_obs.dist_until_curve
-        #if dist_next_curve > 50 and self.latest_speed_observation.dist_next_traffic_light_m > 50:
-        route = self.obj_handler.plan_route_around_objects(route, annotations)
-        return route
-
     @property
     def latest_speed_observation(self) -> SpeedObservation:
         """Retrieve the latest speed observation"""
 
-        if not self.current_route:
+        if not self.global_route_ann:
             return SpeedObservation()
 
-        speed_obs = self.obj_handler.get_speed_observation(self.current_route)
+        speed_obs = self.obj_handler.get_speed_observation(self.cached_local_route)
 
-        curve_obs = self.curve_detection.find_next_curve(self.current_route)
+        curve_obs = self.curve_detection.find_next_curve(self.cached_local_route)
         speed_obs.dist_next_curve = curve_obs.dist_until_curve
         speed_obs.curve_target_speed = curve_obs.max_speed
 
         if self.tld_info:
             speed_obs.tl_phase = self.tld_info.phase
             speed_obs.dist_next_traffic_light_m = self.tld_info.distance
-
 
         speed_obs.detected_speed_limit = self.legal_speed_ahead() \
             if len(self.cached_local_ann_route) > 0 else 0.0
@@ -195,9 +175,9 @@ class TrajectoryPlanner:
         return speed_obs
 
     def _handle_american_traffic_lights(self, speed_obs: SpeedObservation, curve_obs: CurveObservation):
-        print('tl in m {}, dist till curve in m {}'.format(speed_obs.dist_next_traffic_light_m, curve_obs.dist_until_curve))
-        print('Cashed ann route end lane m ', self.cached_local_ann_route[0].end_lane_m)
-        print('curve obs end id: ', curve_obs.end_id)
+        # print('tl in m {}, dist till curve in m {}'.format(speed_obs.dist_next_traffic_light_m, curve_obs.dist_until_curve))
+        # print('Cashed ann route end lane m ', self.cached_local_ann_route[0].end_lane_m)
+        # print('curve obs end id: ', curve_obs.end_id)
         # ignore the traffic lights of orthogonal lanes until the curve is over
         if self.end_curve_id:
             speed_obs.tl_phase = TrafficLightPhase.GREEN

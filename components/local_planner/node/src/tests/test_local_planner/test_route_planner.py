@@ -51,7 +51,7 @@ def test_route_metadata():
         [True, False, True, True, True, True, True, True, False, False, True]
 
     # lane id always 1 and possible lanes contain the lane id
-    assert all(map(lambda s: s.lane_id == 1, metadata.sections_ahead))
+    assert all(map(lambda s: s.lane_id == 1 if s.drive_reversed else s.lane_id == -1, metadata.sections_ahead))
     assert all(map(lambda s: s.lane_id in s.possible_lanes, metadata.sections_ahead))
 
     # all relevant traffic lights found

@@ -4,6 +4,7 @@ from time import sleep
 from math import dist
 from random import choice
 from typing import Callable, List, Tuple
+from dataclasses import dataclass
 
 import rospy
 

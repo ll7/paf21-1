@@ -1,14 +1,15 @@
 """Represents a handler for the detected objects."""
 import math
 from math import pi, dist
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Callable
 from dataclasses import dataclass, field
 
 import numpy as np
 
 from local_planner.core import Vehicle#, visualize_route_rviz
-from local_planner.core.geometry import rotate_vector, orth_offset_left, add_vector, sub_vector
+from local_planner.core.geometry import rotate_vector, orth_offset_left, add_vector, scale_vector, sub_vector
 from local_planner.route_planning.xodr_converter import XodrMap
+from local_planner.route_planning.route_annotation import AnnRouteWaypoint
 from local_planner.map_provider import load_xodr_map
 from local_planner.object_processing.object_meta import ObjectMeta
 from local_planner.state_machine import SpeedObservation
@@ -78,7 +79,7 @@ class ObjectHandler:
         blocked_ids = []
 
         for obj_id, obj in objects.items():
-            blocked = self.find_blocked_points(route, obj, threshold=1)
+            blocked = self.find_blocked_points(route, obj, threshold=2)
 
             if not blocked:
                 continue
@@ -95,7 +96,7 @@ class ObjectHandler:
                             if blocked_ids[i - 1] >= blocked_ids[i] - 2]
         if blocked_ids:
             blocked_ids_temp.append(blocked_ids[0])
-        blocked_ids.sort()
+        blocked_ids_temp.sort()
         return blocked_ids_temp, min_obj
 
     def find_blocked_points(self, route: List[Tuple[float, float]],
@@ -105,7 +106,7 @@ class ObjectHandler:
         indices = []
         obj_positions = [obj.trajectory[-1]]
         if len(obj.trajectory) > 2:
-            obj_positions = ObjectHandler._predict_movement(obj.trajectory, num_points=100)
+            obj_positions = ObjectHandler._predict_movement(obj.trajectory, num_points=30)
 
         veh_pos = self.vehicle.pos
         veh_vel = self.vehicle.velocity_mps
@@ -182,9 +183,12 @@ class ObjectHandler:
         coordinate = rotate_vector(coordinate, theta)
         return coordinate[0] + self.vehicle.pos[0], coordinate[1] + self.vehicle.pos[1]
 
-    def sigmoid_smooth(self, object_speed, object_coordinates, point, first_coord, factor):
-        """tries to smooth out the overtaking maneuver so it can be driven at higher speeds"""
-        street_width = factor * self.street_width  # parameter to stop in the  middle of other lane
+    def sigmoid_smooth(self, object_speed: float, object_coordinates: List[Tuple[float, float]],
+                       point: Tuple[float, float], first_coord: Tuple[float, float], side: int) -> float:
+        """Calculate the orthogonal offset for smooth lane changes."""
+        # TODO: use the exact road withds from the XODR map
+        # point = ann_point.pos
+        street_width = side * self.street_width  # parameter to stop in the  middle of other lane
         slope = 3  # slope of overtaking
         relative_velocity = self.vehicle.velocity_mps - object_speed
         # if relative_velocity <= 10/3.6:
@@ -196,81 +200,93 @@ class ObjectHandler:
         self.dist_safe = max([relative_velocity * time_to_collision, 0])
         # self.dist_safe = 6
         dist_c = dist(object_coordinates[0], object_coordinates[-1]) + 30
-        print(relative_distance_to_object, 'dist')
         if relative_velocity < 0:
             dist_c = 0
         x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)
         x_2 = (1 / slope) * (relative_distance_to_object - self.dist_safe - dist_c)
-        print(x_1, x_2)
         deviation = (street_width / (1 + math.exp(-x_1))) + ((-street_width) / (1 + math.exp(-x_2)))
         return deviation
 
-    def plan_lane_change(self):
-        # 1) check if overtake even required
-        # 2) decide whether overtake on left / right side
-        # 3) determine the bounds where to overtake
-        # 4) re-plan the overtaking trajectory
-        #    - shift each trajectory point if possible
-        #    - update lane assignments for shifted points
-        # 5) check whether the new trajectory is drivable
-        #    - if yes: apply the trajectory
-        #    - if no: keep the old trajectory (car will brake)
-        pass
+    def plan_overtaking_maneuver(self, local_route: List[AnnRouteWaypoint]) -> List[AnnRouteWaypoint]:
+        """Plan the new trajectory of an overtaking maneuver"""
 
-    def plan_route_around_objects(self, local_route: List[Tuple[float, float]], annotations):
-        """calculates a route on the left side of the obstacle"""
-        ann = annotations
-        temp_route = local_route.copy()
-        enum_route = local_route.copy()
+        lanes = [(point.actual_lane, point.possible_lanes) for point in local_route]
+        temp_route = [point.pos for point in local_route]
+        enum_route = temp_route.copy()
+
+        # abort with previous trajectory if no overtake required
         blocked_ids, closest_object = self.get_blocked_ids(enum_route)
-
         if not blocked_ids:
-            return temp_route, ann[:0]
+            return None
 
+        # 2) decide whether overtake on left / right side
+        overtake_left, overtake_right = ObjectHandler._can_overtake(lanes, blocked_ids)
+        if not overtake_left and not overtake_right:
+            print('no overtake')
+            return None
+        side = 1 if overtake_left else -1
+
+        # 3) re-plan the overtaking trajectory
+        blocked_route = [enum_route[i] for i in blocked_ids]
+        sigmoid = lambda wp: self.sigmoid_smooth(closest_object.velocity, blocked_route, wp, enum_route[0], side)
+        shifted_wps = ObjectHandler._shift_waypoints(enum_route, sigmoid)
+        
+        new_is_blocked, _ = self.get_blocked_ids(shifted_wps)
+        if new_is_blocked:
+            print('new is blocked')
+            return None
+
+        # update waypoint annotations
+        self._write_route_into_annotated(shifted_wps, local_route)
+
+        print('overtaking')
+        return local_route
+
+    def _write_route_into_annotated(self, shifted_wps: List[Tuple[float, float]],
+                                    local_route: List[AnnRouteWaypoint]):
+
+        for i in range(len(local_route)):
+            wp = local_route[i]
+            wp.pos = shifted_wps[i]
+            wp.actual_lane = self.map.roads_by_id[wp.road_id].detect_lane(wp.pos) 
+    
+    @staticmethod
+    def _shift_waypoints(enum_route, wp_shift: Callable[[Tuple[float, float]], float]):
+        offset_vectors = [orth_offset_left(enum_route[i], enum_route[i+1], 1.0)
+                          for i in range(len(enum_route) - 1)]
+        offset_vectors.insert(0, offset_vectors[0])
+
+        offset_scales = [wp_shift(wp) for wp in enum_route]
+        offsets = [scale_vector(vec, vec_len) for vec, vec_len in zip(offset_vectors, offset_scales)]
+        shifted_wps = [add_vector(wp, vec) for wp, vec in zip(enum_route, offsets)]
+        return shifted_wps
+
+    @staticmethod
+    def _can_overtake(ann, blocked_ids):
         lane, possible_lanes = ann[min(blocked_ids)]
         possible_lanes = np.abs(possible_lanes)
-        if lane - 1 in possible_lanes:
-            side = 1
-        elif lane + 1 in possible_lanes:
-            side = -1
-        else:
-            side = 0
+        left_lane, right_lane = (lane - 1, lane + 1) if lane > 0 else (lane + 1, lane - 1)
+        overtake_left, overtake_right = left_lane in possible_lanes, right_lane in possible_lanes
+        # TODO: consider also the possible lanes of the end point and one point in the middle
+        #return overtake_left, overtake_right
+        return overtake_left, False # TODO: enforce "drive on the right" rule
 
-        self.side = side
-        widths = []
-        lanes = []
-        for index, tmp_point in enumerate(enum_route):
-            lane, possible_lanes = ann[min(blocked_ids)]
-            if lane - side not in possible_lanes:
-                side = 0
-            if index != 0:
-                moving_vector = orth_offset_left(enum_route[index - 1], tmp_point, 1.0)
-            else:
-                moving_vector = orth_offset_left(tmp_point, enum_route[index + 1], 1.0)
-
-            width = 0.0
-            if closest_object is not None:
-                blocked_route = [enum_route[blocked_id] for blocked_id in blocked_ids]
-                print(index, 'index')
-                width = self.sigmoid_smooth(closest_object.velocity, blocked_route,
-                                            tmp_point, enum_route[0], side)
-
-            if abs(width) > 0.5:
-                lane = lane - side
-            side = self.side
-            widths.append(width)
-            lanes.append(lane)
-            temp_route[index] = (tmp_point[0] + width * moving_vector[0],
-                                 tmp_point[1] + width * moving_vector[1])
-
-        new_check, _ = self.get_blocked_ids(temp_route)
-        print(widths)
-        if np.sum(widths) > 50:
-            print('here')
-        print('Second Block', new_check)
-        print('Blocked:', blocked_ids)
-        if closest_object is not None:
-            print('Distance to object', dist(self.vehicle.pos, closest_object.trajectory[-1]))
-            if len(new_check) == 0:
-                print(temp_route)
-        return (local_route, None) if new_check else (temp_route, lanes)
+    def sigmoid_smooth_lanechange(self, object_speed: float, object_coordinates: List[Tuple[float, float]],
+                       point: Tuple[float, float], first_coord: Tuple[float, float], side: int) -> float:
+        """Calculate the orthogonal offset for smooth lane changes."""
+        # TODO: use the exact road withds from the XODR map
+        # point = ann_point.pos
+        street_width = side * self.street_width  # parameter to stop in the  middle of other lane
+        slope = 3  # slope of overtaking
+        relative_velocity = self.vehicle.velocity_mps - object_speed
+        # if relative_velocity <= 10/3.6:
+        #     return 0
+        relative_distance_to_object = -dist(point, object_coordinates[0])
+        if dist(point, first_coord) > dist(first_coord, object_coordinates[0]):
+            relative_distance_to_object = -relative_distance_to_object
+        time_to_collision = 1
+        self.dist_safe = max([relative_velocity * time_to_collision, 0])
+        # self.dist_safe = 6
+        x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)
+        deviation = (street_width / (1 + math.exp(-x_1)))
+        return deviation
