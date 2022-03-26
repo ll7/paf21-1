@@ -21,6 +21,7 @@ class ObjectHandler:
     max_velocity_change_rate: float = 2.0
     street_width: float = 4
     dist_safe: int = 10
+    side: int = 0
 
     def get_speed_observation(self, local_route: List[Tuple[float, float]]) -> SpeedObservation:
         """Retrieve the speed observation."""
@@ -70,7 +71,7 @@ class ObjectHandler:
         blocked_ids = []
 
         for obj_id, obj in objects.items():
-            blocked = self.find_blocked_points(route, obj, threshold=1.8)
+            blocked = self.find_blocked_points(route, obj, threshold=1)
 
 
             if not blocked:
@@ -83,7 +84,13 @@ class ObjectHandler:
         blocked_ids = [num for num in blocked_ids if num >= 0]
         if len(blocked_ids) > 0:
             print(f'All blocked_ids: {blocked_ids}, Min_obj: {min_obj}')
-        return blocked_ids, min_obj
+        blocked_ids.sort()
+        blocked_ids_temp = [blocked_ids[i] for i in range(len(blocked_ids) - 1)
+                            if blocked_ids[i - 1] >= blocked_ids[i] - 2]
+        if blocked_ids:
+            blocked_ids_temp.append(blocked_ids[0])
+        blocked_ids.sort()
+        return blocked_ids_temp, min_obj
 
     def find_blocked_points(self, route: List[Tuple[float, float]],
                             obj: ObjectMeta, threshold: float):
@@ -105,7 +112,7 @@ class ObjectHandler:
             zone_clearance_time = ObjectHandler._calculate_zone_clearance(
                 route_point, obj_positions[-1], obj.velocity, veh_pos, veh_vel, threshold)
             # print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
-            if zone_clearance_time < 3.0:
+            if zone_clearance_time < 0.0:
                 indices += [index - 1, index]
                 break
         return indices
@@ -169,22 +176,26 @@ class ObjectHandler:
         coordinate = rotate_vector(coordinate, theta)
         return coordinate[0] + self.vehicle.pos[0], coordinate[1] + self.vehicle.pos[1]
 
-    def sigmoid_smooth(self, object_speed, object_coordinates, point, first_coord):
+    def sigmoid_smooth(self, object_speed, object_coordinates, point, first_coord, factor):
         """tries to smooth out the overtaking maneuver so it can be driven at higher speeds"""
-        street_width = self.street_width  # parameter to stop in the  middle of other lane
-        slope = 2  # slope of overtaking
+        street_width = factor * self.street_width  # parameter to stop in the  middle of other lane
+        slope = 3  # slope of overtaking
         relative_velocity = self.vehicle.velocity_mps - object_speed
-        if relative_velocity <= 10/3.6:
-            return 0
+        # if relative_velocity <= 10/3.6:
+        #     return 0
         relative_distance_to_object = -dist(point, object_coordinates[0])
         if dist(point, first_coord) > dist(first_coord, object_coordinates[0]):
             relative_distance_to_object = -relative_distance_to_object
-        time_to_collision = 2
+        time_to_collision = 1
         self.dist_safe = max([relative_velocity * time_to_collision, 0])
         # self.dist_safe = 6
-        dist_c = dist(object_coordinates[0], object_coordinates[-1]) + 20
+        dist_c = dist(object_coordinates[0], object_coordinates[-1]) + 30
+        print(relative_distance_to_object, 'dist')
+        if relative_velocity < 0:
+            dist_c = 0
         x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)
         x_2 = (1 / slope) * (relative_distance_to_object - self.dist_safe - dist_c)
+        print(x_1, x_2)
         deviation = (street_width / (1 + math.exp(-x_1))) + ((-street_width) / (1 + math.exp(-x_2)))
         return deviation
 
@@ -194,8 +205,25 @@ class ObjectHandler:
         temp_route = local_route.copy()
         enum_route = local_route.copy()
         blocked_ids, closest_object = self.get_blocked_ids(enum_route)
+
+        if not blocked_ids:
+            return temp_route, ann[:0]
+        lane, possible_lanes = ann[min(blocked_ids)]
+        possible_lanes = np.abs(possible_lanes)
+        if lane - 1 in possible_lanes:
+            side = 1
+        elif lane + 1 in possible_lanes:
+            side = -1
+        else:
+            side = 0
+
+        self.side = side
         widths = []
+        lanes = []
         for index, tmp_point in enumerate(enum_route):
+            lane, possible_lanes = ann[min(blocked_ids)]
+            if lane - side not in possible_lanes:
+                side = 0
             if index != 0:
                 moving_vector = orth_offset_left(enum_route[index - 1], tmp_point, 1.0)
             else:
@@ -204,19 +232,25 @@ class ObjectHandler:
             width = 0.0
             if closest_object is not None:
                 blocked_route = [enum_route[blocked_id] for blocked_id in blocked_ids]
+                print(index, 'index')
                 width = self.sigmoid_smooth(closest_object.velocity, blocked_route,
-                                            tmp_point, enum_route[0])
+                                            tmp_point, enum_route[0], side)
 
+            if abs(width) > 0.5:
+                lane = lane - side
+            side = self.side
             widths.append(width)
-
+            lanes.append(lane)
             temp_route[index] = (tmp_point[0] + width * moving_vector[0],
                                  tmp_point[1] + width * moving_vector[1])
         new_check, _ = self.get_blocked_ids(temp_route)
         print(widths)
+        if np.sum(widths) > 50:
+            print('here')
         print('Second Block', new_check)
         print('Blocked:', blocked_ids)
         if closest_object is not None:
             print('Distance to object', dist(self.vehicle.pos, closest_object.trajectory[-1]))
             if len(new_check) == 0:
                 print(temp_route)
-        return local_route if new_check else temp_route
+        return (local_route, None) if new_check else (temp_route, lanes)

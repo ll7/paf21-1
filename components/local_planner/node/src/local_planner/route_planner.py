@@ -121,16 +121,23 @@ class TrajectoryPlanner:
         bound = min(self.prev_wp_id + self.length_route, len(route))
         temp_route = route[self.prev_wp_id:bound]
         temp_ann = lanes[self.prev_wp_id:bound]
-        temp_route = self.check_overtake(temp_route, temp_ann)
-        self.insert_into_gloabal_route(temp_route, self.prev_wp_id, bound)
-
+        temp_route, new_lanes = self.check_overtake(temp_route, temp_ann)
+        if temp_route:
+            self.insert_into_global_route(temp_route, self.prev_wp_id, bound)
+        if new_lanes:
+            self.insert_new_lanes_into_global_route(new_lanes, self.prev_wp_id, bound)
         self.current_route = temp_route
         return temp_route
 
-    def insert_into_gloabal_route(self, route, lower_bound, upper_bound):
+    def insert_into_global_route(self, route, lower_bound, upper_bound):
         """function to insert updated path into global an_route"""
         for i in range(lower_bound, upper_bound):
             self.global_route_ann[i].pos = route[i-lower_bound]
+
+    def insert_new_lanes_into_global_route(self, lanes, lower_bound, upper_bound):
+        """function to insert updated path into global an_route"""
+        for i in range(lower_bound, upper_bound):
+            self.global_route_ann[i].actual_lane = lanes[i-lower_bound]
 
     def check_passed_waypoints(self, route):
         """Set the next waypoint index for the not yet passed waypoints"""
@@ -176,11 +183,12 @@ class TrajectoryPlanner:
             speed_obs.tl_phase = self.tld_info.phase
             speed_obs.dist_next_traffic_light_m = self.tld_info.distance
 
+
         speed_obs.detected_speed_limit = self.legal_speed_ahead() \
             if len(self.cached_local_ann_route) > 0 else 0.0
 
         self._handle_american_traffic_lights(speed_obs, curve_obs)
-
+        speed_obs.dist_next_traffic_light_m = 1000
         #print('Speed Obs ', speed_obs)
 
         return speed_obs

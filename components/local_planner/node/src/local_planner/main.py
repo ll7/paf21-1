@@ -67,7 +67,8 @@ class LocalPlannerNode:
         nav_thread.start()
 
         while not rospy.is_shutdown():
-            try:
+            # try:
+            if self.vehicle.is_ready:
                 local_route = self.route_planner.calculate_trajectory()
                 visualize_route_rviz(local_route)
 
@@ -78,8 +79,8 @@ class LocalPlannerNode:
                 driving_signal = self.driving_control.next_signal()
                 msg = RosMessagesAdapter.signal_to_message(driving_signal)
                 self.driving_signal_publisher.publish(msg)
-            except IndexError as index_error:
-                print(f'Error: {index_error}; failed to send driving signal!')
+            # except IndexError as index_error:
+            #     print(f'Error: {index_error}; failed to send driving signal!')
             rate.sleep()
             
 
