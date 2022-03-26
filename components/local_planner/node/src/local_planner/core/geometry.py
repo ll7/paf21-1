@@ -127,6 +127,7 @@ def angle_triangle(p_a: Tuple[float, float],
     vec_ac = points_to_vector(p_a, p_c)
     return angle_between_vectors(vec_ab, vec_ac)
 
+
 def bounding_box(start_point: Tuple[float, float], end_point: Tuple[float, float],
                  road_width: float) -> List[Tuple[float, float]]:
     """Calculate a bounding box around the start and end point with a given offset to the side."""

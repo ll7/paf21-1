@@ -14,7 +14,7 @@ class VehicleMetadata:
     length_between_axles_m: float = 3.1
     max_steer_angle_rad: float = np.deg2rad(30)
     base_accel_mps2: float = 2.0
-    base_brake_mps2: float = -2.0
+    base_brake_mps2: float = -6.0
     wheelbase: float = 2.875
     vehicle_reaction_time_s: float = 0.1
 
