@@ -100,9 +100,11 @@ class TrajectoryPlanner:
 
     def calculate_trajectory(self) -> List[Tuple[float, float]]:
         """Combines trajectory and respective velocity to one data struct"""
+
         if not self.vehicle.is_ready:
             return []
-
+        print('here')
+        print([(wp.actual_lane, wp.possible_lanes) for wp in self.global_route_ann])
         # cache the route to avoid concurrency bugs because
         # the route might be overwritten by the navigation task
         route = self.global_route
