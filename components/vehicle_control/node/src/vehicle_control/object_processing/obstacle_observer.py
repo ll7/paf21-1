@@ -16,7 +16,7 @@ from vehicle_control.state_machine import SpeedObservation
 
 
 @dataclass
-class ObjectHandler:
+class ObstacleObserver:
     """Represents a handler for the detected objects."""
     vehicle: Vehicle
     objects: Dict[int, ObjectMeta] = field(default_factory=dict)
@@ -25,7 +25,6 @@ class ObjectHandler:
     max_velocity_change_rate: float = 2.0
     street_width: float = 4
     dist_safe: int = 10
-    side: int = 0
 
     def __post_init__(self):
         if not self.map:
@@ -106,17 +105,17 @@ class ObjectHandler:
         indices = []
         obj_positions = [obj.trajectory[-1]]
         if len(obj.trajectory) > 2:
-            obj_positions = ObjectHandler._predict_movement(obj.trajectory, num_points=100)
+            obj_positions = ObstacleObserver._predict_movement(obj.trajectory, num_points=100)
 
         veh_pos = self.vehicle.pos
         veh_vel = self.vehicle.velocity_mps
 
         for index, route_point in enumerate(route):
             # calculate square distance
-            distance = ObjectHandler._closest_point(route_point, obj_positions)
+            distance = ObstacleObserver._closest_point(route_point, obj_positions)
             if distance > threshold:
                 continue
-            zone_clearance_time = ObjectHandler._calculate_zone_clearance(
+            zone_clearance_time = ObstacleObserver._calculate_zone_clearance(
                 route_point, obj_positions[-1], obj.velocity, veh_pos, veh_vel, threshold)
             print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
             if zone_clearance_time < 3.0:
@@ -220,7 +219,7 @@ class ObjectHandler:
             return None
 
         # 2) decide whether overtake on left / right side
-        overtake_left, overtake_right = ObjectHandler._can_overtake(lanes, blocked_ids)
+        overtake_left, overtake_right = ObstacleObserver._can_overtake(lanes, blocked_ids)
         if not overtake_left and not overtake_right:
             print('no overtake')
             return None
@@ -236,7 +235,7 @@ class ObjectHandler:
                 local_route[i].actual_lane = local_route[i - 1].actual_lane
         point_can_be_moved = [1 if wp.actual_lane - side in wp.possible_lanes else 0 for wp in
                               local_route]
-        shifted_wps = ObjectHandler._shift_waypoints(enum_route, sigmoid, point_can_be_moved)
+        shifted_wps = ObstacleObserver._shift_waypoints(enum_route, sigmoid, point_can_be_moved)
 
         new_is_blocked, _ = self.get_blocked_ids(shifted_wps)
         if new_is_blocked:
@@ -255,7 +254,9 @@ class ObjectHandler:
         for i in range(len(local_route)):
             wp = local_route[i]
             wp.pos = shifted_wps[i]
-            wp.actual_lane = self.map.roads_by_id[wp.road_id].detect_lane(wp.pos) 
+            wp.actual_lane = self.map.roads_by_id[wp.road_id].detect_lane(wp.pos)
+            if wp.actual_lane == 0:
+                print('WARNING: new annotated actual lane is 0, this should never happen!')
     
     @staticmethod
     def _shift_waypoints(enum_route, wp_shift: Callable[[Tuple[float, float]], float],

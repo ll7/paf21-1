@@ -113,7 +113,7 @@ class RoutePlanner:
         interpol_route = RoutePlanner._filter_steem_waypoints(interpol_route, pi/8)
         # print("wps_filtered:", interpol_route)
 
-        ann_route = RouteAnnotation.annotate_waypoints(interpol_route, route_metadata)
+        ann_route = RouteAnnotation.annotate_waypoints(interpol_route, route_metadata, xodr_map)
         ann_route = RoutePlanner.advanced_speed(ann_route)
         print(print("route_annotated", ann_route))
         return ann_route

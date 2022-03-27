@@ -31,7 +31,7 @@ class PathSection:
     drive_reversed: bool
     possible_lanes: List[int]
     end_pos: Tuple[float, float]
-    road: Road = field(repr=False)
+    # road: Road = field(repr=False)
     # length: float
 
 
@@ -49,8 +49,8 @@ class RouteAnnotation:
     """Representing helper functionality to annotate pre-planned routes with metadata"""
 
     @staticmethod
-    def annotate_waypoints(waypoints: List[Tuple[float, float]], metadata: RouteMetadata) \
-                           -> List[AnnRouteWaypoint]:
+    def annotate_waypoints(waypoints: List[Tuple[float, float]], metadata: RouteMetadata,
+                           map: XodrMap) -> List[AnnRouteWaypoint]:
         """Annotate the waypoints with route metadata"""
         max_dist = 999.0
         radius_handled = 5.0
@@ -75,8 +75,13 @@ class RouteAnnotation:
             ss_dist = euclid_dist(waypoint, ss_pos) if ss_pos else max_dist
             sec_dist = euclid_dist(waypoint, sec_end_pos) if sec_end_pos else max_dist
 
-            current_road = metadata.sections_ahead[sec_id].road
+            current_road = map.roads_by_id[metadata.sections_ahead[sec_id].road_id]
             actual_lane = current_road.detect_lane(waypoint)
+            if actual_lane == 0:
+                neighbors = map.find_sections(waypoint)
+                if not neighbors:
+                    print('unassignable lane:', waypoint)
+                    continue # ignore point, tests show that detection holes are not bigger than 2m
             poss_lanes = metadata.sections_ahead[sec_id].possible_lanes
 
             ann_wp = AnnRouteWaypoint(waypoint, current_road.road_id, actual_lane,
@@ -107,12 +112,13 @@ class RouteAnnotation:
         inital_speed = 50.0
 
         for i, section in enumerate(path_sections):
-            sec_traffic_lights = RouteAnnotation._filter_items(section.road.traffic_lights, section)
-            sec_speed_signs = RouteAnnotation._filter_items(section.road.speed_signs, section)
+            road = xodr_map.roads_by_id[section.road_id]
+            sec_traffic_lights = RouteAnnotation._filter_items(road.traffic_lights, section)
+            sec_speed_signs = RouteAnnotation._filter_items(road.speed_signs, section)
 
             is_first_section = i == 0
             if is_first_section:
-                road_len = section.road.approx_road_length
+                road_len = road.approx_road_length
                 dist_spawn_end = euclid_dist(section.end_pos, spawn_pos)
                 s_value_car = road_len - dist_spawn_end
 
@@ -165,7 +171,7 @@ class RouteAnnotation:
                 lane_offset = road.lane_offsets[lane_id] - road.lane_widths[lane_id]/2
                 road_bounds = bounding_box(road.road_start, road.road_end, lane_offset)
                 end_pos = road_bounds[1] if drive_reverse else road_bounds[3]
-                section = PathSection(road_id, lane_id, drive_reverse, poss_lanes, end_pos, road)
+                section = PathSection(road_id, lane_id, drive_reverse, poss_lanes, end_pos)
                 path_sections.append(section)
 
             last_road_id = road_id

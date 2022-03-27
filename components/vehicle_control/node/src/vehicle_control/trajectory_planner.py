@@ -11,7 +11,7 @@ from vehicle_control.core.geometry import angle_between_vectors, points_to_vecto
 from vehicle_control.state_machine import SpeedObservation, TrafficLightInfo, \
                                         TrafficLightPhase, ManeuverObservation
 from vehicle_control.driving import CurveDetection, CurveObservation
-from vehicle_control.object_processing import ObjectHandler
+from vehicle_control.object_processing import ObstacleObserver
 
 
 @dataclass
@@ -27,13 +27,13 @@ class TrajectoryPlanner:
     prev_wp_id: int = -1
     end_curve_id = None
     length_route: int = 100
-    obj_handler: ObjectHandler = None
+    obj_handler: ObstacleObserver = None
     tld_info: TrafficLightInfo = TrafficLightInfo()
     curve_detection: CurveDetection = CurveDetection()
 
     def __post_init__(self):
         if not self.obj_handler:
-            self.obj_handler = ObjectHandler(self.vehicle)
+            self.obj_handler = ObstacleObserver(self.vehicle)
 
     @property
     def global_route(self) -> List[Tuple[float, float]]:

@@ -1,3 +1,4 @@
+from math import dist
 from vehicle_control.route_planning.xodr_converter import XODRConverter
 
 
@@ -101,6 +102,23 @@ def test_find_neighbor_sections_town04_highway_3():
     road_ids = [n[2].road_id for n in neighbors]
     print(road_ids)
     assert road_ids == [1184]
+
+
+# def test_find_neighbor_sections_town04_highway_4():
+#     point = (248.52882111040037, 395.729771257481)
+#     xodr_map = load_town_04()
+#     neighbors = xodr_map.find_sections(point)
+#     road_ids = [n[2].road_id for n in neighbors]
+
+#     lane_polygons = [(road_id, lane_id, xodr_map.roads_by_id[road_id].lane_polygons[lane_id])
+#                      for road_id in xodr_map.roads_by_id
+#                      for lane_id in xodr_map.roads_by_id[road_id].lane_polygons]
+#     print('closeby polygons:', [(road_id, lane_id)
+#                                 for road_id, lane_id, polygon_points in lane_polygons
+#                                 if any(map(lambda p: dist(p, point) < 2, polygon_points))])
+
+#     print(road_ids)
+#     assert False# road_ids == [6]
 
  
 # def test_find_neighbor_sections_town04_highway_4():
