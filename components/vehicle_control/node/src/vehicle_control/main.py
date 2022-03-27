@@ -74,7 +74,11 @@ class LocalPlannerNode:
                 visualize_route_rviz(local_route)
 
                 self.speed_state_machine.update_state(self.route_planner.latest_speed_observation)
+                print(self.route_planner.latest_speed_observation)
                 velocity = self.speed_state_machine.get_target_speed()
+                print(velocity, 'kmh')
+                if velocity <= 0:
+                    print('here')
                 self.driving_control.update_route(local_route)
                 self.driving_control.update_target_velocity(velocity)
                 driving_signal = self.driving_control.next_signal()
