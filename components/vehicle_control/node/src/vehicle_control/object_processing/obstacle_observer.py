@@ -105,7 +105,7 @@ class ObstacleObserver:
         indices = []
         obj_positions = [obj.trajectory[-1]]
         if len(obj.trajectory) > 2:
-            obj_positions = ObstacleObserver._predict_movement(obj.trajectory, num_points=100)
+            obj_positions = ObstacleObserver._predict_movement(obj.trajectory, num_points=0)
 
         veh_pos = self.vehicle.pos
         veh_vel = self.vehicle.velocity_mps
@@ -198,7 +198,7 @@ class ObstacleObserver:
         time_to_collision = 1
         self.dist_safe = max([relative_velocity * time_to_collision, 0])
         # self.dist_safe = 6
-        dist_c = dist(object_coordinates[0], object_coordinates[-1]) + 30
+        dist_c = dist(object_coordinates[0], object_coordinates[-1]) + 10
         if relative_velocity < 0:
             dist_c = 0
         x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)
@@ -228,11 +228,6 @@ class ObstacleObserver:
         # 3) re-plan the overtaking trajectory
         blocked_route = [enum_route[i] for i in blocked_ids]
         sigmoid = lambda wp: self.sigmoid_smooth(closest_object.velocity, blocked_route, wp, enum_route[0], side)
-
-        for i in range(1, len(local_route)-1):
-            if local_route[i].actual_lane == 0 and local_route[i - 1] != 0\
-                    and local_route[i + 1] != 0:
-                local_route[i].actual_lane = local_route[i - 1].actual_lane
         point_can_be_moved = [1 if wp.actual_lane - side in wp.possible_lanes else 0 for wp in
                               local_route]
         shifted_wps = ObstacleObserver._shift_waypoints(enum_route, sigmoid, point_can_be_moved)
@@ -243,20 +238,29 @@ class ObstacleObserver:
             return None
 
         # update waypoint annotations
-        self._write_route_into_annotated(shifted_wps, local_route)
+        local_route = self._write_route_into_annotated(shifted_wps, local_route)
 
         print('overtaking')
         return local_route
 
     def _write_route_into_annotated(self, shifted_wps: List[Tuple[float, float]],
-                                    local_route: List[AnnRouteWaypoint]):
-
+                                    local_route: List[AnnRouteWaypoint]) -> List[AnnRouteWaypoint]:
+        new_route = []
         for i in range(len(local_route)):
             wp = local_route[i]
-            wp.pos = shifted_wps[i]
-            wp.actual_lane = self.map.roads_by_id[wp.road_id].detect_lane(wp.pos)
+            pos = shifted_wps[i]
+            actual_lane = self.map.roads_by_id[wp.road_id].detect_lane(pos)
+
             if wp.actual_lane == 0:
                 print('WARNING: new annotated actual lane is 0, this should never happen!')
+                pos = wp.pos
+                actual_lane = wp.actual_lane
+
+            new_wp = AnnRouteWaypoint(pos, wp.road_id, actual_lane, wp.possible_lanes,
+                                      wp.legal_speed, wp.dist_next_tl, wp.end_lane_m)
+            new_route.append(new_wp)
+
+        return new_route
     
     @staticmethod
     def _shift_waypoints(enum_route, wp_shift: Callable[[Tuple[float, float]], float],
