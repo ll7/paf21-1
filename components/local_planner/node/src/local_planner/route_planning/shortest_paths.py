@@ -4,15 +4,19 @@ from typing import List
 import numpy as np
 
 
-def shortest_path(start_pos: int, end_pos: int, matrix: np.ndarray) -> List[int]:
+def shortest_path(start_pos: int, end_pos: int, adj_matrix: np.ndarray) -> List[int]:
     """Find the shortest path for the given start / end positions and graph"""
+    backtrace = _naive_dijkstra(adj_matrix, start_pos)
+    return _unroll_shortest_path(start_pos, end_pos, backtrace)
 
-    # compute a shortest edge adjacency given the start position
-    backtrace = _naive_dijkstra(matrix, start_pos)
 
-    # unroll the shortest path from behind using the backtrace
+def _unroll_shortest_path(start_pos: int, end_pos: int,
+                          backtrace: List[int]) -> List[int]:
+    """collect edge trajectories from the end until reaching the start."""
+
     path = [end_pos]
     pos = end_pos
+
     while pos != start_pos:
         pos = backtrace[pos]
         if pos == -1:
@@ -22,7 +26,7 @@ def shortest_path(start_pos: int, end_pos: int, matrix: np.ndarray) -> List[int]
     return path
 
 
-def _naive_dijkstra(matrix: np.ndarray, start_pos: int) -> np.ndarray:
+def _naive_dijkstra(adj_matrix: np.ndarray, start_node: int) -> List[int]:
     """A very naive and simplified implementation of Dijkstra's algorithm.
 
     Returns a backtrace adjacency of shortest edges when traversing the graph
@@ -30,45 +34,35 @@ def _naive_dijkstra(matrix: np.ndarray, start_pos: int) -> np.ndarray:
 
     # initialize the distances array with infinite distances
     # and the backtrace array with 'no connection' links
-    num_nodes = matrix.shape[0]
-    dist = np.ones(shape=(num_nodes,)) * np.inf
-    backtrace = np.ones(shape=(num_nodes,)).astype('int32') * -1
+    num_nodes = adj_matrix.shape[0]
+    dist = np.full((num_nodes), np.inf, dtype=np.float32)
+    backtrace = np.full((num_nodes,), -1, dtype=np.int32)
 
-    dist[start_pos] = 0.0
-    queue = list(range(num_nodes))
+    dist[start_node] = 0.0
+    unvisited_nodes = list(range(num_nodes))
 
-    # relax edges until there's no further relaxation
-    while queue:
-        current_node = _next_node(queue, dist)
-        if current_node == -1:
-            break
-        queue.remove(current_node)
+    # visit all nodes reachable from the start node
+    while unvisited_nodes:
 
-        # find all nodes connected to the current node by an outgoing edge
-        conn_nodes = [i for i in list(range(num_nodes)) if matrix[current_node][i]]
+        # pick the next node to visit
+        dist_in_queue = dist[unvisited_nodes]
+        node_to_visit = unvisited_nodes[np.argmin(dist_in_queue)]
+
+        if dist[node_to_visit] == np.inf:
+            break # only unreachable nodes left -> exit
+
+        # find the visited node's neighbors (only outgoing edges)
+        conn_nodes = [i for i in list(range(num_nodes)) if adj_matrix[node_to_visit][i]]
 
         # allow the shortest paths to use the current node
         # -> update dist / backtrace array if there's a shorter path
         for index in conn_nodes:
-            new_dist = dist[current_node] + matrix[current_node][index]
+            new_dist = dist[node_to_visit] + adj_matrix[node_to_visit][index]
             if new_dist < dist[index]:
                 dist[index] = new_dist
-                backtrace[index] = current_node
+                backtrace[index] = node_to_visit
 
-    return backtrace
+        # mark the node as visited
+        unvisited_nodes.remove(node_to_visit)
 
-
-def _next_node(queue: List[int], dist: np.ndarray) -> int:
-    """Determine the index of the next edge to relax,
-    defaulting to -1 when there are no further relaxations possible."""
-
-    minimum = np.inf
-    min_index = -1
-
-    # info: this min_key search could be implemented by a prio queue
-    for index in queue:
-        if dist[index] < minimum:
-            minimum = dist[index]
-            min_index = index
-
-    return min_index
+    return backtrace.tolist()
