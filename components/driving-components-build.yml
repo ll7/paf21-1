@@ -1,15 +1,15 @@
 version: '2'
 
 services:
-  competition-manager:
+  competition_manager:
     image: competition_manager
     build:
       context: ./competition_manager
 
-  local-planner:
-    image: local_planner
+  vehicle_control:
+    image: vehicle_control
     build:
-      context: ./local_planner
+      context: ./vehicle_control
 
   perception:
     image: perception

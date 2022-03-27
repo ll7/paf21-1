@@ -1,7 +1,0 @@
-<!-- -->
-<launch>
-  <node pkg="local_planner" name="local_planner"
-        type="main.py" output="screen" required="true">
-    <param name="/use_sim_time" value="true" />
-  </node>
-</launch>
