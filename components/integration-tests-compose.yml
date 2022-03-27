@@ -21,11 +21,11 @@ services:
     networks:
       - ros
 
-  local-planner:
-    image: local_planner
+  vehicle_control:
+    image: vehicle_control
     environment:
       ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: local-planner
+      ROS_HOSTNAME: vehicle_control
     networks:
       - ros
 
