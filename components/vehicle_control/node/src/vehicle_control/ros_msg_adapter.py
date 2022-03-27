@@ -54,7 +54,6 @@ class RosMessagesAdapter:
     def message_to_vehicle_position(msg: OdometryMsg) -> Tuple[float, float]:
         """Convert a ROS message into the vehicle position"""
         pos = msg.pose.pose.position
-        print(f'Msg.Pos: {pos}')
         return pos.x, pos.y
 
     @staticmethod

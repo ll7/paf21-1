@@ -91,10 +91,10 @@ class StanleySteeringController:
         temp_steering_angle = self.compute_steering_angle(route, pos, theta)
         steering_angle = k[0] * temp_steering_angle
         for step in range(1, n):
-            theta = theta + ((velocity * np.tan(temp_steering_angle)) /
-                             self.vehicle.meta.wheelbase) * timestep
             x_n = pos[0] + velocity * np.cos(theta + temp_steering_angle) * timestep
             y_n = pos[1] + velocity * np.sin(theta + temp_steering_angle) * timestep
+            theta = theta + ((velocity * np.tan(temp_steering_angle)) /
+                             self.vehicle.meta.wheelbase) * timestep
             pos = (x_n, y_n)
             temp_steering_angle = self.compute_steering_angle(route, pos, theta)
             steering_angle += k[step] * temp_steering_angle

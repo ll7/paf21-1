@@ -6,8 +6,9 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from vehicle_control.core import Vehicle#, visualize_route_rviz
-from vehicle_control.core.geometry import rotate_vector, orth_offset_left, add_vector, scale_vector, sub_vector
+from vehicle_control.core import Vehicle, visualize_route_rviz
+from vehicle_control.core.geometry import rotate_vector, orth_offset_left, add_vector,\
+    scale_vector, sub_vector, vector_to_dir, points_to_vector
 from vehicle_control.route_planning.xodr_converter import XodrMap
 from vehicle_control.route_planning.route_annotation import AnnRouteWaypoint
 from vehicle_control.map_provider import load_xodr_map
@@ -63,14 +64,15 @@ class ObstacleObserver:
         blocked_ids, obj = self.get_blocked_ids(route)
         if len(blocked_ids) > 0:
             # distance = self.calculate_min_distance(route, min(blocked_ids), obj.trajectory[-1])
-            distance = self._cumulated_dist(self.vehicle.pos, obj.trajectory[-1])
+            distance = self._cumulated_dist(self.vehicle.pos, local_route[min(blocked_ids)])
             spd_obs.is_trajectory_free = False
             spd_obs.dist_next_obstacle_m = distance
             spd_obs.obj_speed_ms = obj.velocity
 
         return spd_obs
 
-    def get_blocked_ids(self, route: List[Tuple[float, float]]) -> Tuple[List[int], ObjectMeta]:
+    def get_blocked_ids(self, route: List[Tuple[float, float]],
+                        prediction_wanted: bool = True) -> Tuple[List[int], ObjectMeta]:
         """gets the ids of route points that aren't accessible"""
         objects: Dict[int, ObjectMeta] = self.objects.copy()
         min_obj: ObjectMeta = None
@@ -78,7 +80,7 @@ class ObstacleObserver:
         blocked_ids = []
 
         for obj_id, obj in objects.items():
-            blocked = self.find_blocked_points(route, obj, threshold=2)
+            blocked = self.find_blocked_points(route, obj, threshold=1, prediction_wanted=prediction_wanted)
 
             if not blocked:
                 continue
@@ -99,14 +101,14 @@ class ObstacleObserver:
         return blocked_ids_temp, min_obj
 
     def find_blocked_points(self, route: List[Tuple[float, float]],
-                            obj: ObjectMeta, threshold: float):
+                            obj: ObjectMeta, threshold: float, prediction_wanted: bool = True):
         """finds blocked points and returns their ids"""
         threshold = threshold ** 2
         indices = []
         obj_positions = [obj.trajectory[-1]]
-        if len(obj.trajectory) > 2:
-            obj_positions = ObstacleObserver._predict_movement(obj.trajectory, num_points=0)
-
+        if len(obj.trajectory) > 8 and prediction_wanted:
+            obj_positions = self._predict_movement(obj.trajectory, obj.velocity, num_points=10)
+        visualize_route_rviz(obj_positions)
         veh_pos = self.vehicle.pos
         veh_vel = self.vehicle.velocity_mps
 
@@ -115,30 +117,39 @@ class ObstacleObserver:
             distance = ObstacleObserver._closest_point(route_point, obj_positions)
             if distance > threshold:
                 continue
-            zone_clearance_time = ObstacleObserver._calculate_zone_clearance(
-                route_point, obj_positions[-1], obj.velocity, veh_pos, veh_vel, threshold)
-            print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
-            if zone_clearance_time < 3.0:
-                indices += [index - 1, index]
-                break
+            for pos in obj_positions:
+                zone_clearance_time = ObstacleObserver._calculate_zone_clearance(
+                    route_point, pos, obj.velocity, veh_pos, veh_vel, threshold)
+                #print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
+                if zone_clearance_time < 3.0:
+                    indices += [index - 1, index]
+        indices = list(set(indices))
         return indices
 
-    @staticmethod
-    def _predict_movement(trajectory: List[Tuple[float, float]],
+    def _predict_movement(self, trajectory: List[Tuple[float, float]], velocity: float,
                           num_points: int) -> List[Tuple[float, float]]:
         """This function estimates the position of the object. """
-        predictions = trajectory[-2:]
-        vec_average = (0.0, 0.0)
+        pos = trajectory[-1]
+        predictions = [pos]
+        if velocity < 1:
+            return predictions
+        old_vector = points_to_vector(trajectory[-7], trajectory[-1])
+        new_vector = points_to_vector(trajectory[-4], trajectory[-1])
 
-        for p_1, p_2 in zip(trajectory[:-1], trajectory[1:]):
-            vec_1 = sub_vector(p_2, p_1)
-            vec_average = add_vector(vec_1, vec_average)
+        theta_old = vector_to_dir(old_vector)
+        theta = vector_to_dir(new_vector)
+        theta_dot = theta - theta_old
 
-        vec_average = (vec_average[0] / len(trajectory), vec_average[1] / len(trajectory))
-        last_point = trajectory[-1]
+        steering_angle = np.arctan((theta_dot/velocity) * self.vehicle.meta.wheelbase)
+        steering_angle = np.clip(steering_angle, -np.deg2rad(5), np.deg2rad(5))
+        timestep = 1/10
         for _ in range(num_points):
-            last_point = add_vector(last_point, vec_average)
-            predictions.append(last_point)
+            x_n = pos[0] + velocity * np.cos(theta + steering_angle) * timestep
+            y_n = pos[1] + velocity * np.sin(theta + steering_angle) * timestep
+            theta = theta + ((velocity * np.tan(steering_angle)) /
+                             self.vehicle.meta.wheelbase) * timestep
+            pos = (x_n, y_n)
+            predictions.append(pos)
         return predictions
 
     @staticmethod
@@ -151,8 +162,8 @@ class ObstacleObserver:
                           veh_vel if veh_vel != 0.0 else 999
         time_self_leave = (dist(veh_pos, route_point) - threshold) / \
                           veh_vel if veh_vel != 0.0 else 999
-        zone_clearance_time = min(time_obj_leave - time_self_enter,
-                                  time_self_leave - time_obj_enter)
+        zone_clearance_time = min(abs((time_obj_leave - time_self_enter)),
+                                  abs((time_self_leave - time_obj_enter)))
         return zone_clearance_time
 
     @staticmethod
@@ -188,7 +199,7 @@ class ObstacleObserver:
         # TODO: use the exact road withds from the XODR map
         # point = ann_point.pos
         street_width = side * self.street_width  # parameter to stop in the  middle of other lane
-        slope = 3  # slope of overtaking
+        slope = 5  # slope of overtaking
         relative_velocity = self.vehicle.velocity_mps - object_speed
         # if relative_velocity <= 10/3.6:
         #     return 0
@@ -198,7 +209,7 @@ class ObstacleObserver:
         time_to_collision = 1
         self.dist_safe = max([relative_velocity * time_to_collision, 0])
         # self.dist_safe = 6
-        dist_c = dist(object_coordinates[0], object_coordinates[-1]) + 10
+        dist_c = dist(object_coordinates[0], object_coordinates[-1]) + 30
         if relative_velocity < 0:
             dist_c = 0
         x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)
@@ -206,15 +217,16 @@ class ObstacleObserver:
         deviation = (street_width / (1 + math.exp(-x_1))) + ((-street_width) / (1 + math.exp(-x_2)))
         return deviation
 
-    def plan_overtaking_maneuver(self, local_route: List[AnnRouteWaypoint]) -> List[AnnRouteWaypoint]:
+    def plan_overtaking_maneuver(self, local_route: List[AnnRouteWaypoint],
+                                 orig_route: List[AnnRouteWaypoint]) -> List[AnnRouteWaypoint]:
         """Plan the new trajectory of an overtaking maneuver"""
 
         lanes = [(point.actual_lane, point.possible_lanes) for point in local_route]
         temp_route = [point.pos for point in local_route]
         enum_route = temp_route.copy()
-
+        original_route = [point.pos for point in orig_route]
         # abort with previous trajectory if no overtake required
-        blocked_ids, closest_object = self.get_blocked_ids(enum_route)
+        blocked_ids, closest_object = self.get_blocked_ids(enum_route, prediction_wanted=False)
         if not blocked_ids:
             return None
 
@@ -230,9 +242,9 @@ class ObstacleObserver:
         sigmoid = lambda wp: self.sigmoid_smooth(closest_object.velocity, blocked_route, wp, enum_route[0], side)
         point_can_be_moved = [1 if wp.actual_lane - side in wp.possible_lanes else 0 for wp in
                               local_route]
-        shifted_wps = ObstacleObserver._shift_waypoints(enum_route, sigmoid, point_can_be_moved)
+        shifted_wps = ObstacleObserver._shift_waypoints(enum_route, sigmoid, point_can_be_moved, original_route)
 
-        new_is_blocked, _ = self.get_blocked_ids(shifted_wps)
+        new_is_blocked, _ = self.get_blocked_ids(shifted_wps, prediction_wanted=False)
         if new_is_blocked:
             print('new is blocked')
             return None
@@ -249,14 +261,18 @@ class ObstacleObserver:
         for i in range(len(local_route)):
             wp = local_route[i]
             pos = shifted_wps[i]
-            actual_lane = self.map.roads_by_id[wp.road_id].detect_lane(pos)
-
-            if wp.actual_lane == 0:
+            road_id = wp.road_id
+            actual_lane = 0
+            for road in list(self.map.roads_by_id.keys()):
+                actual_lane = self.map.roads_by_id[road].detect_lane(pos, wp.road_id)
+                if actual_lane != 0:
+                    road_id = road
+                    break
+            if actual_lane == 0:
                 print('WARNING: new annotated actual lane is 0, this should never happen!')
-                pos = wp.pos
-                actual_lane = wp.actual_lane
+                continue
 
-            new_wp = AnnRouteWaypoint(pos, wp.road_id, actual_lane, wp.possible_lanes,
+            new_wp = AnnRouteWaypoint(pos, road_id, actual_lane, wp.possible_lanes,
                                       wp.legal_speed, wp.dist_next_tl, wp.end_lane_m)
             new_route.append(new_wp)
 
@@ -264,14 +280,21 @@ class ObstacleObserver:
     
     @staticmethod
     def _shift_waypoints(enum_route, wp_shift: Callable[[Tuple[float, float]], float],
-                         factors: List[int]):
+                         factors: List[int], original_route: List[Tuple[float, float]]):
         offset_vectors = [orth_offset_left(enum_route[i], enum_route[i+1], 1.0)
                           for i in range(len(enum_route) - 1)]
-        offset_vectors.insert(0, offset_vectors[0])
 
+        offset_vectors.insert(0, offset_vectors[0])
         offset_scales = [wp_shift(wp) for wp in enum_route]
+        sign = -1 if np.sum(offset_scales) < 0 else 1
+        signed_distance_weight = [sign * 4 - (sign * dist(point, orig_point))
+                                  for point, orig_point in zip(enum_route, original_route)]
         offset_scales = [wp * factor for wp, factor in zip(offset_scales, factors)]
-        offsets = [scale_vector(vec, vec_len) for vec, vec_len in zip(offset_vectors, offset_scales)]
+        #offsets = [scale_vector(vec, vec_len) for vec, vec_len in zip(offset_vectors, offset_scales)]
+        weights = [min(scale, distance) if scale != 0
+                   else distance for scale, distance in zip(offset_scales, signed_distance_weight)]
+        print(weights)
+        offsets = [scale_vector(vec, vec_len) for vec, vec_len in zip(offset_vectors, weights)]
         shifted_wps = [add_vector(wp, vec) for wp, vec in zip(enum_route, offsets)]
         return shifted_wps
 
@@ -282,8 +305,8 @@ class ObstacleObserver:
         left_lane, right_lane = (lane - 1, lane + 1) if lane > 0 else (lane + 1, lane - 1)
         overtake_left, overtake_right = left_lane in possible_lanes, right_lane in possible_lanes
         # TODO: consider also the possible lanes of the end point and one point in the middle
-        return overtake_left, overtake_right
-        #return overtake_left, False # TODO: enforce "drive on the right" rule
+        #return overtake_left, overtake_right
+        return overtake_left, False # TODO: enforce "drive on the right" rule
 
     def sigmoid_smooth_lanechange(self, object_speed: float, object_coordinates: List[Tuple[float, float]],
                        point: Tuple[float, float], first_coord: Tuple[float, float], side: int) -> float:
@@ -298,7 +321,7 @@ class ObstacleObserver:
         relative_distance_to_object = -dist(point, object_coordinates[0])
         if dist(point, first_coord) > dist(first_coord, object_coordinates[0]):
             relative_distance_to_object = -relative_distance_to_object
-        time_to_collision = 1
+        time_to_collision = 0.5
         self.dist_safe = max([relative_velocity * time_to_collision, 0])
         # self.dist_safe = 6
         x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)

@@ -77,12 +77,7 @@ class RouteAnnotation:
             sec_dist = euclid_dist(waypoint, sec_end_pos) if sec_end_pos else max_dist
 
             current_road = map.roads_by_id[metadata.sections_ahead[sec_id].road_id]
-            actual_lane = current_road.detect_lane(waypoint)
-            if actual_lane == 0:
-                neighbors = map.find_sections(waypoint)
-                if not neighbors:
-                    print('unassignable lane:', waypoint)
-                    continue # ignore point, tests show that detection holes are not bigger than 2m
+            actual_lane = metadata.sections_ahead[sec_id].lane_id
             poss_lanes = metadata.sections_ahead[sec_id].possible_lanes
 
             ann_wp = AnnRouteWaypoint(waypoint, current_road.road_id, actual_lane,

@@ -23,6 +23,7 @@ class TrajectoryPlanner:
     vehicle: Vehicle
     driving_control: DrivingController = None
     global_route_ann: List[AnnRouteWaypoint] = field(default_factory=list)
+    orig_route_ann: List[AnnRouteWaypoint] = field(default_factory=list)
     next_wp_id: int = -1
     prev_wp_id: int = -1
     end_curve_id = None
@@ -89,6 +90,7 @@ class TrajectoryPlanner:
         """Update the global route to follow"""
 
         self.global_route_ann = ann_waypoints
+        self.orig_route_ann = ann_waypoints
         print(f"update global route ({len(self.global_route)} points): {self.global_route}")
 
         if len(self.global_route) < 2:
@@ -103,12 +105,11 @@ class TrajectoryPlanner:
 
         if not self.vehicle.is_ready:
             return []
-        print('here')
-        print([(wp.actual_lane, wp.possible_lanes) for wp in self.global_route_ann])
         # cache the route to avoid concurrency bugs because
         # the route might be overwritten by the navigation task
         route = self.global_route
         ann_route = self.global_route_ann
+        orig_route = self.orig_route_ann
         if not self.is_navigation_ready:
             return route
 
@@ -123,7 +124,8 @@ class TrajectoryPlanner:
         bound = min(self.prev_wp_id + self.length_route, len(route))
         temp_global_ann = self.global_route_ann
         temp_route = ann_route[self.prev_wp_id:bound]
-        overtaking_trajectory = self.obj_handler.plan_overtaking_maneuver(temp_route)
+        orig_route = orig_route[self.prev_wp_id:bound]
+        overtaking_trajectory = self.obj_handler.plan_overtaking_maneuver(temp_route, orig_route)
 
         if overtaking_trajectory:
             self.global_route_ann = temp_global_ann[:self.prev_wp_id] \
