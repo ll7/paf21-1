@@ -106,7 +106,7 @@ class ObjectHandler:
         indices = []
         obj_positions = [obj.trajectory[-1]]
         if len(obj.trajectory) > 2:
-            obj_positions = ObjectHandler._predict_movement(obj.trajectory, num_points=30)
+            obj_positions = ObjectHandler._predict_movement(obj.trajectory, num_points=100)
 
         veh_pos = self.vehicle.pos
         veh_vel = self.vehicle.velocity_mps
@@ -118,8 +118,8 @@ class ObjectHandler:
                 continue
             zone_clearance_time = ObjectHandler._calculate_zone_clearance(
                 route_point, obj_positions[-1], obj.velocity, veh_pos, veh_vel, threshold)
-            # print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
-            if zone_clearance_time < 0.0:
+            print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
+            if zone_clearance_time < 3.0:
                 indices += [index - 1, index]
                 break
         return indices
@@ -229,8 +229,15 @@ class ObjectHandler:
         # 3) re-plan the overtaking trajectory
         blocked_route = [enum_route[i] for i in blocked_ids]
         sigmoid = lambda wp: self.sigmoid_smooth(closest_object.velocity, blocked_route, wp, enum_route[0], side)
-        shifted_wps = ObjectHandler._shift_waypoints(enum_route, sigmoid)
-        
+
+        for i in range(1, len(local_route)-1):
+            if local_route[i].actual_lane == 0 and local_route[i - 1] != 0\
+                    and local_route[i + 1] != 0:
+                local_route[i].actual_lane = local_route[i - 1].actual_lane
+        point_can_be_moved = [1 if wp.actual_lane - side in wp.possible_lanes else 0 for wp in
+                              local_route]
+        shifted_wps = ObjectHandler._shift_waypoints(enum_route, sigmoid, point_can_be_moved)
+
         new_is_blocked, _ = self.get_blocked_ids(shifted_wps)
         if new_is_blocked:
             print('new is blocked')
@@ -251,12 +258,14 @@ class ObjectHandler:
             wp.actual_lane = self.map.roads_by_id[wp.road_id].detect_lane(wp.pos) 
     
     @staticmethod
-    def _shift_waypoints(enum_route, wp_shift: Callable[[Tuple[float, float]], float]):
+    def _shift_waypoints(enum_route, wp_shift: Callable[[Tuple[float, float]], float],
+                         factors: List[int]):
         offset_vectors = [orth_offset_left(enum_route[i], enum_route[i+1], 1.0)
                           for i in range(len(enum_route) - 1)]
         offset_vectors.insert(0, offset_vectors[0])
 
         offset_scales = [wp_shift(wp) for wp in enum_route]
+        offset_scales = [wp * factor for wp, factor in zip(offset_scales, factors)]
         offsets = [scale_vector(vec, vec_len) for vec, vec_len in zip(offset_vectors, offset_scales)]
         shifted_wps = [add_vector(wp, vec) for wp, vec in zip(enum_route, offsets)]
         return shifted_wps
@@ -268,8 +277,8 @@ class ObjectHandler:
         left_lane, right_lane = (lane - 1, lane + 1) if lane > 0 else (lane + 1, lane - 1)
         overtake_left, overtake_right = left_lane in possible_lanes, right_lane in possible_lanes
         # TODO: consider also the possible lanes of the end point and one point in the middle
-        #return overtake_left, overtake_right
-        return overtake_left, False # TODO: enforce "drive on the right" rule
+        return overtake_left, overtake_right
+        #return overtake_left, False # TODO: enforce "drive on the right" rule
 
     def sigmoid_smooth_lanechange(self, object_speed: float, object_coordinates: List[Tuple[float, float]],
                        point: Tuple[float, float], first_coord: Tuple[float, float], side: int) -> float:
