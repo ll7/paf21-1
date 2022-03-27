@@ -1,0 +1,28 @@
+competition:
+  start:
+    position: 
+      x: 80.97613525390625
+      y: 16.23183250427246
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: 0.7071068
+      w: 0.7071068
+  goal:
+    position: 
+      x: 570.5172729492188
+      y: -251.7205047607422
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.3420201
+      w: 0.9396926
+  traffic_rules: true
+  ready_for_ego: false
+  town_name: 'Town06'
+  spawn_npc:
+    n: 0 # orig: 50
+    w: 0 # orig: 50
+    s: 1 # seed

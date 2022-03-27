@@ -1,0 +1,28 @@
+competition:
+  start:
+    position: 
+      x: -1.366001844406128
+      y: -73.27887725830078
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.0017453
+      w: 0.9999985
+  goal:
+    position:
+      x: -102.61219787597656
+      y: -29.04216957092285
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.258819
+      w: 0.9659258
+  traffic_rules: true
+  ready_for_ego: false
+  town_name: 'Town07'
+  spawn_npc:
+    n: 0 # orig: 50
+    w: 0 # orig: 50
+    s: 1 # seed
