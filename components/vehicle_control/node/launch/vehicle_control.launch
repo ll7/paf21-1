@@ -1,6 +1,6 @@
 <!-- -->
 <launch>
-  <node pkg="local_planner" name="local_planner"
+  <node pkg="vehicle_control" name="vehicle_control"
         type="main.py" output="screen" required="true">
     <param name="/use_sim_time" value="true" />
   </node>

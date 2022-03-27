@@ -1,7 +1,7 @@
 version: '2'
 
 services:
-  competition-manager:
+  competition_manager:
     image: competition_manager
     build:
       context: ./competition_manager

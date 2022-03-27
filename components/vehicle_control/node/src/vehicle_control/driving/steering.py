@@ -10,7 +10,7 @@ from vehicle_control.core import Vehicle
 from vehicle_control.core.geometry import \
     points_to_vector, norm_angle, vector_len, vector_to_dir, rotate_vector, add_vector
 
-from vehicle_control.vehicle_control.curve_detection import CurveDetection
+from vehicle_control.driving.curve_detection import CurveDetection
 
 
 class SteeringController(Protocol):

@@ -5,8 +5,8 @@ from typing import Protocol, Tuple, List
 from dataclasses import dataclass, field
 
 from vehicle_control.core import Vehicle
-from vehicle_control.vehicle_control import NaiveSteeringController
-from vehicle_control.vehicle_control import StanleySteeringController
+from vehicle_control.driving import NaiveSteeringController
+from vehicle_control.driving import StanleySteeringController
 
 
 @dataclass

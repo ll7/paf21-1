@@ -6,11 +6,11 @@ from dataclasses import dataclass, field
 
 from vehicle_control.core import Vehicle
 from vehicle_control.route_planning.route_annotation import AnnRouteWaypoint
-from vehicle_control.vehicle_control import DrivingController
+from vehicle_control.driving import DrivingController
 from vehicle_control.core.geometry import angle_between_vectors, points_to_vector, vector_len
 from vehicle_control.state_machine import SpeedObservation, TrafficLightInfo, \
                                         TrafficLightPhase, ManeuverObservation
-from vehicle_control.vehicle_control import CurveDetection, CurveObservation
+from vehicle_control.driving import CurveDetection, CurveObservation
 from vehicle_control.object_processing import ObjectHandler
 
 

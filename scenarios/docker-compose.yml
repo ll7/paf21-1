@@ -41,11 +41,11 @@ services:
       CARLA_OPENSCENARIO_FILE: /config/FollowLeadingVehicle.xosc
       CONFIG_FILE: ${CONFIG_FILE}
 
-  competition-manager:
+  competition_manager:
     image: competition_manager
     environment:
       ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: competition-manager
+      ROS_HOSTNAME: competition_manager
 
   vehicle_control:
     image: vehicle_control

@@ -15,7 +15,7 @@ from vehicle_control.route_planning.route_annotation import AnnRouteWaypoint
 from vehicle_control.navigation import CompetitionDrivingService
 from vehicle_control.trajectory_planner import TrajectoryPlanner
 from vehicle_control.ros_msg_adapter import RosMessagesAdapter
-from vehicle_control.vehicle_control import DrivingController
+from vehicle_control.driving import DrivingController
 from vehicle_control.state_machine import SpeedStateMachine, ManeuverStateMachine
 
 

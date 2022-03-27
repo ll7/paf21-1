@@ -9,7 +9,7 @@ services:
     networks:
       - ros
 
-  carla-sim-mock:
+  carla_sim_mock:
     image: ros:noetic
     command: /integration-tests-startup.sh
     volumes:
@@ -17,7 +17,7 @@ services:
       - ./recordings:/app/recordings
     environment:
       ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: carla-sim-mock
+      ROS_HOSTNAME: carla_sim_mock
     networks:
       - ros
 

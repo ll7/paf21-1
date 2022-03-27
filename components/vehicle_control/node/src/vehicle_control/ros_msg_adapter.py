@@ -10,7 +10,7 @@ from nav_msgs.msg import Odometry as OdometryMsg
 from sensor_msgs.msg import Imu as ImuMsg
 
 from vehicle_control.state_machine import TrafficLightInfo, TrafficLightPhase
-from vehicle_control.vehicle_control import DrivingSignal
+from vehicle_control.driving import DrivingSignal
 from vehicle_control.object_processing import ObjectMeta
 from vehicle_control.core.geometry import vector_to_dir, vector_len
 
