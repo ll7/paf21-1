@@ -12,6 +12,7 @@ from perception.object_detection.object_tracker import ObjectTracker
 
 
 class ObjectDetector:
+    # pylint: disable=too-few-public-methods
     """A module that detects vehicles and pedestrians."""
     def __init__(self, config_path: str):
         with open(config_path, encoding='utf-8') as file:

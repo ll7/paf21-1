@@ -10,21 +10,17 @@ services:
     environment:
       SDL_VIDEODRIVER: offscreen
       SDL_HINT_CUDA_DEVICE: 0
-    expose:
-      - 2000
-      - 2001
-      - 2002
-    networks:
-      - carla
+    ports:
+      - 2000:2000
+      - 2001:2000
+      - 2002:2000
     command: ["-carla-server"]
 
   roscore:
     image: ros:noetic
     command: roscore
-    expose:
-      - 11311
-    networks:
-      - ros
+    ports:
+      - 11311:11311
 
   carla-ros-bridge:
     image: carla-ros-bridge
@@ -44,17 +40,12 @@ services:
       CARLA_SIM_HOST: carla-simulator
       CARLA_OPENSCENARIO_FILE: /config/FollowLeadingVehicle.xosc
       CONFIG_FILE: ${CONFIG_FILE}
-    networks:
-      - carla
-      - ros
 
   competition-manager:
     image: competition_manager
     environment:
       ROS_MASTER_URI: http://roscore:11311
       ROS_HOSTNAME: competition-manager
-    networks:
-      - ros
 
   vehicle_control:
     image: vehicle_control
@@ -63,8 +54,6 @@ services:
     environment:
       ROS_MASTER_URI: http://roscore:11311
       ROS_HOSTNAME: vehicle_control
-    networks:
-      - ros
 
   perception:
     image: perception
@@ -73,8 +62,6 @@ services:
     environment:
       ROS_MASTER_URI: http://roscore:11311
       ROS_HOSTNAME: perception
-    networks:
-      - ros
 
   # WARNING: this recorder might write several dozens of gigabites within minutes
   #          use it carefully and only for recording
@@ -87,9 +74,3 @@ services:
   #   environment:
   #      ROS_MASTER_URI: http://roscore:11311
   #      ROS_HOSTNAME: rosbag-recorder
-  #   networks:
-  #     - ros
-
-networks:
-  carla:
-  ros:
