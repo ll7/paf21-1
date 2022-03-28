@@ -214,6 +214,20 @@ class Road:
         """All speed signs from the traffic signs list."""
         return [s for s in self.traffic_signs if s.sign_type == TrafficSignType.SPEED_LIMIT]
 
+    # def contains_point(self, pos: Tuple[float, float]) -> bool:
+    #     if not self.lane_polygons:
+    #         return False
+    #     return Polygon(self.lane_polygons[0]).contains(Point(pos))
+
+    def detect_lane(self, pos: Tuple[float, float], id) -> int:
+        """Assuming the point is on the road, detect the lane."""
+        point = Point(pos)
+        for lane_id in self.lane_polygons:
+            poly = Polygon(self.lane_polygons[lane_id])
+            if poly.contains(point):
+                return lane_id
+        return 0
+
     @staticmethod
     def _get_line_type(road: Element) -> str:
         """Get the line type out of the road."""
@@ -377,6 +391,17 @@ class Road:
             poly_points = inner_bound + list(reversed(outer_bound))
             all_polygons[lane_id] = poly_points
 
+        # # compute the road polygon spanning all drivable lanes of the entire road
+        # if self.left_ids or self.right_ids:
+        #     leftmost_poly = all_polygons[min(self.left_ids)] if self.left_ids \
+        #                         else all_polygons[max(self.right_ids)]
+        #     rightmost_poly = all_polygons[max(self.right_ids)] if self.right_ids \
+        #                         else all_polygons[min(self.left_ids)]
+
+        #     num_geos = len(leftmost_poly) // 2
+        #     road_poly = leftmost_poly[num_geos:] + rightmost_poly[:num_geos]
+        #     all_polygons[0] = road_poly
+
         return all_polygons
 
     def _compute_offset_vectors(self) -> List[Tuple[Tuple[float, float], Tuple[float, float]]]:
@@ -480,6 +505,25 @@ class XodrMap:
             self.roads_by_id = {}
         if self.nav_graph is None:
             self.nav_graph = self._create_links()
+
+    # def find_sections(self, pos: Tuple[float, float]) -> List[Tuple[int, bool, Road]]:
+    #     """Find the neighboring road sections related to the given position on the map"""
+    #     sections = []
+
+    #     for road in self.roads_by_id.values():
+
+    #         if not road.geometries:
+    #             print('road without geometries, this should never happen!')
+    #             continue
+
+    #         if not road.contains_point(pos):
+    #             continue
+
+    #         lane_id = road.detect_lane(pos)
+    #         is_right_road_side = lane_id < 0
+    #         sections.append((lane_id, is_right_road_side, road))
+
+    #     return sections
 
     def find_sections(self, pos: Tuple[float, float]) -> List[Tuple[int, bool, Road]]:
         """Find the neighboring road sections related to the given position on the map"""

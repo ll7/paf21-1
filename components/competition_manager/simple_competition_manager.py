@@ -65,6 +65,8 @@ class CompetitionManagerNode:
             self.end_time = rospy.get_rostime().to_sec()
             duration = self.end_time - self.start_time
             print(f'The competition was completed in {duration} seconds')
+            for _ in range(1000):
+                print('goal reached')
 
     def run_node(self):
         rospy.init_node('competition_manager')

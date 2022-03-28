@@ -1,4 +1,4 @@
-from math import dist
+from math import dist, pi
 
 from vehicle_control.route_planning.route_annotation import RouteAnnotation
 from vehicle_control.route_planning.route_planner import RoutePlanner
@@ -51,7 +51,7 @@ def test_route_metadata():
         [True, False, True, True, True, True, True, True, False, False, True]
 
     # lane id always 1 and possible lanes contain the lane id
-    assert all(map(lambda s: s.lane_id == 1, metadata.sections_ahead))
+    assert all(map(lambda s: s.lane_id == 1 if s.drive_reversed else s.lane_id == -1, metadata.sections_ahead))
     assert all(map(lambda s: s.lane_id in s.possible_lanes, metadata.sections_ahead))
 
     # all relevant traffic lights found
@@ -66,6 +66,17 @@ def test_route_metadata():
     exp_ss_pos = [(-0.014683089359112911, -127.76235955923758)]
     assert [ss.pos for ss in metadata.speed_signs_ahead] == exp_ss_pos
     assert metadata.initial_speed == 90.0
+
+
+# def test_route_metadata_town04():
+#     xodr_map = load_town_04()
+#     start = (406.0252685546875, 124.70137786865234)
+#     end = (182.08697509765625, 395.9513244628906)
+#     orient = pi/2
+#     route = RoutePlanner.generate_waypoints(start, end, orient, xodr_map)
+#     print('fucked up wps', [wp for wp in route if wp.actual_lane == 0])
+#     # lane id always 1 and possible lanes contain the lane id
+#     assert all(map(lambda s: s.actual_lane != 0, route))
 
 
 # def test_route_interpolation():

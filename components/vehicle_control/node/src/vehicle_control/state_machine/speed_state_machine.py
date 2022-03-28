@@ -101,7 +101,7 @@ class SpeedStateMachine:
 
         if needs_brake:
             self.current_state = SpeedState.BRAKE
-            self.target_speed_mps = target_speed
+            self.target_speed_mps = 0
             return
 
         self.current_state = SpeedState.ACCEL
@@ -118,7 +118,7 @@ class SpeedStateMachine:
 
         if needs_brake:
             self.current_state = SpeedState.BRAKE
-            self.target_speed_mps = target_speed
+            self.target_speed_mps = 0
             return
 
         if reached_target_speed:
@@ -130,7 +130,7 @@ class SpeedStateMachine:
         reached_target_speed = self._is_in_speed_tolerance(target_speed)
 
         if needs_brake:
-            self.target_speed_mps = target_speed
+            self.target_speed_mps = 0
             return
 
         if reached_target_speed:
@@ -192,7 +192,7 @@ class SpeedStateMachine:
                        accel_mps2 * maneuver_time_s ** 2 / 2
 
         # object_offset = max(target_velocity * 1.8, 4)
-        object_offset = 4
+        object_offset = 7
         linear_dist = distance_m - object_offset - braking_dist
         time_until_brake = linear_dist / self.vehicle.velocity_mps \
                            if self.vehicle.velocity_mps > 0 else 999

@@ -1,7 +1,7 @@
 """A module for annotating routes with valuable metadata"""
 
 from math import dist as euclid_dist
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Tuple, List, Callable
 
 from vehicle_control.core.geometry import bounding_box
@@ -14,11 +14,14 @@ class AnnRouteWaypoint:
     """Representing a route waypoint including
     annotations regarding the driving context"""
     pos: Tuple[float, float]
+    road_id: int
     actual_lane: int
     possible_lanes: List[int]
     legal_speed: float
     dist_next_tl: float
-    end_lane_m: float
+    end_lane_m: float # TODO: needs to be reworked to concat multiple road sections
+                      #       without a crossroad / highway exit between them
+    
 
 
 @dataclass
@@ -29,6 +32,7 @@ class PathSection:
     drive_reversed: bool
     possible_lanes: List[int]
     end_pos: Tuple[float, float]
+    # road: Road = field(repr=False)
     # length: float
 
 
@@ -46,8 +50,8 @@ class RouteAnnotation:
     """Representing helper functionality to annotate pre-planned routes with metadata"""
 
     @staticmethod
-    def annotate_waypoints(waypoints: List[Tuple[float, float]], metadata: RouteMetadata) \
-                           -> List[AnnRouteWaypoint]:
+    def annotate_waypoints(waypoints: List[Tuple[float, float]], metadata: RouteMetadata,
+                           map: XodrMap) -> List[AnnRouteWaypoint]:
         """Annotate the waypoints with route metadata"""
         max_dist = 999.0
         radius_handled = 5.0
@@ -72,11 +76,12 @@ class RouteAnnotation:
             ss_dist = euclid_dist(waypoint, ss_pos) if ss_pos else max_dist
             sec_dist = euclid_dist(waypoint, sec_end_pos) if sec_end_pos else max_dist
 
+            current_road = map.roads_by_id[metadata.sections_ahead[sec_id].road_id]
             actual_lane = metadata.sections_ahead[sec_id].lane_id
             poss_lanes = metadata.sections_ahead[sec_id].possible_lanes
 
-            ann_wp = AnnRouteWaypoint(
-                waypoint, actual_lane, poss_lanes, legal_speed, tl_dist, sec_dist)
+            ann_wp = AnnRouteWaypoint(waypoint, current_road.road_id, actual_lane,
+                                      poss_lanes, legal_speed, tl_dist, sec_dist)
             ann_waypoints.append(ann_wp)
 
             if tl_dist < radius_handled:
@@ -104,7 +109,6 @@ class RouteAnnotation:
 
         for i, section in enumerate(path_sections):
             road = xodr_map.roads_by_id[section.road_id]
-
             sec_traffic_lights = RouteAnnotation._filter_items(road.traffic_lights, section)
             sec_speed_signs = RouteAnnotation._filter_items(road.speed_signs, section)
 
@@ -159,13 +163,11 @@ class RouteAnnotation:
             if is_entering_new_section:
                 road = road_by_id(road_id)
                 drive_reverse = is_road_end
-                norm_lane_id = abs(lane_id)
                 poss_lanes = RouteAnnotation._get_poss_lanes(road, drive_reverse)
                 lane_offset = road.lane_offsets[lane_id] - road.lane_widths[lane_id]/2
-                # lane_offset = road.lane_widths[lane_id] * (norm_lane_id - 0.5)
                 road_bounds = bounding_box(road.road_start, road.road_end, lane_offset)
                 end_pos = road_bounds[1] if drive_reverse else road_bounds[3]
-                section = PathSection(road_id, norm_lane_id, drive_reverse, poss_lanes, end_pos)
+                section = PathSection(road_id, lane_id, drive_reverse, poss_lanes, end_pos)
                 path_sections.append(section)
 
             last_road_id = road_id
@@ -179,6 +181,4 @@ class RouteAnnotation:
         can_use_oncoming_lanes = road.line_type == "broken"
         if not can_use_oncoming_lanes:
             poss_lanes = road.left_ids if drive_reverse else road.right_ids
-
-        poss_lanes = list(sorted([id * (1 if drive_reverse else -1) for id in poss_lanes]))
         return poss_lanes

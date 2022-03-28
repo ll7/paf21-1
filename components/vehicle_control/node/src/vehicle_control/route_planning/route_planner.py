@@ -113,7 +113,7 @@ class RoutePlanner:
         interpol_route = RoutePlanner._filter_steem_waypoints(interpol_route, pi/8)
         # print("wps_filtered:", interpol_route)
 
-        ann_route = RouteAnnotation.annotate_waypoints(interpol_route, route_metadata)
+        ann_route = RouteAnnotation.annotate_waypoints(interpol_route, route_metadata, xodr_map)
         ann_route = RoutePlanner.advanced_speed(ann_route)
         print(print("route_annotated", ann_route))
         return ann_route
@@ -215,11 +215,12 @@ class RoutePlanner:
                 road_2 = xodr_map.roads_by_id[road_id2]
                 interm_wps_2 = RoutePlanner._get_intermed_section_waypoints(
                     road_2, lane_id2, forward_id2)
+                print(interm_wps_2, interm_wps_2, 'wps')
                 if euclid_dist(interm_wps_1[-1], interm_wps_2[0]) < 0.5:
                     continue
                 speed_signs = [sign.legal_speed for sign in road_1.speed_signs]
                 displaced_points = RoutePlanner._lane_change(
-                    interm_wps_1, interm_wps_2[0], speed_signs, slope_m=8.0)
+                     interm_wps_1, interm_wps_2[0], speed_signs, slope_m=3.0)
                 route_waypoints[-len(displaced_points):] = displaced_points
         return route_waypoints
 
@@ -293,7 +294,7 @@ class RoutePlanner:
         speed = max(speed_signs) if speed_signs else 50
 
         time_to_collision = 0.3
-        dist_safe = max(speed * time_to_collision, 5.0)
+        dist_safe = max(speed * time_to_collision, 0.0)
         street_width_vec = sub_vector(ref_point, points[-1])
         displaced_points = []
         for point in points:
@@ -307,7 +308,7 @@ class RoutePlanner:
     def _sigmoid_displace(ref_point: Tuple[float, float], point: Tuple[float, float],
                           street_width_vec: Tuple[float, float], slope_m: float,
                           dist_safe: float) -> Tuple[float, float]:
-        distance_to_ref = euclid_dist(point, ref_point)
+        distance_to_ref = -euclid_dist(point, ref_point)
         street_width = vector_len(street_width_vec)
         try:
             rel_dist = -sqrt(distance_to_ref**2 - street_width ** 2)
