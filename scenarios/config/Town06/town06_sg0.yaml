@@ -1,27 +1,27 @@
 competition:
   start:
     position: 
-      x: -1.366001844406128
-      y: -73.27887725830078
+      x: 80.97613525390625
+      y: 16.23183250427246
       z: 0.0
-    orientation:
+    orientation: 
       x: 0.0
       y: 0.0
-      z: 0.0017453
-      w: 0.9999985
+      z: 0.7071068
+      w: 0.7071068
   goal:
-    position:
-      x: -102.61219787597656
-      y: -29.04216957092285
+    position: 
+      x: 570.5172729492188
+      y: -251.7205047607422
       z: 0.0
     orientation:
       x: 0.0
       y: 0.0
-      z: 0.258819
-      w: 0.9659258
+      z: 0.3420201
+      w: 0.9396926
   traffic_rules: true
   ready_for_ego: false
-  town_name: 'Town07'
+  town_name: 'Town06'
   spawn_npc:
     n: 0 # orig: 50
     w: 0 # orig: 50
