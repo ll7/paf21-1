@@ -61,7 +61,7 @@ class ObstacleObserver:
         # cache the objects to avoid concurrency bugs
         route = local_route.copy()
         spd_obs = SpeedObservation()
-        blocked_ids, obj = self.get_blocked_ids(route)
+        blocked_ids, obj = self.get_blocked_ids(route, prediction_wanted=False)
         if len(blocked_ids) > 0:
             # distance = self.calculate_min_distance(route, min(blocked_ids), obj.trajectory[-1])
             distance = self._cumulated_dist(self.vehicle.pos, local_route[min(blocked_ids)])
@@ -78,9 +78,8 @@ class ObstacleObserver:
         min_obj: ObjectMeta = None
         min_id = len(route)
         blocked_ids = []
-
         for obj_id, obj in objects.items():
-            blocked = self.find_blocked_points(route, obj, threshold=2, prediction_wanted=prediction_wanted)
+            blocked = self.find_blocked_points(route, obj, threshold=1, prediction_wanted=prediction_wanted)
 
             if not blocked:
                 continue
@@ -120,7 +119,7 @@ class ObstacleObserver:
             for pos in obj_positions:
                 zone_clearance_time = ObstacleObserver._calculate_zone_clearance(
                     route_point, pos, obj.velocity, veh_pos, veh_vel, threshold)
-                print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
+                #print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
                 if zone_clearance_time < 3.0:
                     indices += [index]
 
@@ -156,16 +155,27 @@ class ObstacleObserver:
 
     @staticmethod
     def _calculate_zone_clearance(route_point, obj_pos, obj_vel, veh_pos, veh_vel, threshold):
-        time_obj_leave = (dist(obj_pos, route_point) + threshold) / \
-                         obj_vel if obj_vel != 0.0 else 999
-        time_obj_enter = (dist(obj_pos, route_point) - threshold) / \
-                         obj_vel if obj_vel != 0.0 else 999
-        time_self_enter = (dist(veh_pos, route_point) - threshold) / \
-                          veh_vel if veh_vel != 0.0 else 999
-        time_self_leave = (dist(veh_pos, route_point) - threshold) / \
-                          veh_vel if veh_vel != 0.0 else 999
-        zone_clearance_time = min(abs((time_obj_leave - time_self_enter)),
-                                  abs((time_self_leave - time_obj_enter)))
+        obj_vel = 0.0001 if obj_vel == 0 else obj_vel
+        veh_vel = 0.0001 if veh_vel == 0 else veh_vel
+        zone_clearence_times = [10]
+        if dist(obj_pos, route_point) < threshold:
+            time_obj_enter = 0
+            time_obj_leave = (2 * threshold - dist(obj_pos, route_point)) / obj_vel
+        else:
+            time_obj_leave = (dist(obj_pos, route_point) + threshold) / obj_vel
+            time_obj_enter = (dist(obj_pos, route_point) - threshold) / obj_vel
+        if dist(veh_pos, route_point) < threshold:
+            time_self_enter = 0
+            time_self_leave = (2 * threshold - dist(veh_pos, route_point)) / veh_vel
+        else:
+            time_self_enter = (dist(veh_pos, route_point) - threshold) / veh_vel
+            time_self_leave = (dist(veh_pos, route_point) + threshold) / veh_vel
+        if time_obj_leave > time_self_enter > time_obj_enter or time_obj_enter > time_self_leave:
+            zone_clearence_times.append(time_self_enter - time_obj_leave)
+        if time_self_leave > time_obj_enter > time_self_enter or time_self_enter > time_obj_leave:
+            zone_clearence_times.append(time_self_enter - time_obj_leave)
+
+        zone_clearance_time = min(zone_clearence_times)
         return zone_clearance_time
 
     @staticmethod
@@ -211,7 +221,7 @@ class ObstacleObserver:
         time_to_collision = 1
         self.dist_safe = max([relative_velocity * time_to_collision, 0])
         # self.dist_safe = 6
-        dist_c = dist(object_coordinates[0], object_coordinates[-1]) + 30
+        dist_c = dist(object_coordinates[0], object_coordinates[-1]) + 50
         if relative_velocity < 0:
             dist_c = 0
         x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)
@@ -307,8 +317,8 @@ class ObstacleObserver:
         left_lane, right_lane = (lane - 1, lane + 1) if lane > 0 else (lane + 1, lane - 1)
         overtake_left, overtake_right = left_lane in possible_lanes, right_lane in possible_lanes
         # TODO: consider also the possible lanes of the end point and one point in the middle
-        #return overtake_left, overtake_right
-        return overtake_left, False # TODO: enforce "drive on the right" rule
+        return overtake_left, overtake_right
+        #return overtake_left, False # TODO: enforce "drive on the right" rule
 
     def sigmoid_smooth_lanechange(self, object_speed: float, object_coordinates: List[Tuple[float, float]],
                        point: Tuple[float, float], first_coord: Tuple[float, float], side: int) -> float:
