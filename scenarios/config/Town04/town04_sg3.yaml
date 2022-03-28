@@ -7,8 +7,8 @@ competition:
     orientation:
       x: 0
       y: 0
-      z: 1
-      w: 0.0000463
+      z: 0.6593847
+      w: 0.7518057
   goal:
     position:
       x: 136.9810028076172
