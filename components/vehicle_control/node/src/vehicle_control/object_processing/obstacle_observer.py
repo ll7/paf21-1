@@ -80,7 +80,7 @@ class ObstacleObserver:
         blocked_ids = []
 
         for obj_id, obj in objects.items():
-            blocked = self.find_blocked_points(route, obj, threshold=1, prediction_wanted=prediction_wanted)
+            blocked = self.find_blocked_points(route, obj, threshold=2, prediction_wanted=prediction_wanted)
 
             if not blocked:
                 continue
@@ -103,26 +103,28 @@ class ObstacleObserver:
     def find_blocked_points(self, route: List[Tuple[float, float]],
                             obj: ObjectMeta, threshold: float, prediction_wanted: bool = True):
         """finds blocked points and returns their ids"""
-        threshold = threshold ** 2
         indices = []
         obj_positions = [obj.trajectory[-1]]
         if len(obj.trajectory) > 8 and prediction_wanted:
-            obj_positions = self._predict_movement(obj.trajectory, obj.velocity, num_points=10)
-        visualize_route_rviz(obj_positions)
+            obj_positions = self._predict_movement(obj.trajectory, obj.velocity, num_points=50)
+        #visualize_route_rviz(obj_positions)
         veh_pos = self.vehicle.pos
         veh_vel = self.vehicle.velocity_mps
 
         for index, route_point in enumerate(route):
             # calculate square distance
             distance = ObstacleObserver._closest_point(route_point, obj_positions)
+            distance = math.sqrt(distance)
             if distance > threshold:
                 continue
             for pos in obj_positions:
                 zone_clearance_time = ObstacleObserver._calculate_zone_clearance(
                     route_point, pos, obj.velocity, veh_pos, veh_vel, threshold)
-                #print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
+                print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
                 if zone_clearance_time < 3.0:
-                    indices += [index - 1, index]
+                    indices += [index]
+
+
         indices = list(set(indices))
         return indices
 

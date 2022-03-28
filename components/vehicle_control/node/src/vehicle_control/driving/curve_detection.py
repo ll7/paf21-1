@@ -50,12 +50,12 @@ class CurveDetection:
         # this radius threshold is equal to a 90 deg curve that's ~80 meters long
         radius_threshold = 50
 
-        if len(wps) < 7:
+        if len(wps) < 20:
             return None
 
-        ids = range(len(wps) - 7)
+        ids = range(len(wps) - 20)
         radiuses = iter(map(lambda i: (approx_curvature_radius(wps[i],
-                                                               wps[i + 3], wps[i + 6]), i), ids))
+                                                               wps[i + 9], wps[i + 19]), i), ids))
         start_id = next(filter(lambda r: r[0] < radius_threshold, radiuses), None)
         end_id = next(filter(lambda r: r[0] > radius_threshold, radiuses), None)
 
@@ -71,7 +71,7 @@ class CurveDetection:
 
         p_1, p_2, p_3 = wps_curve[0], wps_curve[len(wps_curve) // 2], wps_curve[-1]
         radius = approx_curvature_radius(p_1, p_2, p_3)
-        print('curve_radius', radius)
+
         max_speed = sqrt(friction_coeff * gravity_accel * radius)
-        print(max_speed, 'speed in curve')
+
         return max_speed
