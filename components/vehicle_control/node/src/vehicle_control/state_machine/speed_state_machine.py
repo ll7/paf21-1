@@ -166,6 +166,8 @@ class SpeedStateMachine:
         speed_tl = 0 if tl_wait_time_s <= 2 else self.legal_speed_limit_mps
         speed_stop = 0 if stop_sign_time <= 2 else self.legal_speed_limit_mps
 
+        obs.obj_speed_ms = obs.obj_speed_ms if obj_wait_time_s <= 2 else self.legal_speed_limit_mps
+        obs.curve_target_speed = obs.curve_target_speed if curve_wait_time_s <= 5 else self.legal_speed_limit_mps
 
         wait_times = [curve_wait_time_s, tl_wait_time_s, obj_wait_time_s, stop_sign_time]
         print("wait_times", wait_times)
@@ -176,6 +178,7 @@ class SpeedStateMachine:
         crit_wait_time_s, target_speed = wait_times[crit_id], target_speeds[crit_id]
 
         needs_brake = crit_wait_time_s <= self.vehicle.meta.vehicle_reaction_time_s
+        print(needs_brake, 'needs  break', crit_wait_time_s, self.vehicle.meta.vehicle_reaction_time_s)
         return needs_brake, min(target_speed, self.legal_speed_limit_mps)
 
     def _time_until_brake(self, distance_m: float, target_velocity: float = 0) -> float:
@@ -201,6 +204,7 @@ class SpeedStateMachine:
         linear_dist = distance_m - object_offset - braking_dist
         time_until_brake = linear_dist / self.vehicle.velocity_mps \
                            if self.vehicle.velocity_mps > 0 else 999
+        print('time till brake', time_until_brake)
         return time_until_brake
 
     def get_target_speed(self) -> float:
