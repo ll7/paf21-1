@@ -274,23 +274,23 @@ def test_lane_change_west_left():
 
 def test_filter_path1():
     path = ['0_0_0', '0_0_1', '0_0_2']
-    filtered_path = RoutePlanner._filter_path(path)
+    filtered_path = RoutePlanner._remove_roads_in_lane_change(path)
     assert filtered_path == ['0_0_0', '0_0_2']
 
 
 def test_filter_path2():
     path = ['0_0_0', '0_0_1', '0_0_2', '0_0_3']
-    filtered_path = RoutePlanner._filter_path(path)
+    filtered_path = RoutePlanner._remove_roads_in_lane_change(path)
     assert filtered_path == ['0_0_0', '0_0_3']
 
 
 def test_filter_path3():
     path = ['0_0_0', '0_1_1', '0_1_2', '0_1_3']
-    filtered_path = RoutePlanner._filter_path(path)
+    filtered_path = RoutePlanner._remove_roads_in_lane_change(path)
     assert filtered_path == ['0_0_0', '0_1_1', '0_1_3']
 
 
 def test_filter_path4():
     path = ['-1_0_0', '0_0_1', '1_1_1', '1_0_1']
-    filtered_path = RoutePlanner._filter_path(path)
+    filtered_path = RoutePlanner._remove_roads_in_lane_change(path)
     assert filtered_path == ['-1_0_0', '0_0_1', '1_1_1', '1_0_1']

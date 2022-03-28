@@ -95,7 +95,7 @@ class RoutePlanner:
         """Generate route waypoints for the given start / end positions using the map"""
 
         path = RoutePlanner.get_shortest_path(start_pos, end_pos, orient_rad, xodr_map)
-        # print(f'planned path: {path}')
+        print(f'planned path: {path}')
 
         if len(path) < 1:
             road_start = xodr_map.find_sections(start_pos)
@@ -106,16 +106,16 @@ class RoutePlanner:
         route_metadata = RouteAnnotation.preprocess_route_metadata(start_pos, path, xodr_map)
         route_waypoints = RoutePlanner._preplan_route(
             start_pos, end_pos, path, orient_rad, xodr_map)
-        # print("wps:", route_waypoints)
+        print(f'wps: {route_waypoints}')
 
         interpol_route = interpolate_route(route_waypoints, interval_m=2.0)
-        # print("wps_interpol:", interpol_route)
+        print("wps_interpol:", interpol_route)
         interpol_route = RoutePlanner._filter_steem_waypoints(interpol_route, pi/8)
-        # print("wps_filtered:", interpol_route)
+        print("wps_filtered:", interpol_route)
 
         ann_route = RouteAnnotation.annotate_waypoints(interpol_route, route_metadata, xodr_map)
         ann_route = RoutePlanner.advanced_speed(ann_route)
-        print(print("route_annotated", ann_route))
+        print("route_annotated", ann_route)
         return ann_route
 
     @staticmethod
@@ -126,7 +126,7 @@ class RoutePlanner:
         nav_graph = AdjMatrixPrep.extend_nav_graph(start_pos, end_pos, orient_rad, xodr_map)
         start_id, end_id = xodr_map.mapping['-1_0_0'], xodr_map.mapping['-2_0_0']
         path_ids = shortest_path(start_id, end_id, nav_graph)
-        print(f'path ids: {path_ids}')
+        # print(f'path ids: {path_ids}')
         key_list = list(xodr_map.mapping.keys())
         return [key_list[p_id] for p_id in path_ids]
 
@@ -148,7 +148,8 @@ class RoutePlanner:
         return route_input
 
     @staticmethod
-    def _filter_path(path: List[str]) -> List[str]:
+    def _remove_roads_in_lane_change(path: List[str]) -> List[str]:
+        """Remove roads in the path that are in the middle of a lane change."""
         # TODO: rename into a more expressive name
         filtered_path = []
         last_road, last_pos = (-1, -1)
@@ -171,7 +172,7 @@ class RoutePlanner:
                        path: List[str], orient_rad: float,
                        xodr_map: XodrMap) -> List[Tuple[float, float]]:
         route_waypoints = []
-        path = RoutePlanner._filter_path(path)
+        path = RoutePlanner._remove_roads_in_lane_change(path)
         sections = [(path[i], path[i+1]) for i in range(len(path)-1)]
 
         for sec_1, sec_2 in sections:
@@ -189,7 +190,7 @@ class RoutePlanner:
                 interm_wps_1 = RoutePlanner._get_intermed_section_waypoints(
                     road_1, lane_id1, forward_id1)
                 interpolated_wps = []
-                for i in range(len(interm_wps_1[:-1])):
+                for i in range(len(interm_wps_1)-1):
                     interpolated_wps.extend(linear_interpolation(
                         interm_wps_1[i], interm_wps_1[i + 1], interval_m=2.0))
                 route_waypoints.extend(interpolated_wps)
@@ -215,19 +216,18 @@ class RoutePlanner:
                 road_2 = xodr_map.roads_by_id[road_id2]
                 interm_wps_2 = RoutePlanner._get_intermed_section_waypoints(
                     road_2, lane_id2, forward_id2)
-                print(interm_wps_2, interm_wps_2, 'wps')
                 if euclid_dist(interm_wps_1[-1], interm_wps_2[0]) < 0.5:
                     continue
+                print(f'Lane change from {sec_1 } to  {sec_2}', interm_wps_1, interm_wps_2)
                 speed_signs = [sign.legal_speed for sign in road_1.speed_signs]
                 displaced_points = RoutePlanner._lane_change(
-                     interm_wps_1, interm_wps_2[0], speed_signs, slope_m=3.0)
+                     interm_wps_1, interm_wps_2[0], speed_signs, slope_m=5.0)
                 route_waypoints[-len(displaced_points):] = displaced_points
         return route_waypoints
 
     @staticmethod
     def _get_intermed_section_waypoints(road: Road, lane_id: int, reverse: bool):
         polygon_points = road.lane_polygons[lane_id]
-
         bound_len = len(polygon_points) // 2
         geo_pairs = list(zip(polygon_points[:bound_len], reversed(polygon_points[bound_len:])))
         road_waypoints = [((p[0][0] + p[1][0]) / 2, (p[0][1] + p[1][1]) / 2) for p in geo_pairs]
@@ -257,7 +257,7 @@ class RoutePlanner:
                 reachable_index = index
                 break
 
-        print("reachable_index", reachable_index)
+        print("Start reachable_index", reachable_index)
         return waypoints[reachable_index:] if reachable_index > -1 else []
 
     @staticmethod
@@ -281,25 +281,26 @@ class RoutePlanner:
                 reachable_index = index - 1
                 break
 
-        print("reachable_index", reachable_index)
+        print("End reachable_index", reachable_index)
         return waypoints[:reachable_index] if reachable_index > -1 else []
 
     @staticmethod
     def _lane_change(points: List[Tuple[float, float]], ref_point: Tuple[float, float],
                      speed_signs: List[float], slope_m=3.0) -> List[Tuple[float, float]]:
         interpolated_wps = []
-        for i in range(len(points[:-1])):
+        for i in range(len(points)-1):
             interpolated_wps.extend(linear_interpolation(points[i], points[i + 1], interval_m=2.0))
         interpolated_wps.append(points[-1])
         speed = max(speed_signs) if speed_signs else 50
 
         time_to_collision = 0.3
-        dist_safe = max(speed * time_to_collision, 0.0)
+        dist_safe = speed * time_to_collision
+
         street_width_vec = sub_vector(ref_point, points[-1])
         displaced_points = []
-        for point in points:
+        for point in interpolated_wps:
             displaced_point = RoutePlanner._sigmoid_displace(ref_point, point, street_width_vec,
-                                                              slope_m, dist_safe)
+                                                             slope_m, dist_safe)
             displaced_points.append(displaced_point)
 
         return displaced_points
@@ -308,15 +309,14 @@ class RoutePlanner:
     def _sigmoid_displace(ref_point: Tuple[float, float], point: Tuple[float, float],
                           street_width_vec: Tuple[float, float], slope_m: float,
                           dist_safe: float) -> Tuple[float, float]:
-        distance_to_ref = -euclid_dist(point, ref_point)
+        distance_to_ref = euclid_dist(point, ref_point)
         street_width = vector_len(street_width_vec)
         try:
             rel_dist = -sqrt(distance_to_ref**2 - street_width ** 2)
         except ValueError:
-            print('Value Error')
-            rel_dist = street_width
+            rel_dist = 0.0
         x_1 = (1 / slope_m) * (rel_dist + dist_safe)
-        deviation = (street_width / (1 + exp(-x_1)))
+        deviation = street_width / (0.98 + exp(-x_1))
         return add_vector(point, scale_vector(street_width_vec, deviation))
 
     @staticmethod
