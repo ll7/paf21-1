@@ -282,7 +282,7 @@ class RoutePlanner:
                 break
 
         print("End reachable_index", reachable_index)
-        return waypoints[:reachable_index] if reachable_index > -1 else []
+        return waypoints[:reachable_index] if reachable_index > -1 else waypoints
 
     @staticmethod
     def _lane_change(points: List[Tuple[float, float]], ref_point: Tuple[float, float],
