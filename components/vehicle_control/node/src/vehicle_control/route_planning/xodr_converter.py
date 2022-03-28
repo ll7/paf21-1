@@ -214,6 +214,11 @@ class Road:
         """All speed signs from the traffic signs list."""
         return [s for s in self.traffic_signs if s.sign_type == TrafficSignType.SPEED_LIMIT]
 
+    @property
+    def stop_signs(self) -> List[TrafficSign]:
+        """All stop signs from the traffic signs list."""
+        return [s for s in self.traffic_signs if s.sign_type == TrafficSignType.STOP]
+
     # def contains_point(self, pos: Tuple[float, float]) -> bool:
     #     if not self.lane_polygons:
     #         return False

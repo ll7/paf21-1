@@ -283,9 +283,10 @@ class ObstacleObserver:
             if actual_lane == 0:
                 print('WARNING: new annotated actual lane is 0, this should never happen!')
                 continue
-
+            
             new_wp = AnnRouteWaypoint(pos, road_id, actual_lane, wp.possible_lanes,
-                                      wp.legal_speed, wp.dist_next_tl, wp.end_lane_m)
+                                      wp.legal_speed, wp.dist_next_tl, wp.end_lane_m,
+                                      stop_sign_m=wp.stop_sign_m)
             new_route.append(new_wp)
 
         return new_route
@@ -317,8 +318,8 @@ class ObstacleObserver:
         left_lane, right_lane = (lane - 1, lane + 1) if lane > 0 else (lane + 1, lane - 1)
         overtake_left, overtake_right = left_lane in possible_lanes, right_lane in possible_lanes
         # TODO: consider also the possible lanes of the end point and one point in the middle
-        return overtake_left, overtake_right
-        #return overtake_left, False # TODO: enforce "drive on the right" rule
+        #return overtake_left, overtake_right
+        return overtake_left, False # TODO: enforce "drive on the right" rule
 
     def sigmoid_smooth_lanechange(self, object_speed: float, object_coordinates: List[Tuple[float, float]],
                        point: Tuple[float, float], first_coord: Tuple[float, float], side: int) -> float:

@@ -40,6 +40,7 @@ class SpeedObservation:
     obj_speed_ms: float = 500
     dist_next_curve: float = 999
     curve_target_speed: float = 50
+    dist_next_stop_m: float = 999
 
 
 @dataclass
@@ -147,7 +148,8 @@ class SpeedStateMachine:
         phases_brake = [TrafficLightPhase.RED, TrafficLightPhase.YELLOW]
         tl_wait_time_s = self._time_until_brake(obs.dist_next_traffic_light_m, 0) \
                          if obs.tl_phase in phases_brake else 999
-
+        stop_sign_time = self._time_until_brake(obs.dist_next_stop_m, 0) \
+            if self.vehicle.velocity_mps > 1 else 999
         # # ToDo think about speeding
         # tl_wait_time_s = 999
         # if obs.tl_phase == TrafficLightPhase.YELLOW:
@@ -162,9 +164,12 @@ class SpeedStateMachine:
         obj_wait_time_s = self._time_until_brake(obs.dist_next_obstacle_m, obs.obj_speed_ms)
         curve_wait_time_s = self._time_until_brake(obs.dist_next_curve, obs.curve_target_speed)
         speed_tl = 0 if tl_wait_time_s <= 2 else self.legal_speed_limit_mps
+        speed_stop = 0 if stop_sign_time <= 2 else self.legal_speed_limit_mps
 
-        wait_times = [curve_wait_time_s, tl_wait_time_s, obj_wait_time_s]
-        target_speeds = [obs.curve_target_speed, speed_tl, obs.obj_speed_ms]
+
+        wait_times = [curve_wait_time_s, tl_wait_time_s, obj_wait_time_s, stop_sign_time]
+        print("wait_times", wait_times)
+        target_speeds = [obs.curve_target_speed, speed_tl, obs.obj_speed_ms, speed_stop]
 
         crit_id = np.argmin(wait_times)
 

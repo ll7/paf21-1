@@ -19,7 +19,8 @@ class AnnRouteWaypoint:
     possible_lanes: List[int]
     legal_speed: float
     dist_next_tl: float
-    end_lane_m: float # TODO: needs to be reworked to concat multiple road sections
+    end_lane_m: float
+    stop_sign_m: float # TODO: needs to be reworked to concat multiple road sections
                       #       without a crossroad / highway exit between them
     
 
@@ -43,6 +44,7 @@ class RouteMetadata:
     sections_ahead: List[PathSection]
     traffic_lights_ahead: List[TrafficLight]
     speed_signs_ahead: List[TrafficSign]
+    stop_signs_ahead: List[TrafficSign]
     initial_speed: float
 
 
@@ -56,24 +58,28 @@ class RouteAnnotation:
         max_dist = 999.0
         radius_handled = 5.0
         default_speed = 50.0
-
-        tl_id, ss_id, sec_id = 0, 0, 0
+        stop_sign_m = 999
+        tl_id, ss_id, sec_id, stop_id = 0, 0, 0, 0
         tl_dist, ss_dist, sec_dist = float('inf'), float('inf'), float('inf')
 
         next_tl_pos = lambda: metadata.traffic_lights_ahead[tl_id].pos \
                                 if tl_id < len(metadata.traffic_lights_ahead) else None
-        next_ss_pos = lambda: metadata.speed_signs_ahead[ss_id].pos \
+        next_speedsign_pos = lambda: metadata.speed_signs_ahead[ss_id].pos \
                                 if ss_id < len(metadata.speed_signs_ahead) else None
         next_sec_end = lambda: metadata.sections_ahead[sec_id].end_pos \
                                  if sec_id < len(metadata.sections_ahead) else None
-
+        next_stopsign_pos = lambda: metadata.stop_signs_ahead[stop_id].pos \
+                                if stop_id < len(metadata.stop_signs_ahead) else None
         ann_waypoints: List[AnnRouteWaypoint] = []
 
         legal_speed = metadata.initial_speed
         for waypoint in waypoints:
-            tl_pos, ss_pos, sec_end_pos = next_tl_pos(), next_ss_pos(), next_sec_end()
+            tl_pos, ss_pos, sec_end_pos = next_tl_pos(), next_speedsign_pos(), next_sec_end()
+            stop_sign_pos = next_stopsign_pos()
             tl_dist = euclid_dist(waypoint, tl_pos) if tl_pos else max_dist
             ss_dist = euclid_dist(waypoint, ss_pos) if ss_pos else max_dist
+            stopsign_dist = euclid_dist(waypoint, stop_sign_pos) if stop_sign_pos else max_dist
+            
             sec_dist = euclid_dist(waypoint, sec_end_pos) if sec_end_pos else max_dist
 
             current_road = map.roads_by_id[metadata.sections_ahead[sec_id].road_id]
@@ -81,7 +87,7 @@ class RouteAnnotation:
             poss_lanes = metadata.sections_ahead[sec_id].possible_lanes
 
             ann_wp = AnnRouteWaypoint(waypoint, current_road.road_id, actual_lane,
-                                      poss_lanes, legal_speed, tl_dist, sec_dist)
+                                      poss_lanes, legal_speed, tl_dist, sec_dist, stopsign_dist)
             ann_waypoints.append(ann_wp)
 
             if tl_dist < radius_handled:
@@ -89,6 +95,8 @@ class RouteAnnotation:
             if ss_dist < radius_handled:
                 legal_speed = metadata.speed_signs_ahead[ss_id].legal_speed
                 ss_id += 1
+            if stopsign_dist < radius_handled:
+                stop_id +=1
             if sec_dist < radius_handled:
                 legal_speed = default_speed
                 sec_id = min(sec_id + 1, len(metadata.sections_ahead) - 1)
@@ -105,12 +113,14 @@ class RouteAnnotation:
         path_sections: List[PathSection] = RouteAnnotation._norm_path(path, road_by_id)
         traffic_lights: List[TrafficLight] = []
         speed_signs: List[TrafficSign] = []
+        stop_signs: List[TrafficSign] = []
         inital_speed = 50.0
 
         for i, section in enumerate(path_sections):
             road = xodr_map.roads_by_id[section.road_id]
             sec_traffic_lights = RouteAnnotation._filter_items(road.traffic_lights, section)
             sec_speed_signs = RouteAnnotation._filter_items(road.speed_signs, section)
+            sec_stop_signs = RouteAnnotation._filter_items(road.stop_signs, section)
 
             is_first_section = i == 0
             if is_first_section:
@@ -127,10 +137,15 @@ class RouteAnnotation:
                     if traffic_l.dist_from_start < s_value_car:
                         sec_traffic_lights.remove(traffic_l)
 
+                for stop_sign in sec_stop_signs:
+                    if stop_sign.dist_from_start < s_value_car:
+                        sec_stop_signs.remove(stop_sign)
+
             traffic_lights.extend(sec_traffic_lights)
             speed_signs.extend(sec_speed_signs)
+            stop_signs.extend(sec_stop_signs)
 
-        return RouteMetadata(path_sections, traffic_lights, speed_signs, inital_speed)
+        return RouteMetadata(path_sections, traffic_lights, speed_signs, stop_signs, inital_speed)
 
     @staticmethod
     def _filter_items(items: List[TrafficSignal], section: PathSection) -> List:

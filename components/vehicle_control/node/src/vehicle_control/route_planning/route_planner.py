@@ -114,7 +114,7 @@ class RoutePlanner:
         print("wps_filtered:", interpol_route)
 
         ann_route = RouteAnnotation.annotate_waypoints(interpol_route, route_metadata, xodr_map)
-        ann_route = RoutePlanner.advanced_speed(ann_route)
+        # ann_route = RoutePlanner.advanced_speed(ann_route) 
         print("route_annotated", ann_route)
         return ann_route
 
