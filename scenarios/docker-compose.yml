@@ -12,9 +12,8 @@ services:
       SDL_HINT_CUDA_DEVICE: 0
     ports:
       - 2000:2000
-      - 2001:2000
-      - 2002:2000
-    command: ["-carla-server"]
+      - 2001:2001
+      - 2002:2002
 
   roscore:
     image: ros:noetic
