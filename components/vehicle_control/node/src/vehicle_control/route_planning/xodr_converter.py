@@ -564,29 +564,32 @@ class XodrMap:
             road = self.roads_by_id[road_id]
             length = sum([g.length for g in road.geometries])
 
-            for link in road.left_ids:
+            # create graph edges for linking each lane's start and end point
+            # info: the navigation graph contains a node for each start / end of a lane
+            for discount, link in enumerate(road.left_ids):
                 index_start = self.mapping[create_key(road.road_id, 1, link)]
                 index_end = self.mapping[create_key(road.road_id, 0, link)]
-                matrix[index_start][index_end] = length
-
-            for link in road.right_ids:
+                matrix[index_start][index_end] = max(length - discount * 0.5, 0.0)
+            for discount, link in enumerate(road.right_ids):
                 index_start = self.mapping[create_key(road.road_id, 0, link)]
                 index_end = self.mapping[create_key(road.road_id, 1, link)]
-                matrix[index_start][index_end] = length
+                length = max(length - 1, 0.0)
+                matrix[index_start][index_end] = max(length - discount * 0.5, 0.0)
 
-            # connect neighbored lanes of a road at the end (multi-lane support)
+            # connect neighbored lanes of a road at the end (in logical driving
+            # direction) to allow planned lane changes
             if len(road.left_ids) > 1:
                 for id_1, id_2 in zip(road.left_ids[:-1], road.left_ids[1:]):
                     id_1_end = self.mapping[create_key(road.road_id, 0, id_1)]
                     id_2_end = self.mapping[create_key(road.road_id, 0, id_2)]
-                    matrix[id_1_end][id_2_end] = 5
-                    matrix[id_2_end][id_1_end] = 5
+                    matrix[id_1_end][id_2_end] = 1e-3
+                    matrix[id_2_end][id_1_end] = 1e-3
             if len(road.right_ids) > 1:
                 for id_1, id_2 in zip(road.right_ids[:-1], road.right_ids[1:]):
                     id_1_end = self.mapping[create_key(road.road_id, 1, id_1)]
                     id_2_end = self.mapping[create_key(road.road_id, 1, id_2)]
-                    matrix[id_1_end][id_2_end] = 5
-                    matrix[id_2_end][id_1_end] = 5
+                    matrix[id_1_end][id_2_end] = 1e-3
+                    matrix[id_2_end][id_1_end] = 1e-3
 
     def _apply_junction_connection(self, road: Road, link: RoadLink, matrix: np.ndarray):
 
