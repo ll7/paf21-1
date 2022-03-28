@@ -164,7 +164,7 @@ def test_accel_green():
     speed_o = SpeedObservation()
     speed_o.tl_phase = TrafficLightPhase.GREEN
     speed_o.is_trajectory_free = True
-    speed_o.dist_next_obstacle_m = 5.0
+    speed_o.dist_next_traffic_light_m = 5.0
     speed_o.detected_speed_limit = 50
 
     speed_s.update_state(speed_o)
@@ -235,7 +235,6 @@ def test_accel_red_out_of_range():
     assert (target_speed >= 50/3.6)
 
 
-# TODO: try to figure out why this test fails
 def test_accel_moving_obstacle_in_range():
     vehicle = Vehicle('test_vehicle')
     vehicle.pos = (0, 0)
@@ -316,7 +315,7 @@ def test_brake_green():
     speed_o = SpeedObservation()
     speed_o.tl_phase = TrafficLightPhase.GREEN
     speed_o.is_trajectory_free = True
-    speed_o.dist_next_obstacle_m = 5.0
+    speed_o.dist_next_traffic_light_m = 5.0
     speed_o.detected_speed_limit = 50
 
     speed_s.update_state(speed_o)
