@@ -1,5 +1,4 @@
 """A module providing steering control implementations"""
-import math
 from typing import Tuple, List, Protocol
 from dataclasses import dataclass, field
 from math import dist, atan2, ceil
@@ -125,6 +124,9 @@ class StanleySteeringController:
             if len(self.cross_track_errors) > self.cte_count:
                 del self.cross_track_errors[-1]
             cross_track_error = sum(self.cross_track_errors) / len(self.cross_track_errors)
+            if self.vehicle.velocity_mps < 1:
+                self.init = False
+                self.cross_track_errors = []
         else:
             cross_track_error = self._cross_track_error(prev_wp, next_wp, position)
             if traveled_distance > 0 and self.vehicle.velocity_mps > 1:
