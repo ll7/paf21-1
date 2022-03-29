@@ -6,6 +6,9 @@ if [ -z $CONFIG_FILE ]; then
     export CONFIG_FILE="town01_sg0.yaml"
 fi
 
+# set compose file to launch
+COMPOSE_FILE=local-carla-sim-compose.yml
+
 # build docker images
 pushd components
     docker-compose -f carla-sim-build.yml build
@@ -17,5 +20,5 @@ popd
 # run docker images (needs to disable X11 security feature)
 pushd scenarios
     xhost +
-    docker-compose up -d
+    docker-compose -f $COMPOSE_FILE up -d
 popd

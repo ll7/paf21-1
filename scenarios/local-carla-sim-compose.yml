@@ -2,24 +2,25 @@
 version: '2.3'
 
 services:
-  carla-simulator:
-    image: carla-sim
-    runtime: nvidia
-    security_opt:
-      - seccomp:unconfined
-    environment:
-      SDL_VIDEODRIVER: offscreen
-      SDL_HINT_CUDA_DEVICE: 0
-    ports:
-      - 2000:2000
-      - 2001:2001
-      - 2002:2002
+  # carla-simulator:
+  #   image: carla-sim
+  #   runtime: nvidia
+  #   security_opt:
+  #     - seccomp:unconfined
+  #   environment:
+  #     SDL_VIDEODRIVER: offscreen
+  #     SDL_HINT_CUDA_DEVICE: 0
+  #   ports:
+  #     - 2000:2000
+  #     - 2001:2001
+  #     - 2002:2002
 
   roscore:
     image: ros:noetic
     command: roscore
-    ports:
-      - 11311:11311
+    expose:
+      - 11311
+    network_mode: host
 
   carla-ros-bridge:
     image: carla-ros-bridge
@@ -34,33 +35,37 @@ services:
       SDL_HINT_CUDA_DEVICE: 0
       DISPLAY: ${DISPLAY}
       QT_X11_NO_MITSHM: 1
-      ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: carla-ros-bridge
-      CARLA_SIM_HOST: carla-simulator
+      ROS_MASTER_URI: http://localhost:11311
+      ROS_HOSTNAME: localhost
+      CARLA_SIM_HOST: localhost
       CARLA_OPENSCENARIO_FILE: /config/FollowLeadingVehicle.xosc
       CONFIG_FILE: ${CONFIG_FILE}
+    network_mode: host
 
   competition_manager:
     image: competition_manager
     environment:
-      ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: competition_manager
+      ROS_MASTER_URI: http://localhost:11311
+      ROS_HOSTNAME: localhost
+    network_mode: host
 
   vehicle_control:
     image: vehicle_control
     volumes:
       - './logs:/app/logs'
     environment:
-      ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: vehicle_control
+      ROS_MASTER_URI: http://localhost:11311
+      ROS_HOSTNAME: localhost
+    network_mode: host
 
   perception:
     image: perception
     volumes:
       - './logs:/app/logs'
     environment:
-      ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: perception
+      ROS_MASTER_URI: http://localhost:11311
+      ROS_HOSTNAME: localhost
+    network_mode: host
 
   # WARNING: this recorder might write several dozens of gigabites within minutes
   #          use it carefully and only for recording
@@ -71,5 +76,11 @@ services:
   #   volumes:
   #     - './recordings:/app/recordings'
   #   environment:
-  #      ROS_MASTER_URI: http://roscore:11311
-  #      ROS_HOSTNAME: rosbag-recorder
+  #     ROS_MASTER_URI: http://localhost:11311
+  #     ROS_HOSTNAME: localhost
+  #   network_mode: host
+
+networks:
+  default:
+    external:
+      name: host
