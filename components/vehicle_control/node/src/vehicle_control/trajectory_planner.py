@@ -178,8 +178,8 @@ class TrajectoryPlanner:
         return speed_obs
 
     def _handle_american_traffic_lights(self, speed_obs: SpeedObservation, curve_obs: CurveObservation):
+        print(speed_obs.dist_next_traffic_light_m, curve_obs.dist_until_curve)
         if self.end_curve_id:
-
             speed_obs.tl_phase = TrafficLightPhase.GREEN
             speed_obs.dist_next_traffic_light_m = 9999
             if self.end_curve_id < self.prev_wp_id:

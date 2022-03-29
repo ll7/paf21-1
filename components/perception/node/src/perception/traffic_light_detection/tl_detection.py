@@ -53,14 +53,14 @@ class TrafficLightDetector:
                     ' ## distances:', distances)
 
             # determine the object sizes (as approx. area)
-            obj_areas = [TrafficLightDetector._eval_object_areas(distances[i], patches[i])
-                         for i in range(len(patches))]
+            # obj_areas = [TrafficLightDetector._eval_object_areas(distances[i], patches[i])
+            #              for i in range(len(patches))]
 
             # 1) ignore traffic lights farther away than a given threshold
             # 2) ignore traffic lights that are too small sized (-> filter pedestrian / bicycle TLs)
             max_dist_m = 80
             area_min, area_max = 0.11, 12
-            cond = lambda i: distances[i] <= max_dist_m and area_min <= obj_areas[i] <= area_max
+            cond = lambda i: distances[i] <= max_dist_m # and area_min <= obj_areas[i] <= area_max
             closeby_patches = [(i, patches[i]) for i in range(len(patches)) if cond(i)]
             print('Closeby patches: ', len(closeby_patches), closeby_patches)
 
@@ -123,7 +123,7 @@ class TrafficLightDetector:
         # 10,9 - 2x6
         # 7,15 - 2x12
         # 7,1 - 4x14
-        # 6,65 5x15
+        # 6,65 - 5x15
         # 6,64 - 4x13
         _, _, width, height = patch
         return width * height / 10
@@ -168,9 +168,13 @@ class TrafficLightDetector:
         image_rgb = image_bgr[:, :, ::-1]
         resize_shape = (self.input_shape[0], self.input_shape[1])
         image_preprocess = resize_image(image_rgb, resize_shape)
+
         pred = np.squeeze(self.model(np.expand_dims(image_preprocess, axis=0)).numpy())
         class_id = int(np.argmax(pred))
-        return TrafficLightPhase(class_id)
+        classes = TrafficLightPhase(class_id)
+        cv2.imwrite(f'/app/logs/test_{classes}.jpg', (image_preprocess.numpy() + 1) * 127.5)
+
+        return classes
 
     @staticmethod
     def _cut_image_patch(patch: List[int], image: np.ndarray):
