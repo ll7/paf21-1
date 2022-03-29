@@ -229,10 +229,10 @@ class ObstacleObserver:
     def plan_overtaking_maneuver(self, local_route: List[AnnRouteWaypoint],
                                  orig_route: List[AnnRouteWaypoint]) -> List[AnnRouteWaypoint]:
         """Plan the new trajectory of an overtaking maneuver"""
-        if self.tracker % 10 == 0:
-            orig_route[0] = local_route[0]
-            local_route = orig_route
-            # route = [point.pos for point in local_route]
+        # if self.tracker % 10 == 0:
+        #     orig_route[0] = local_route[0]
+        #     local_route = orig_route
+        #     # route = [point.pos for point in local_route]
         self.tracker += 1
         lanes = [(point.actual_lane, point.possible_lanes) for point in local_route]
         temp_route = [point.pos for point in local_route]
@@ -253,9 +253,7 @@ class ObstacleObserver:
         # 3) re-plan the overtaking trajectory
         blocked_route = [enum_route[i] for i in blocked_ids]
         sigmoid = lambda wp: self.sigmoid_smooth(closest_object.velocity, blocked_route, wp, enum_route[0], side)
-        point_can_be_moved = [1 if wp.actual_lane - side in wp.possible_lanes else 0 for wp in
-                              local_route]
-        shifted_wps = ObstacleObserver._shift_waypoints(enum_route, sigmoid, point_can_be_moved, original_route)
+        shifted_wps = ObstacleObserver._shift_waypoints(enum_route, sigmoid, original_route)
 
         new_is_blocked, _ = self.get_blocked_ids(shifted_wps, prediction_wanted=True)
         if new_is_blocked:
@@ -294,7 +292,7 @@ class ObstacleObserver:
     
     @staticmethod
     def _shift_waypoints(enum_route, wp_shift: Callable[[Tuple[float, float]], float],
-                         factors: List[int], original_route: List[Tuple[float, float]]):
+                         original_route: List[Tuple[float, float]]):
         offset_vectors = [orth_offset_left(enum_route[i], enum_route[i+1], 1.0)
                           for i in range(len(enum_route) - 1)]
 
@@ -303,8 +301,6 @@ class ObstacleObserver:
         sign = -1 if np.sum(offset_scales) < 0 else 1
         signed_distance_weight = [sign * 4 - (sign * dist(point, orig_point))
                                   for point, orig_point in zip(enum_route, original_route)]
-        offset_scales = [wp * factor for wp, factor in zip(offset_scales, factors)]
-        #offsets = [scale_vector(vec, vec_len) for vec, vec_len in zip(offset_vectors, offset_scales)]
         weights = [min(scale, distance) for scale, distance
                    in zip(offset_scales, signed_distance_weight)]
         print(weights)
@@ -321,7 +317,7 @@ class ObstacleObserver:
             left_lane = -lane
             overtake_left, overtake_right = left_lane in possible_lanes, right_lane in possible_lanes
         # TODO: consider also the possible lanes of the end point and one point in the middle
-        #return overtake_left, overtake_right
+        # return overtake_left, overtake_right
         return overtake_left, False # TODO: enforce "drive on the right" rule
 
     def sigmoid_smooth_lanechange(self, object_speed: float, object_coordinates: List[Tuple[float, float]],
