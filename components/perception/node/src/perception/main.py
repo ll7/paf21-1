@@ -98,11 +98,11 @@ class PerceptionNode:
 
     def _init_tld_info_publisher(self):
         out_topic = f"/drive/{self.vehicle_name}/tld_info"
-        return rospy.Publisher(out_topic, StringMsg, queue_size=10)
+        return rospy.Publisher(out_topic, StringMsg, queue_size=1)
 
     def _init_object_info_publisher(self):
         out_topic = f"/drive/{self.vehicle_name}/object_info"
-        return rospy.Publisher(out_topic, StringMsg, queue_size=10)
+        return rospy.Publisher(out_topic, StringMsg, queue_size=1)
 
 
 def main():

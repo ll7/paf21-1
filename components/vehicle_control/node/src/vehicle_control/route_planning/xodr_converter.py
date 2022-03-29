@@ -94,9 +94,10 @@ class TrafficSign(TrafficSignal):
     @property
     def sign_type(self) -> TrafficSignType or None:
         """Retrieve the sign type."""
-        if self.name.startswith('Speed_'):
+        if self.name.startswith('Speed_') or self.name.startswith('speed_'):
             return TrafficSignType.SPEED_LIMIT
-        if self.name.startswith('Stencil_STOP'):
+        if self.name.startswith('Stencil_STOP') or self.name.startswith('Sign_Stop') \
+                or self.name.startswith('StopLine'):
             return TrafficSignType.STOP
         if self.name.startswith('SimpleCrosswalk'):
             return TrafficSignType.CROSSWALK

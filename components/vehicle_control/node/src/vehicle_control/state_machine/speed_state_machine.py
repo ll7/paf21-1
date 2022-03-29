@@ -130,13 +130,13 @@ class SpeedStateMachine:
         needs_brake, target_speed = self._is_brake_required(obs)
         reached_target_speed = self._is_in_speed_tolerance(target_speed)
 
-        if needs_brake:
-            self.target_speed_mps = 0
-            return
-
         if reached_target_speed:
             self.current_state = SpeedState.KEEP
             self.target_speed_mps = target_speed
+            return
+
+        if needs_brake:
+            self.target_speed_mps = 0
             return
 
         self.target_speed_mps = target_speed
@@ -145,21 +145,13 @@ class SpeedStateMachine:
     def _is_brake_required(self, obs: SpeedObservation):
         # fallback logic for handling yellow like red
         # ===========================================
+        safety_time_s = 2.0
+        curve_offset_m = 2.0
         phases_brake = [TrafficLightPhase.RED, TrafficLightPhase.YELLOW]
         tl_wait_time_s = self._time_until_brake(obs.dist_next_traffic_light_m, 0) \
             if obs.tl_phase in phases_brake else 999
         stop_sign_time = self._time_until_brake(obs.dist_next_stop_m, 0) \
             if self.vehicle.velocity_mps > 1 else 999
-        # # ToDo think about speeding
-        # tl_wait_time_s = 999
-        # if obs.tl_phase == TrafficLightPhase.YELLOW:
-        #     tl_wait_time_s = self._time_until_brake(obs.dist_next_traffic_light_m, 0)
-        #     #if it is yellow and the distance to brake is too short, speed up instead of braking
-        #     to_late_to_brake: float = -3.0
-        #     if tl_wait_time_s < to_late_to_brake:
-        #         tl_wait_time_s = 999
-        # elif obs.tl_phase == TrafficLightPhase.RED:
-        #     tl_wait_time_s = self._time_until_brake(obs.dist_next_traffic_light_m, 0)
         obj_wait_time_s = self._time_until_brake(obs.dist_next_obstacle_m, obs.obj_speed_ms)
         distance_m = obs.dist_next_obstacle_m
         accel_mps2 = self.vehicle.meta.base_brake_mps2
@@ -167,18 +159,20 @@ class SpeedStateMachine:
         braking_dist_standing = self.vehicle.velocity_mps * maneuver_time_standing + \
                                 accel_mps2 * maneuver_time_standing ** 2 / 2
         if braking_dist_standing > distance_m:
-            print(braking_dist_standing, distance_m)
             obj_wait_time_s = -1
 
-        curve_wait_time_s = self._time_until_brake(obs.dist_next_curve, obs.curve_target_speed)
-        speed_tl = 0 if tl_wait_time_s <= 2 else self.legal_speed_limit_mps
-        speed_stop = 0 if stop_sign_time <= 2 else self.legal_speed_limit_mps
+        curve_wait_time_s = self._time_until_brake(obs.dist_next_curve, obs.curve_target_speed,
+                                                   curve_offset_m)
+        speed_tl = 0 if tl_wait_time_s <= safety_time_s else self.legal_speed_limit_mps
+        speed_stop = 0 if stop_sign_time <= safety_time_s else self.legal_speed_limit_mps
 
-        obs.obj_speed_ms = obs.obj_speed_ms if obj_wait_time_s <= 2 else self.legal_speed_limit_mps
-        obs.curve_target_speed = obs.curve_target_speed if curve_wait_time_s <= 5 else self.legal_speed_limit_mps
+        obs.obj_speed_ms = obs.obj_speed_ms if obj_wait_time_s <= safety_time_s \
+            else self.legal_speed_limit_mps
+        obs.curve_target_speed = obs.curve_target_speed if curve_wait_time_s <= safety_time_s \
+            else self.legal_speed_limit_mps
 
         wait_times = [curve_wait_time_s, tl_wait_time_s, obj_wait_time_s, stop_sign_time]
-        print("wait_times", wait_times)
+
         target_speeds = [obs.curve_target_speed, speed_tl, obs.obj_speed_ms, speed_stop]
 
         crit_id = np.argmin(wait_times)
@@ -186,11 +180,10 @@ class SpeedStateMachine:
         crit_wait_time_s, target_speed = wait_times[crit_id], target_speeds[crit_id]
 
         needs_brake = crit_wait_time_s <= self.vehicle.meta.vehicle_reaction_time_s
-        print(needs_brake, 'needs  break', crit_wait_time_s,
-              self.vehicle.meta.vehicle_reaction_time_s)
         return needs_brake, min(target_speed, self.legal_speed_limit_mps)
 
-    def _time_until_brake(self, distance_m: float, target_velocity: float = 0) -> float:
+    def _time_until_brake(self, distance_m: float, target_velocity: float = 0,
+                          object_offset: float = 7.0) -> float:
         """Compute the braking distance and based on that the time until brake.
         In case this function returns a negative value, it means that it's already
         too late to brake, so you need to launch an emergency protocol"""
@@ -209,7 +202,7 @@ class SpeedStateMachine:
                        accel_mps2 * maneuver_time_s ** 2 / 2
 
         # object_offset = max(target_velocity * 1.8, 4)
-        object_offset = 7
+        # object_offset = 7
         linear_dist = distance_m - object_offset - braking_dist
         time_until_brake = linear_dist / self.vehicle.velocity_mps \
             if self.vehicle.velocity_mps > 0 else 999

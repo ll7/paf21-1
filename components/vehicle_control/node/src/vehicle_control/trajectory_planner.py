@@ -160,7 +160,7 @@ class TrajectoryPlanner:
             return SpeedObservation()
 
         speed_obs = self.obj_handler.get_speed_observation(self.cached_local_route)
-        # speed_obs.obj_speed_ms = 0.0
+        speed_obs.obj_speed_ms = 0.0
 
         curve_obs = self.curve_detection.find_next_curve(self.cached_local_route)
         speed_obs.dist_next_curve = curve_obs.dist_until_curve
@@ -174,6 +174,7 @@ class TrajectoryPlanner:
             if len(self.cached_local_ann_route) > 0 else 0.0
 
         self._handle_american_traffic_lights(speed_obs, curve_obs)
+        speed_obs.dist_next_traffic_light_m = 1000
         return speed_obs
 
     def _handle_american_traffic_lights(self, speed_obs: SpeedObservation, curve_obs: CurveObservation):
