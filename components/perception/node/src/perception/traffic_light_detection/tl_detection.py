@@ -59,7 +59,7 @@ class TrafficLightDetector:
             # 1) ignore traffic lights farther away than a given threshold
             # 2) ignore traffic lights that are too small sized (-> filter pedestrian / bicycle TLs)
             max_dist_m = 80
-            area_min, area_max = 0.11, 12
+            # area_min, area_max = 0.11, 12
             cond = lambda i: distances[i] <= max_dist_m # and area_min <= obj_areas[i] <= area_max
             closeby_patches = [(i, patches[i]) for i in range(len(patches)) if cond(i)]
             print('Closeby patches: ', len(closeby_patches), closeby_patches)
@@ -125,8 +125,12 @@ class TrafficLightDetector:
         # 7,1 - 4x14
         # 6,65 - 5x15
         # 6,64 - 4x13
+
+        # TODO: use a formula that does the job (this formula is 100% trash)
+        # idea is to filter small bicycle traffic lights, so they get ignored
         _, _, width, height = patch
         return width * height / 10
+        # relation between sides might be a indicator (filter square-lookalike objects)
 
     def _eval_traffic_light(self, tl_meta: TrafficLightMetadata) -> TrafficLightInfo:
         """Evaluate a single traffic light."""
