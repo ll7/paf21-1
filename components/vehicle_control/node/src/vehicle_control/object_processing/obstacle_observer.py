@@ -313,9 +313,9 @@ class ObstacleObserver:
         lane, possible_lanes = ann[min(blocked_ids)]
         left_lane, right_lane = (lane - 1, lane + 1) if lane > 0 else (lane + 1, lane - 1)
         overtake_left, overtake_right = left_lane in possible_lanes, right_lane in possible_lanes
-        if left_lane not in possible_lanes:
-            left_lane = -lane
-            overtake_left, overtake_right = left_lane in possible_lanes, right_lane in possible_lanes
+        # if left_lane not in possible_lanes:
+        #     left_lane = -lane
+        #     overtake_left, overtake_right = left_lane in possible_lanes, right_lane in possible_lanes
         # TODO: consider also the possible lanes of the end point and one point in the middle
         # return overtake_left, overtake_right
         return overtake_left, False # TODO: enforce "drive on the right" rule
