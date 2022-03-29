@@ -3,6 +3,28 @@ from vehicle_control.core.vehicle import Vehicle
 
 """ Keep States """
 
+def test_drive_curve():
+    vehicle = Vehicle('test_vehicle')
+    vehicle.pos = (0, 0)
+    vehicle.orientation_rad = 1
+    vehicle.velocity_mps = 8
+    speed_s = SpeedStateMachine(vehicle)
+    speed_s.current_state = SpeedState.KEEP
+    speed_o = SpeedObservation()
+    speed_o.tl_phase = TrafficLightPhase.GREEN
+    speed_o.is_trajectory_free = True 
+    speed_o.dist_next_traffic_light_m=1.4731885194778442 
+    speed_o.dist_next_obstacle_m=999 
+    speed_o.obj_speed_ms=500 
+    speed_o.dist_next_curve=0
+    speed_o.curve_target_speed=10
+    speed_o.dist_next_stop_m=999
+    speed_s.update_state(speed_o)
+    target_speed = speed_s.get_target_speed()
+    print(target_speed)
+    assert(speed_s.current_state == SpeedState.ACCEL)
+    assert (target_speed >= 10)
+
 def test_keep_green():
     vehicle = Vehicle('test_vehicle')
     vehicle.pos = (0, 0)
@@ -14,7 +36,7 @@ def test_keep_green():
     speed_o = SpeedObservation()
     speed_o.tl_phase = TrafficLightPhase.GREEN
     speed_o.is_trajectory_free = True
-    speed_o.dist_next_traffic_light = 5.0
+    speed_o.dist_next_traffic_light_m = 5.0
     speed_o.detected_speed_limit = 50
 
     speed_s.update_state(speed_o)
