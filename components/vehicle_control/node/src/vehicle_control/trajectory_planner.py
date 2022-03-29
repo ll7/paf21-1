@@ -178,18 +178,18 @@ class TrajectoryPlanner:
 
     def _handle_american_traffic_lights(self, speed_obs: SpeedObservation, curve_obs: CurveObservation):
         print(speed_obs.dist_next_traffic_light_m, curve_obs.dist_until_curve)
+        is_american_tl = abs(speed_obs.dist_next_traffic_light_m - curve_obs.dist_until_curve) > 5
+
+        # car is within a right / left turn maneuver
+        # -> needs to ignore american TLs of orthogonal lanes
         if self.end_curve_id:
             speed_obs.tl_phase = TrafficLightPhase.GREEN
             speed_obs.dist_next_traffic_light_m = 9999
-            if self.end_curve_id < self.prev_wp_id:
+            if self.end_curve_id + 5 < self.prev_wp_id:
                 self.end_curve_id = None
 
-        # stop before the traffic light if it is just a regular one and not american
-        elif abs(speed_obs.dist_next_traffic_light_m - curve_obs.dist_until_curve) < 5: # and curve_obs.end_id < 20:
-            print('Stop at the TL')
-
         # stop at the end of lane
-        elif len(self.cached_local_ann_route) > 0:
+        elif curve_obs.dist_until_curve < 10 and is_american_tl and len(self.cached_local_ann_route) > 0:
             dist_end_lane = self.cached_local_ann_route[0].end_lane_m
             turn_at_crossroad = curve_obs.end_id != -1 and \
                 abs(curve_obs.dist_until_curve - dist_end_lane) < 5
