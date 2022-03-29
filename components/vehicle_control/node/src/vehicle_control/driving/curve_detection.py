@@ -27,7 +27,6 @@ class CurveDetection:
         """Evaluate the given route for the next curve to be handled"""
 
         curve_bounds = CurveDetection._find_next_curve_bounds(route_wps)
-        print (curve_bounds, 'curve bounds')
         if not curve_bounds:
             return CurveObservation()
 
@@ -39,10 +38,6 @@ class CurveDetection:
         dist_until_curve = CurveDetection._route_dist(wps_until_curve)
         dist_end_curve = dist_until_curve + CurveDetection._route_dist(wps_curve)
         max_curve_speed = CurveDetection._curve_target_speed(wps_curve)
-        print(dist_until_curve, 'dist_until_curve')
-        print(dist_end_curve, 'dist_end_curve')
-        print(max_curve_speed, 'max_curve_speed')
-        print(curve_end_id, 'curve_end_id')
         return CurveObservation(dist_until_curve, dist_end_curve, max_curve_speed, curve_end_id)
 
     @staticmethod

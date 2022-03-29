@@ -15,7 +15,7 @@ pushd scenarios
     docker-compose -f $COMPOSE_FILE logs vehicle_control > $LOG_DIR/vehicle_control_log.txt
     docker-compose -f $COMPOSE_FILE logs competition_manager > $LOG_DIR/competition_manager.txt
     COMP_MGR_OUT=$(docker-compose -f $COMPOSE_FILE logs competition_manager | grep 'The competition was completed')
-    docker-compose -f $COMPOSE_FILE down
+    docker-compose -f $COMPOSE_FILE down --remove-orphans
 popd
 
 echo '=========================='

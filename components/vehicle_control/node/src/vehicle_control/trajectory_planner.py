@@ -174,17 +174,11 @@ class TrajectoryPlanner:
             if len(self.cached_local_ann_route) > 0 else 0.0
 
         self._handle_american_traffic_lights(speed_obs, curve_obs)
-        speed_obs.dist_next_traffic_light_m = 1000
-        #print('Speed Obs ', speed_obs)
-
         return speed_obs
 
     def _handle_american_traffic_lights(self, speed_obs: SpeedObservation, curve_obs: CurveObservation):
-        # print('tl in m {}, dist till curve in m {}'.format(speed_obs.dist_next_traffic_light_m, curve_obs.dist_until_curve))
-        # print('Cashed ann route end lane m ', self.cached_local_ann_route[0].end_lane_m)
-        # print('curve obs end id: ', curve_obs.end_id)
-        # ignore the traffic lights of orthogonal lanes until the curve is over
         if self.end_curve_id:
+
             speed_obs.tl_phase = TrafficLightPhase.GREEN
             speed_obs.dist_next_traffic_light_m = 9999
             if self.end_curve_id < self.prev_wp_id:
@@ -218,7 +212,7 @@ class TrajectoryPlanner:
 
         cached_point = self.cached_local_ann_route[index2]
         target_velocity = cached_point.legal_speed/3.6
-        accel_mps2 = -2.0
+        accel_mps2 = self.vehicle.meta.base_brake_mps2
         maneuver_time_s = (target_velocity - self.vehicle.velocity_mps) / accel_mps2
         braking_dist = self.vehicle.velocity_mps * maneuver_time_s + \
                        accel_mps2 * maneuver_time_s ** 2 / 2 + 1

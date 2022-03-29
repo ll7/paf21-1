@@ -23,9 +23,10 @@ class ObstacleObserver:
     objects: Dict[int, ObjectMeta] = field(default_factory=dict)
     map: XodrMap = None
     delta_time: float = 0.1
-    max_velocity_change_rate: float = 2.0
+    max_velocity_change_rate: float = 0.1
     street_width: float = 4
     dist_safe: int = 10
+    tracker: int = 0
 
     def __post_init__(self):
         if not self.map:
@@ -80,7 +81,8 @@ class ObstacleObserver:
         min_id = len(route)
         blocked_ids = []
         for obj_id, obj in objects.items():
-            blocked = self.find_blocked_points(route, obj, threshold=1, prediction_wanted=prediction_wanted)
+            blocked = self.find_blocked_points(route, obj, threshold=1,
+                                               prediction_wanted=prediction_wanted)
 
             if not blocked:
                 continue
@@ -106,7 +108,8 @@ class ObstacleObserver:
         indices = []
         obj_positions = [obj.trajectory[-1]]
         if len(obj.trajectory) > 8 and prediction_wanted:
-            obj_positions = self._predict_movement(obj.trajectory, obj.velocity, num_points=50)
+            obj_positions = ObstacleObserver._predict_movement(obj.trajectory,
+                                                               obj.velocity, num_points=50)
         #visualize_route_rviz(obj_positions)
         veh_pos = self.vehicle.pos
         veh_vel = self.vehicle.velocity_mps
@@ -128,30 +131,23 @@ class ObstacleObserver:
         indices = list(set(indices))
         return indices
 
-    def _predict_movement(self, trajectory: List[Tuple[float, float]], velocity: float,
+    @staticmethod
+    def _predict_movement(trajectory: List[Tuple[float, float]], velocity: float,
                           num_points: int) -> List[Tuple[float, float]]:
         """This function estimates the position of the object. """
-        pos = trajectory[-1]
-        predictions = [pos]
+        predictions = trajectory[-1:]
+        vec_average = (0.0, 0.0)
         if velocity < 1:
             return predictions
-        old_vector = points_to_vector(trajectory[-7], trajectory[-1])
-        new_vector = points_to_vector(trajectory[-4], trajectory[-1])
+        for p_1, p_2 in zip(trajectory[:-1], trajectory[1:]):
+            vec_1 = sub_vector(p_2, p_1)
+            vec_average = add_vector(vec_1, vec_average)
 
-        theta_old = vector_to_dir(old_vector)
-        theta = vector_to_dir(new_vector)
-        theta_dot = theta - theta_old
-
-        steering_angle = np.arctan((theta_dot/velocity) * self.vehicle.meta.wheelbase)
-        steering_angle = np.clip(steering_angle, -np.deg2rad(5), np.deg2rad(5))
-        timestep = 1/10
+        vec_average = (vec_average[0] / len(trajectory), vec_average[1] / len(trajectory))
+        last_point = trajectory[-1]
         for _ in range(num_points):
-            x_n = pos[0] + velocity * np.cos(theta + steering_angle) * timestep
-            y_n = pos[1] + velocity * np.sin(theta + steering_angle) * timestep
-            theta = theta + ((velocity * np.tan(steering_angle)) /
-                             self.vehicle.meta.wheelbase) * timestep
-            pos = (x_n, y_n)
-            predictions.append(pos)
+            last_point = add_vector(last_point, vec_average)
+            predictions.append(last_point)
         return predictions
 
     @staticmethod
@@ -233,13 +229,16 @@ class ObstacleObserver:
     def plan_overtaking_maneuver(self, local_route: List[AnnRouteWaypoint],
                                  orig_route: List[AnnRouteWaypoint]) -> List[AnnRouteWaypoint]:
         """Plan the new trajectory of an overtaking maneuver"""
-
+        if self.tracker % 10 == 0:
+            orig_route[0] = local_route[0]
+            local_route = orig_route
+        self.tracker += 1
         lanes = [(point.actual_lane, point.possible_lanes) for point in local_route]
         temp_route = [point.pos for point in local_route]
         enum_route = temp_route.copy()
         original_route = [point.pos for point in orig_route]
         # abort with previous trajectory if no overtake required
-        blocked_ids, closest_object = self.get_blocked_ids(enum_route, prediction_wanted=False)
+        blocked_ids, closest_object = self.get_blocked_ids(enum_route, prediction_wanted=True)
         if not blocked_ids:
             return None
 
@@ -257,7 +256,7 @@ class ObstacleObserver:
                               local_route]
         shifted_wps = ObstacleObserver._shift_waypoints(enum_route, sigmoid, point_can_be_moved, original_route)
 
-        new_is_blocked, _ = self.get_blocked_ids(shifted_wps, prediction_wanted=False)
+        new_is_blocked, _ = self.get_blocked_ids(shifted_wps, prediction_wanted=True)
         if new_is_blocked:
             print('new is blocked')
             return None

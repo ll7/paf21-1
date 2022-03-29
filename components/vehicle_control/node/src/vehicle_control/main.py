@@ -75,6 +75,7 @@ class LocalPlannerNode:
 
                 self.speed_state_machine.update_state(self.route_planner.latest_speed_observation)
                 print(self.route_planner.latest_speed_observation)
+                print(self.speed_state_machine.current_state)
                 velocity = self.speed_state_machine.get_target_speed()
                 print(velocity, 'mps ', self.vehicle.velocity_mps)
                 if velocity <= 0:
