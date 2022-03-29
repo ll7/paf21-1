@@ -8,6 +8,7 @@ if [ ! -d "./simulator" ]; then
     wget -q -O- $CARLA_SIM_URL | tar xzf - -C ./simulator
     echo 'download successful!'
 
+    echo 'downloading additional CARLA simulator assets (some maps)'
     ADD_ASSETS_URL=https://carla-releases.s3.eu-west-3.amazonaws.com/Linux/AdditionalMaps_0.9.10.tar.gz
     cd simulator/Import && wget -q $ADD_ASSETS_URL && cd ..
     echo 'download successful!'
