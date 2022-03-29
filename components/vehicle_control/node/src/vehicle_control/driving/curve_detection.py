@@ -92,12 +92,16 @@ class CurveDetection:
         """ Determine the max. speed possible to drive the given curvature
         using a formula that approximates the car's friction given the radius."""
 
-        friction_coeff = 0.6  # 0.6
+        friction_coeff = 0.7  # 0.6
         gravity_accel = 9.81
 
         p_1, p_2, p_3 = wps_curve[0], wps_curve[len(wps_curve) // 2], wps_curve[-1]
-        radius = approx_curvature_radius(p_1, p_2, p_3)
+        radius_1 = approx_curvature_radius(p_1, p_2, p_3)
+        if len(wps_curve) >= 5:
+            p_1, p_2, p_3 = wps_curve[0], wps_curve[2], wps_curve[4]
+        radius_2 = approx_curvature_radius(p_1, p_2, p_3)
 
-        max_speed = sqrt(friction_coeff * gravity_accel * radius)
+        min_radius = min(radius_1, radius_2)
+        max_speed = sqrt(friction_coeff * gravity_accel * min_radius)
 
         return max_speed
