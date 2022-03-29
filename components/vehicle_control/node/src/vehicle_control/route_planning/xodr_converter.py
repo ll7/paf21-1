@@ -574,12 +574,12 @@ class XodrMap:
             for discount, link in enumerate(road.left_ids):
                 index_start = self.mapping[create_key(road.road_id, 1, link)]
                 index_end = self.mapping[create_key(road.road_id, 0, link)]
-                matrix[index_start][index_end] = max(length - discount * 0.5, 0.0)
+                matrix[index_start][index_end] = max(length - discount * 0.5, 0.1)
             for discount, link in enumerate(road.right_ids):
                 index_start = self.mapping[create_key(road.road_id, 0, link)]
                 index_end = self.mapping[create_key(road.road_id, 1, link)]
                 length = max(length - 1, 0.0)
-                matrix[index_start][index_end] = max(length - discount * 0.5, 0.0)
+                matrix[index_start][index_end] = max(length - discount * 0.5, 0.1)
 
             # connect neighbored lanes of a road at the end (in logical driving
             # direction) to allow planned lane changes
