@@ -1,6 +1,7 @@
 __pycache__
 logs
 recordings
+simulator
 
 .vscode
 .idea
