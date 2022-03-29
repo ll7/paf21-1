@@ -77,9 +77,6 @@ class LocalPlannerNode:
                 print(self.route_planner.latest_speed_observation)
                 print(self.speed_state_machine.current_state)
                 velocity = self.speed_state_machine.get_target_speed()
-                print(velocity, 'mps ', self.vehicle.velocity_mps)
-                if velocity <= 0:
-                    print('here')
                 self.driving_control.update_route(local_route)
                 self.driving_control.update_target_velocity(velocity)
                 driving_signal = self.driving_control.next_signal()
@@ -126,7 +123,7 @@ class LocalPlannerNode:
 
     def _init_driving_signal_publisher(self):
         out_topic = f"/carla/{self.vehicle.name}/ackermann_cmd"
-        return rospy.Publisher(out_topic, AckermannDrive, queue_size=10)
+        return rospy.Publisher(out_topic, AckermannDrive, queue_size=1)
 
 
 def main():
