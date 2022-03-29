@@ -110,7 +110,7 @@ def main():
     with specific configuration parameters"""
 
     vehicle_name = "ego_vehicle"
-    publish_rate_hz = 10
+    publish_rate_hz = 20
     node = PerceptionNode(vehicle_name, publish_rate_hz)
     node.run_node()
 
