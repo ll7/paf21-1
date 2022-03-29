@@ -102,6 +102,8 @@ class ObjectDetector:
         contour_depth = np.delete(contour_depth, outliers, axis=0)
         contour = np.delete(contour, outliers, axis=0)
         # cluster using the jenks natural breaks algorithm
+        if len(contour_depth) < 3:
+            return []
         breaks = jenks_breaks(contour_depth, nb_class=2)
 
         equal_break_values = breaks[0] == breaks[1]
