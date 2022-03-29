@@ -36,10 +36,12 @@ class AdjMatrixPrep:
 
     @staticmethod
     def _find_neighbors(start_pos: Tuple[float, float], end_pos: Tuple[float, float],
-                         orient_rad: float, xodr_map: XodrMap):
+                        orient_rad: float, xodr_map: XodrMap):
 
         left_offset = rotate_vector(unit_vector(orient_rad), pi/2)
         right_offset = rotate_vector(unit_vector(orient_rad), -pi/2)
+        forward_offset = unit_vector(orient_rad)
+        backward_offset = rotate_vector(unit_vector(orient_rad), pi)
 
         # handle spawns on sections next to a drivable lane
         # this helps when spawning e.g. on a parking lot / hard shoulder
@@ -55,9 +57,20 @@ class AdjMatrixPrep:
             if start_neighbors:
                 break
 
+        if not start_neighbors:
+            for shift in np.arange(0.0, 7.0, 0.5):
+                shift_forward = add_vector(start_pos, scale_vector(forward_offset, shift))
+                start_neighbors = xodr_map.find_sections(shift_forward)
+                if start_neighbors:
+                    break
+
+                shift_backward = add_vector(start_pos, scale_vector(backward_offset, shift))
+                start_neighbors = xodr_map.find_sections(shift_backward)
+                if start_neighbors:
+                    break
+
         end_neighbors = xodr_map.find_sections(end_pos)
         return start_neighbors, end_neighbors
-
 
     @staticmethod
     def _insert_graph_edges(graph: np.ndarray, mapping: Dict[str, int], point: Tuple[float, float],
@@ -273,12 +286,11 @@ class RoutePlanner:
 
         # discard waypoints before the car
         reachable_index = -1
-        threshold = pi/2
+        threshold = 3.0
         for index, waypoint in enumerate(waypoints):
-            vec_dir = vec2dir(pos, waypoint)
-            norm_diff = norm_angle(vec_dir)
-            if abs(norm_diff) <= threshold:
-                reachable_index = index - 1
+            distance = euclid_dist(pos, waypoint)
+            if distance <= threshold:
+                reachable_index = index
                 break
 
         print("End reachable_index", reachable_index)
