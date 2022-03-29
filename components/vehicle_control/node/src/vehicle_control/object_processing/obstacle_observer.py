@@ -1,8 +1,8 @@
 """Represents a handler for the detected objects."""
-import math
-from math import pi, dist
+from math import pi, dist, exp, sqrt
 from typing import List, Tuple, Dict, Callable
 from dataclasses import dataclass, field
+from copy import deepcopy
 
 import numpy as np
 
@@ -59,12 +59,13 @@ class ObstacleObserver:
     def _detect_vehicle_in_lane(self, local_route: List[Tuple[float, float]]) -> SpeedObservation:
         """Detect a vehicle in the same direction."""
         # cache the objects to avoid concurrency bugs
-        route = local_route.copy()
+        route = deepcopy(local_route)
         spd_obs = SpeedObservation()
         blocked_ids, obj = self.get_blocked_ids(route, prediction_wanted=False)
         if len(blocked_ids) > 0:
             # distance = self.calculate_min_distance(route, min(blocked_ids), obj.trajectory[-1])
-            distance = self._cumulated_dist(self.vehicle.pos, local_route[min(blocked_ids)])
+            distance = ObstacleObserver._cumulated_dist(self.vehicle.pos,
+                                                        local_route[min(blocked_ids)])
             spd_obs.is_trajectory_free = False
             spd_obs.dist_next_obstacle_m = distance
             spd_obs.obj_speed_ms = obj.velocity
@@ -74,7 +75,7 @@ class ObstacleObserver:
     def get_blocked_ids(self, route: List[Tuple[float, float]],
                         prediction_wanted: bool = True) -> Tuple[List[int], ObjectMeta]:
         """gets the ids of route points that aren't accessible"""
-        objects: Dict[int, ObjectMeta] = self.objects.copy()
+        objects: Dict[int, ObjectMeta] = deepcopy(self.objects)
         min_obj: ObjectMeta = None
         min_id = len(route)
         blocked_ids = []
@@ -113,7 +114,7 @@ class ObstacleObserver:
         for index, route_point in enumerate(route):
             # calculate square distance
             distance = ObstacleObserver._closest_point(route_point, obj_positions)
-            distance = math.sqrt(distance)
+            distance = sqrt(distance)
             if distance > threshold:
                 continue
             for pos in obj_positions:
@@ -226,7 +227,7 @@ class ObstacleObserver:
             dist_c = 0
         x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)
         x_2 = (1 / slope) * (relative_distance_to_object - self.dist_safe - dist_c)
-        deviation = (street_width / (1 + math.exp(-x_1))) + ((-street_width) / (1 + math.exp(-x_2)))
+        deviation = (street_width / (1 + exp(-x_1))) + ((-street_width) / (1 + exp(-x_2)))
         return deviation
 
     def plan_overtaking_maneuver(self, local_route: List[AnnRouteWaypoint],
@@ -338,5 +339,5 @@ class ObstacleObserver:
         self.dist_safe = max([relative_velocity * time_to_collision, 0])
         # self.dist_safe = 6
         x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)
-        deviation = (street_width / (1 + math.exp(-x_1)))
+        deviation = (street_width / (1 + exp(-x_1)))
         return deviation
