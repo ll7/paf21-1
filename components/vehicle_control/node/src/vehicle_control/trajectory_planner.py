@@ -160,7 +160,7 @@ class TrajectoryPlanner:
             return SpeedObservation()
 
         speed_obs = self.obj_handler.get_speed_observation(self.cached_local_route)
-        speed_obs.obj_speed_ms = 0.0
+        # speed_obs.obj_speed_ms = 0.0
 
         curve_obs = self.curve_detection.find_next_curve(self.cached_local_route)
         speed_obs.dist_next_curve = curve_obs.dist_until_curve
