@@ -5,8 +5,6 @@
 This ROS node processes route data from the global planner and sensor data
 from the perception layer to plan trajectories and drive them accurately.
 
-TODO: insert global planner docs from GitHub history
-
 ## Components
 The local planner consists of following components:
 
@@ -14,6 +12,10 @@ The local planner consists of following components:
 All sensor information such as positioning, surrounding NPCs, traffic lights / speed signs
 are collected and fused together to a cohesive system state that gets processed by
 the situational planning layer.
+
+### Global Planning
+Processes xodr map data and calculate the shortest path with two given points.
+Wiki: [Global-Planner](https://github.com/ll7/paf21-1/wiki/Global-Planner)
 
 ### Situational Planning
 For situational planning we use a couple of state machines mainly for regulating
