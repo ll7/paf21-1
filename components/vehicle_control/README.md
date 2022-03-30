@@ -5,8 +5,6 @@
 This ROS node processes route data from the global planner and sensor data
 from the perception layer to plan trajectories and drive them accurately.
 
-TODO: insert global planner docs from GitHub history
-
 ## Components
 The local planner consists of following components:
 
