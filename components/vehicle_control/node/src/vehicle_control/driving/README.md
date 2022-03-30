@@ -13,7 +13,7 @@ This File Contains:
   - steering_angle_rad: float
   - target_velocity_mps: float
 
-### Steering.py
+### steering.py
 This File Contains the following steering controller to steer the car.
 
 - [StanleySteeringController](https://github.com/ll7/paf21-1/wiki/Vehicle-Controller)
@@ -23,7 +23,7 @@ This File Contains the following steering controller to steer the car.
 - CombinedSteering
   combines Stanley (for straights) and Naive Steering (for curves)
 
-### Curve Detection.py
+### curve_detection.py
 
 - CurveDetection
   returns a CurveObservation
