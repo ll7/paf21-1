@@ -126,15 +126,15 @@ class ObstacleObserver:
                     route_point, pos, obj.velocity, veh_pos, veh_vel, threshold)
                 if zone_clearance_time < 2.0:
                     indices += [index]
-
-
         indices = list(set(indices))
         return indices
 
     @staticmethod
     def _predict_movement(trajectory: List[Tuple[float, float]], velocity: float,
                           num_points: int) -> List[Tuple[float, float]]:
-        """This function estimates the position of the object. """
+        """This function estimates the trajectory of the object.
+         By averaging the last known trajectory
+         and Linear interpolation"""
         predictions = trajectory[-1:]
         vec_average = (0.0, 0.0)
         if velocity < 1:
@@ -152,6 +152,15 @@ class ObstacleObserver:
 
     @staticmethod
     def _calculate_zone_clearance(route_point, obj_pos, obj_vel, veh_pos, veh_vel, threshold):
+        """Calculates the the time difference of us leaving and
+         the other obj entering a specific route point or vice versa
+        Inputs: route_point: the blocked waypoint
+                obj_pos: the current position of the object
+                obj_vel: the velocity of the object
+                veh_pos: our position
+                veh_vel: our velocity
+                threshold: the radius to look around a waypoint
+        """
         obj_vel = 0.0001 if obj_vel == 0 else obj_vel
         veh_vel = 0.0001 if veh_vel == 0 else veh_vel
         zone_clearence_times = [1000]
@@ -177,22 +186,13 @@ class ObstacleObserver:
 
     @staticmethod
     def _closest_point(point, points) -> float:
-        # calculate square distance
+        """calculate square distance"""
         distances = np.sum((np.array(points) - np.array(point)) ** 2, axis=1)
         return np.min(distances)
 
-    def calculate_min_distance(self, route, until_id, obj_pos):
-        distance = 0
-        route.insert(0, self.vehicle.pos)
-        for index, point in enumerate(route):
-            if until_id <= index:
-                distance += dist(point, obj_pos)
-                break
-            distance += dist(point, route[index + 1])
-        return distance
-
     @staticmethod
     def _cumulated_dist(veh_pos: Tuple[float, float], route_pos: Tuple[float, float]):
+        """calculates distance between two points"""
         return abs(veh_pos[0] - route_pos[0]) + abs(veh_pos[1] - route_pos[1])
 
     def _convert_relative_to_world(self, coordinate: Tuple[float, float]) -> Tuple[float, float]:
@@ -204,19 +204,16 @@ class ObstacleObserver:
 
     def sigmoid_smooth(self, object_speed: float, object_coordinates: List[Tuple[float, float]],
                        point: Tuple[float, float], first_coord: Tuple[float, float], side: int) -> float:
-        """Calculate the orthogonal offset for smooth lane changes."""
+        """Calculate the orthogonal offset for smooth lane changes. using 2 sigmoid functions"""
         # TODO: use the exact road withds from the XODR map
-        # point = ann_point.pos
         street_width = side * self.street_width  # parameter to stop in the  middle of other lane
         slope = 5  # slope of overtaking
         relative_velocity = self.vehicle.velocity_mps - object_speed
-
         relative_distance_to_object = -dist(point, object_coordinates[0])
         if dist(point, first_coord) > dist(first_coord, object_coordinates[0]):
             relative_distance_to_object = -relative_distance_to_object
         time_to_collision = 1
         self.dist_safe = max([relative_velocity * time_to_collision, 0])
-        # self.dist_safe = 6
         dist_c = dist(object_coordinates[0], object_coordinates[-1]) + self.dist_safe
         if relative_velocity < 0:
             dist_c = 0
@@ -296,6 +293,8 @@ class ObstacleObserver:
 
     def _shift_waypoints(self, enum_route, wp_shift: Callable[[Tuple[float, float]], float],
                          original_route: List[Tuple[float, float]]):
+        """shifts waypoints using orthogonal vectors and ensures
+         points dont differ too far from original route"""
         offset_vectors = [orth_offset_left(enum_route[i], enum_route[i+1], 1.0)
                           for i in range(len(enum_route) - 1)]
 
@@ -306,39 +305,20 @@ class ObstacleObserver:
                                   for point, orig_point in zip(enum_route, original_route)]
         weights = [min(scale, distance) for scale, distance
                    in zip(offset_scales, signed_distance_weight)]
-        print(weights)
         offsets = [scale_vector(vec, vec_len) for vec, vec_len in zip(offset_vectors, weights)]
         shifted_wps = [add_vector(wp, vec) for wp, vec in zip(enum_route, offsets)]
         return shifted_wps
 
     @staticmethod
     def _can_overtake(ann, blocked_ids):
+        """checks """
         lane, possible_lanes = ann[min(blocked_ids)]
         left_lane, right_lane = (lane - 1, lane + 1) if lane > 0 else (lane + 1, lane - 1)
         overtake_left, overtake_right = left_lane in possible_lanes, right_lane in possible_lanes
+        # alter following lines to enable overtaking in opposing lanes
         # if left_lane not in possible_lanes:
         #     left_lane = -lane
         #     overtake_left, overtake_right = left_lane in possible_lanes, right_lane in possible_lanes
         # TODO: consider also the possible lanes of the end point and one point in the middle
         # return overtake_left, overtake_right
         return overtake_left, False # TODO: enforce "drive on the right" rule
-
-    def sigmoid_smooth_lanechange(self, object_speed: float, object_coordinates: List[Tuple[float, float]],
-                       point: Tuple[float, float], first_coord: Tuple[float, float], side: int) -> float:
-        """Calculate the orthogonal offset for smooth lane changes."""
-        # TODO: use the exact road withds from the XODR map
-        # point = ann_point.pos
-        street_width = side * self.street_width  # parameter to stop in the  middle of other lane
-        slope = 3  # slope of overtaking
-        relative_velocity = self.vehicle.velocity_mps - object_speed
-        # if relative_velocity <= 10/3.6:
-        #     return 0
-        relative_distance_to_object = -dist(point, object_coordinates[0])
-        if dist(point, first_coord) > dist(first_coord, object_coordinates[0]):
-            relative_distance_to_object = -relative_distance_to_object
-        time_to_collision = 0.5
-        self.dist_safe = max([relative_velocity * time_to_collision, 0])
-        # self.dist_safe = 6
-        x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)
-        deviation = (street_width / (1 + exp(-x_1)))
-        return deviation
