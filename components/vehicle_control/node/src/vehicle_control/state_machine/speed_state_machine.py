@@ -183,7 +183,7 @@ class SpeedStateMachine:
         return needs_brake, min(target_speed, self.legal_speed_limit_mps)
 
     def _time_until_brake(self, distance_m: float, target_velocity: float = 0,
-                          object_offset: float = 7.0) -> float:
+                          object_offset: float = 10.0) -> float:
         """Compute the braking distance and based on that the time until brake.
         In case this function returns a negative value, it means that it's already
         too late to brake, so you need to launch an emergency protocol"""
@@ -206,7 +206,7 @@ class SpeedStateMachine:
         linear_dist = distance_m - object_offset - braking_dist
         time_until_brake = linear_dist / self.vehicle.velocity_mps \
             if self.vehicle.velocity_mps > 0 else 999
-        print('time till brake', time_until_brake)
+        #print('time till brake', time_until_brake)
         return time_until_brake
 
     def get_target_speed(self) -> float:

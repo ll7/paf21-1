@@ -174,7 +174,6 @@ class TrajectoryPlanner:
             if len(self.cached_local_ann_route) > 0 else 0.0
 
         self._handle_american_traffic_lights(speed_obs, curve_obs)
-        speed_obs.dist_next_traffic_light_m = 1000
         return speed_obs
 
     def _handle_american_traffic_lights(self, speed_obs: SpeedObservation, curve_obs: CurveObservation):

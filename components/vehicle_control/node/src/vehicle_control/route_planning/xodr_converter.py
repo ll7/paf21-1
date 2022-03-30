@@ -225,7 +225,7 @@ class Road:
     #         return False
     #     return Polygon(self.lane_polygons[0]).contains(Point(pos))
 
-    def detect_lane(self, pos: Tuple[float, float], id) -> int:
+    def detect_lane(self, pos: Tuple[float, float]) -> int:
         """Assuming the point is on the road, detect the lane."""
         point = Point(pos)
         for lane_id in self.lane_polygons:
