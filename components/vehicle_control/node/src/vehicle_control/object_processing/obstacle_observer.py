@@ -81,7 +81,7 @@ class ObstacleObserver:
         min_id = len(route)
         blocked_ids = []
         for obj_id, obj in objects.items():
-            blocked = self.find_blocked_points(route, obj, threshold=1,
+            blocked = self.find_blocked_points(route, obj, threshold=2,
                                                prediction_wanted=prediction_wanted)
 
             if not blocked:
@@ -109,7 +109,7 @@ class ObstacleObserver:
         obj_positions = [obj.trajectory[-1]]
         if len(obj.trajectory) > 4 and prediction_wanted:
             obj_positions = ObstacleObserver._predict_movement(obj.trajectory,
-                                                               obj.velocity, num_points=50)
+                                                               obj.velocity, num_points=100)
         #visualize_route_rviz(obj_positions)
         veh_pos = self.vehicle.pos
         veh_vel = self.vehicle.velocity_mps
@@ -124,7 +124,7 @@ class ObstacleObserver:
                 zone_clearance_time = ObstacleObserver._calculate_zone_clearance(
                     route_point, pos, obj.velocity, veh_pos, veh_vel, threshold)
                 #print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
-                if zone_clearance_time < 3.0:
+                if zone_clearance_time < 4.0:
                     indices += [index]
 
 
@@ -218,7 +218,7 @@ class ObstacleObserver:
         time_to_collision = 1
         self.dist_safe = max([relative_velocity * time_to_collision, 0])
         # self.dist_safe = 6
-        dist_c = dist(object_coordinates[0], object_coordinates[-1]) + 10
+        dist_c = dist(object_coordinates[0], object_coordinates[-1]) + self.dist_safe
         if relative_velocity < 0:
             dist_c = 0
         x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)
@@ -240,7 +240,7 @@ class ObstacleObserver:
         original_route = [point.pos for point in orig_route]
         # abort with previous trajectory if no overtake required
         blocked_ids, closest_object = self.get_blocked_ids(enum_route, prediction_wanted=True)
-        if not blocked_ids or min(blocked_ids) > 20:
+        if not blocked_ids or 5 > abs(min(blocked_ids)) > 20:
             return None
 
         # 2) decide whether overtake on left / right side
@@ -261,10 +261,10 @@ class ObstacleObserver:
             return None
 
         # update waypoint annotations
-        local_route = self._write_route_into_annotated(shifted_wps, local_route)
+        shifted_route = self._write_route_into_annotated(shifted_wps, local_route)
 
         print('overtaking')
-        return local_route
+        return shifted_route if shifted_route else local_route
 
     def _write_route_into_annotated(self, shifted_wps: List[Tuple[float, float]],
                                     local_route: List[AnnRouteWaypoint]) -> List[AnnRouteWaypoint]:
@@ -276,13 +276,14 @@ class ObstacleObserver:
             actual_lane = 0
             for road in list(self.map.roads_by_id.keys()):
                 actual_lane = self.map.roads_by_id[road].detect_lane(pos, wp.road_id)
+
                 if actual_lane != 0:
                     road_id = road
+                    print(road_id, 'id')
                     break
             if actual_lane == 0:
-                print('WARNING: new annotated actual lane is 0, this should never happen!')
-                continue
-            
+                print('invalid overtake')
+                return None
             new_wp = AnnRouteWaypoint(pos, road_id, actual_lane, wp.possible_lanes,
                                       wp.legal_speed, wp.dist_next_tl, wp.end_lane_m,
                                       stop_sign_m=wp.stop_sign_m)
@@ -311,6 +312,7 @@ class ObstacleObserver:
     @staticmethod
     def _can_overtake(ann, blocked_ids):
         lane, possible_lanes = ann[min(blocked_ids)]
+        print(possible_lanes, 'lanes')
         left_lane, right_lane = (lane - 1, lane + 1) if lane > 0 else (lane + 1, lane - 1)
         overtake_left, overtake_right = left_lane in possible_lanes, right_lane in possible_lanes
         # if left_lane not in possible_lanes:
