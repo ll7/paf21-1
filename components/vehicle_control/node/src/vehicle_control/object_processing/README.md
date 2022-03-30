@@ -2,7 +2,7 @@
 # Obstacle Observer
 
 ## About
-The obstacle observer 
+This component handles the Obstacle retrieved directly from the Perception layer. The callable methods provide [Speed Observations](https://github.com/ll7/paf21-1/wiki/Speed-State-Machine) and new replanned routes to avoid collisions.
 ## Components
 The obstacle observer consists of following components:
 
