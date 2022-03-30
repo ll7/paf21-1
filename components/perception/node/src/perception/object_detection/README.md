@@ -7,10 +7,9 @@ This is done by the detection of contours with the corresponding masks on the se
 For this purpose, the depth image is converted into a local point cloud and the contours can be used
 to determine the relative position of the objects. In addition to the detection the objects are 
 tracked with the help of an object tracker. The object detection sends as output to the vehicle
-control the information of the identifier, the object class and the relative position of each
-to each detected object.
+control the information of the identifier, the object class and the relative position of each detected object.
 
-## Detection Techiques
+## Detection Techniques
 
 **Procedure Sketch:**
 
