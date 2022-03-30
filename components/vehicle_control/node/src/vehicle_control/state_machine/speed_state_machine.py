@@ -53,6 +53,11 @@ class SpeedStateMachine:
     speed_offset_up_mps: float = 0 / 3.6
     speed_offset_down_mps: float = 3.0 / 3.6
     count: int = 0
+    successive_accel_steps: int=0
+    max_accel_steps: int=400 # 20 seconds of simulation time
+    initiate_backward_driving: bool=False
+    backward_driving_steps: int=150
+    remaining_backward_steps: int=0 # drive backwards for 7.5 seconds
 
     def update_state(self, obs: SpeedObservation):
         """Update the speed state machine given a new observation
@@ -68,6 +73,15 @@ class SpeedStateMachine:
         if not self.vehicle.is_ready:
             return
 
+        # skip speed state logic, override it with a backward driving maneuver
+        # when the car is stuck (JFYI: this is totally the wrong place to put this, really bad hack)
+        if self.initiate_backward_driving:
+            self.target_speed_mps = -10
+            if self.remaining_backward_steps > 0:
+                self.remaining_backward_steps -= 1
+            else:
+                self.initiate_backward_driving = False
+            return
 
         if self.current_state == SpeedState.ACCEL:
             self._handle_accel(obs)
@@ -108,6 +122,13 @@ class SpeedStateMachine:
 
         if keep_accelerating:
             self.target_speed_mps = target_speed
+
+            # check for emergency backward driving when car is stuck
+            self.successive_accel_steps += 1
+            if self.successive_accel_steps < self.max_accel_steps \
+                and self.vehicle.velocity_mps < 1:
+                self.initiate_backward_driving = True
+                self.remaining_backward_steps = self.backward_driving_steps
             return
 
         if needs_brake:
