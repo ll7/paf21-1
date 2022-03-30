@@ -33,13 +33,13 @@ class ObstacleObserver:
             self.map = load_xodr_map()
 
     def get_speed_observation(self, local_route: List[Tuple[float, float]]) -> SpeedObservation:
-        """Retrieve the speed observation."""
+        """Retrieve the speed observation containing the information about blocking vehicles"""
         if not self.vehicle.is_ready:
             return SpeedObservation()
         return self._detect_vehicle_in_lane(local_route)
 
     def update_objects(self, object_list: List[Dict]):
-        """Update the object list, the vehicle position and orientation"""
+        """Update the object list, their position and orientation"""
         if not self.vehicle.is_ready:
             return
 
@@ -58,24 +58,23 @@ class ObstacleObserver:
         self.objects = {k: self.objects[k] for k in keys}
 
     def _detect_vehicle_in_lane(self, local_route: List[Tuple[float, float]]) -> SpeedObservation:
-        """Detect a vehicle in the same direction."""
-        # cache the objects to avoid concurrency bugs
+        """Detects if a vehicle is in our lane and returns the closest blocking one in a Speed Observation"""
         route = deepcopy(local_route)
         spd_obs = SpeedObservation()
         blocked_ids, obj = self.get_blocked_ids(route, prediction_wanted=True)
         if len(blocked_ids) > 0:
-            # distance = self.calculate_min_distance(route, min(blocked_ids), obj.trajectory[-1])
             distance = ObstacleObserver._cumulated_dist(self.vehicle.pos,
                                                         local_route[min(blocked_ids)])
             spd_obs.is_trajectory_free = False
             spd_obs.dist_next_obstacle_m = distance
             spd_obs.obj_speed_ms = 0
-            print(obj, 'in our lane')
         return spd_obs
 
     def get_blocked_ids(self, route: List[Tuple[float, float]],
                         prediction_wanted: bool = True) -> Tuple[List[int], ObjectMeta]:
-        """gets the ids of route points that aren't accessible"""
+        """gets the ids of route points that aren't accessible
+        Output: List of all the blocked waypoints by id, closest object
+        """
         objects: Dict[int, ObjectMeta] = deepcopy(self.objects)
         min_obj: ObjectMeta = None
         min_id = len(route)
@@ -104,7 +103,9 @@ class ObstacleObserver:
 
     def find_blocked_points(self, route: List[Tuple[float, float]],
                             obj: ObjectMeta, threshold: float, prediction_wanted: bool = True):
-        """finds blocked points and returns their ids"""
+        """finds blocked points and returns their ids of an Object
+        Return: Lsit of Ids that are blocked by obj
+        """
         indices = []
         obj_positions = [obj.trajectory[-1]]
         if len(obj.trajectory) > 4 and prediction_wanted:
@@ -123,8 +124,7 @@ class ObstacleObserver:
             for pos in obj_positions:
                 zone_clearance_time = ObstacleObserver._calculate_zone_clearance(
                     route_point, pos, obj.velocity, veh_pos, veh_vel, threshold)
-                #print(f'Clearance_zone {zone_clearance_time} for obj_id {obj.identifier}')
-                if zone_clearance_time < 4.0:
+                if zone_clearance_time < 2.0:
                     indices += [index]
 
 
