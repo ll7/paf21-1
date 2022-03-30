@@ -32,13 +32,16 @@ class ObjectTracker:
         nearest_dist = self.max_distance
 
         for obj_info in self.object_infos:
+            # calculate the euclid distance between the new point and the last relativ position
             distance = euclid_dist(point, obj_info.rel_position)
             if distance < nearest_dist and obj_info.obj_class == object_class:
+                # detected the same object
                 same_object_detected = True
                 nearest_point_id = obj_info.identifier
                 nearest_dist = distance
 
         if same_object_detected is False:
+            # set for new object unique identifier
             nearest_point_id = self.id_count
             self.id_count += 1
 

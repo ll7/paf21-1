@@ -78,6 +78,7 @@ class PerceptionNode:
         self._init_front_camera_subscribers()
 
     def _init_front_camera_subscribers(self):
+        """Initialize the camera (semantic, rgb, depth) subscribers"""
         img_preprocessor = RosMessagesAdapter()
         preproc_img = img_preprocessor.image_message_to_numpy
 
@@ -97,10 +98,12 @@ class PerceptionNode:
         rospy.Subscriber(in_rgb_topic, ImageMsg, callback)
 
     def _init_tld_info_publisher(self):
+        """Initialize the traffic light info publisher."""
         out_topic = f"/drive/{self.vehicle_name}/tld_info"
         return rospy.Publisher(out_topic, StringMsg, queue_size=1)
 
     def _init_object_info_publisher(self):
+        """Initialize the object info publisher."""
         out_topic = f"/drive/{self.vehicle_name}/object_info"
         return rospy.Publisher(out_topic, StringMsg, queue_size=1)
 

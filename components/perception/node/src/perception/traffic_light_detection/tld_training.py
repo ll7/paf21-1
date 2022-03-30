@@ -55,6 +55,7 @@ class TldTrainingSession:
 
     @staticmethod
     def _create_model(num_classes: int) -> Model:
+        """Create a convolution neural network."""
         return Sequential([
             Conv2D(filters=4, kernel_size=[5, 5], padding='same', activation='relu'),
             BatchNormalization(),
@@ -70,6 +71,7 @@ class TldTrainingSession:
         ])
 
     def _load_datasets(self) -> Tuple[tf.data.Dataset, tf.data.Dataset]:
+        """Load and prepare the dataset for training and validation."""
         builder = ImageFolder(self.images_path)
         ds_train: tf.data.Dataset = builder.as_dataset(split='train', as_supervised=True)
         ds_val: tf.data.Dataset = builder.as_dataset(split='val', as_supervised=True)
