@@ -15,6 +15,10 @@ All sensor information such as positioning, surrounding NPCs, traffic lights / s
 are collected and fused together to a cohesive system state that gets processed by
 the situational planning layer.
 
+### Global Planning
+Processes xodr map data and calculate the shortest path with two given points.
+Wiki: [Global-Planner](https://github.com/ll7/paf21-1/wiki/Global-Planner)
+
 ### Situational Planning
 For situational planning we use a couple of state machines mainly for regulating
 the target speed and whether to execute specific maneuvers like e.g. overtaking.
