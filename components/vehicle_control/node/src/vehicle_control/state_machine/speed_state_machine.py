@@ -14,7 +14,7 @@ class SpeedState(IntEnum):
 
 
 class TrafficLightPhase(IntEnum):
-    """Representing traffic light phases"""
+    """Representing the traffic light phases"""
     BACKSIDE = 0
     GREEN = 1
     RED = 2
@@ -23,7 +23,7 @@ class TrafficLightPhase(IntEnum):
 
 @dataclass
 class TrafficLightInfo:
-    """Representing information on a recently detected traffic light"""
+    """Representing information of a recently detected traffic light"""
     phase: TrafficLightPhase = TrafficLightPhase.GREEN
     distance: float = 1000
     accuracy: float = 0.0
@@ -55,7 +55,8 @@ class SpeedStateMachine:
     count: int = 0
 
     def update_state(self, obs: SpeedObservation):
-        """Update the speed state machine with a new observation"""
+        """Update the speed state machine given a new observation
+        """
         # WARNING: only uncomment when intending to ignore traffic lights
         # obs.tl_phase = TrafficLightPhase.GREEN
 
@@ -67,10 +68,7 @@ class SpeedStateMachine:
         if not self.vehicle.is_ready:
             return
 
-        # TODO: fix issue with traffic lights being considered when car spawns in front of red TLs
-        #       even though the traffic lights are still far away such that the car should approach
 
-        # """Update the machine's state given a speed observation."""
         if self.current_state == SpeedState.ACCEL:
             self._handle_accel(obs)
         elif self.current_state == SpeedState.KEEP:
@@ -79,20 +77,14 @@ class SpeedStateMachine:
             self._handle_brake(obs)
         else:
             raise ValueError(f'Unsupported speed state {self.current_state}!')
-        # print(self.current_state)
-        # if self.count % 1000 == 0:
-        #     print(f'speed state: {self.current_state},',
-        #           f'target speed: {self.target_speed_mps:.2f},',
-        #           f'legal speed: {self.legal_speed_limit_mps:.2f},',
-        #           f'obs speed {obs.obj_speed_ms:.2f},'
-        #           f'actual speed: {self.vehicle.velocity_mps:.2f}')
-        # self.count += 1
 
-    def _is_in_speed_tolerance(self, speed_limit: float):
-        speed_diff = self.vehicle.velocity_mps - speed_limit
+    def _is_in_speed_tolerance(self, target_speed: float):
+        """checks if the vehicles velocity is in a certain zone around the targeted speed"""
+        speed_diff = self.vehicle.velocity_mps - target_speed
         return -self.speed_offset_down_mps <= speed_diff <= self.speed_offset_up_mps
 
     def _handle_keep(self, obs: SpeedObservation):
+        """transition function if previous state is KEEP"""
         needs_brake, target_speed = self._is_brake_required(obs)
         reached_target_speed = self._is_in_speed_tolerance(target_speed)
 
@@ -109,6 +101,7 @@ class SpeedStateMachine:
         self.target_speed_mps = target_speed
 
     def _handle_accel(self, obs: SpeedObservation):
+        """transition function if previous state is ACCEL"""
         needs_brake, target_speed = self._is_brake_required(obs)
         reached_target_speed = self._is_in_speed_tolerance(target_speed)
         keep_accelerating = not reached_target_speed and not needs_brake
@@ -127,6 +120,7 @@ class SpeedStateMachine:
             self.target_speed_mps = target_speed
 
     def _handle_brake(self, obs: SpeedObservation):
+        """transition function if previous state is BRAKE"""
         needs_brake, target_speed = self._is_brake_required(obs)
         reached_target_speed = self._is_in_speed_tolerance(target_speed)
 
@@ -143,8 +137,9 @@ class SpeedStateMachine:
         self.current_state = SpeedState.ACCEL
 
     def _is_brake_required(self, obs: SpeedObservation):
-        # fallback logic for handling yellow like red
-        # ===========================================
+        """Calculates the most critical object and if we need to brake
+        Output: is_brake_required: bool, targeted speed: float
+        """
         safety_time_s = 2.0
         curve_offset_m = 2.0
         phases_brake = [TrafficLightPhase.RED, TrafficLightPhase.YELLOW]
@@ -211,14 +206,4 @@ class SpeedStateMachine:
 
     def get_target_speed(self) -> float:
         """Retrieve the currently suggested target speed."""
-        # action = self.current_state
-        # if action == SpeedState.ACCEL:
-        #     self.target_speed_mps = self.legal_speed_limit_mps
-        # elif action == SpeedState.BRAKE:
-        #     self.target_speed_mps = 0
-        # elif action == SpeedState.KEEP:
-        #     self.target_speed_mps = self.vehicle.velocity_mps
-        #     # self.target_speed_mps = self.vehicle.actual_velocity_mps
-        # else:
-        #     raise ValueError(f'Unknown speed state {self.current_state} encountered!')
         return self.target_speed_mps
