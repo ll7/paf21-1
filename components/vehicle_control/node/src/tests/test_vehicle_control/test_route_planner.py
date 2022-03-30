@@ -23,6 +23,12 @@ def load_town_04():
     return xodr_map
 
 
+def load_town_10():
+    xodr_path = "/app/res/xodr/Town10HD.xodr"
+    xodr_map = XODRConverter.read_xodr(xodr_path)
+    return xodr_map
+
+
 # TODO: fix this test (it's prob related to the lane offsets)
 def test_path_finding():
     xodr_map = load_town_01()
@@ -137,6 +143,17 @@ def test_path_finding_multilane_highway_town_4():
 
     print(route)
     assert True
+
+# def test_path_finding_multilane_highway_town_10():
+#     xodr_map = load_town_10()
+#     end = (106.00283813476562, -92.81285095214844)
+#     start = (102.57848358154297, -42.16566848754883)
+#     path = RoutePlanner.get_shortest_path(start, end, 1.31, xodr_map)
+#     print(path)
+#     route = RoutePlanner._preplan_route(start, end, path, 0.0, xodr_map)
+#
+#     print(route)
+#     assert True
 
 
 # def test_path_finding_multilane_highway_town_4():
