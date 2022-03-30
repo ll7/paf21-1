@@ -172,7 +172,7 @@ class TrajectoryPlanner:
 
         speed_obs.detected_speed_limit = self.legal_speed_ahead() \
             if len(self.cached_local_ann_route) > 0 else 0.0
-
+        speed_obs.detected_speed_limit = 130
         self._handle_american_traffic_lights(speed_obs, curve_obs)
         if load_town_param() == "Town10HD":
             speed_obs.dist_next_traffic_light_m = 555

@@ -236,7 +236,9 @@ class ObstacleObserver:
         original_route = [point.pos for point in orig_route]
         # abort with previous trajectory if no overtake required
         blocked_ids, closest_object = self.get_blocked_ids(enum_route, prediction_wanted=True)
-        if not blocked_ids or 5 > abs(min(blocked_ids)) > 10:
+        breaking_dist = (self.vehicle.velocity_mps*3.6) / 2
+        if not blocked_ids or breaking_dist < \
+                dist(temp_route[min(blocked_ids)], self.vehicle.pos) < breaking_dist*2:
             return None
 
         # 2) decide whether overtake on left / right side
