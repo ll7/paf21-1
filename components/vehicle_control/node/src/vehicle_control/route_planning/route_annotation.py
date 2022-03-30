@@ -73,6 +73,9 @@ class RouteAnnotation:
         ann_waypoints: List[AnnRouteWaypoint] = []
 
         legal_speed = metadata.initial_speed
+        last_dist_speed_sign = 1e6
+        last_dist_section = 1e6
+
         for waypoint in waypoints:
             tl_pos, ss_pos, sec_end_pos = next_tl_pos(), next_speedsign_pos(), next_sec_end()
             stop_sign_pos = next_stopsign_pos()
@@ -92,13 +95,17 @@ class RouteAnnotation:
 
             if tl_dist < radius_handled:
                 tl_id += 1
-            if ss_dist < radius_handled:
+            if last_dist_speed_sign < ss_dist < 100:
+                last_dist_speed_sign = 1e6
                 legal_speed = metadata.speed_signs_ahead[ss_id].legal_speed
-                ss_id += 1
+                if ss_id < len(metadata.speed_signs_ahead):
+                    ss_id += 1
+            else:
+                last_dist_speed_sign = ss_dist
             if stopsign_dist < radius_handled:
-                stop_id +=1
-            if sec_dist < radius_handled:
-                legal_speed = default_speed
+                stop_id += 1
+            if sec_dist < last_dist_section:
+                # legal_speed = default_speed
                 sec_id = min(sec_id + 1, len(metadata.sections_ahead) - 1)
 
         return ann_waypoints
