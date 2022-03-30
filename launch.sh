@@ -26,6 +26,7 @@ pushd scenarios
     docker-compose -f $COMPOSE_FILE up -d
 popd
 
+# launch the CARLA simulator
 sleep 3
 pushd simulator
     ./CarlaUE4.sh

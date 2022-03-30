@@ -54,10 +54,12 @@ class SpeedStateMachine:
     speed_offset_down_mps: float = 3.0 / 3.6
     count: int = 0
     successive_accel_steps: int=0
-    max_accel_steps: int=400 # 20 seconds of simulation time
+    max_accel_steps: int=4000 # 20 seconds of simulation time
     initiate_backward_driving: bool=False
     backward_driving_steps: int=150
     remaining_backward_steps: int=0 # drive backwards for 7.5 seconds
+    stuck_velocity_threshold: float=1
+    backward_drive_target_velocity: float=-10
 
     def update_state(self, obs: SpeedObservation):
         """Update the speed state machine given a new observation
@@ -76,12 +78,18 @@ class SpeedStateMachine:
         # skip speed state logic, override it with a backward driving maneuver
         # when the car is stuck (JFYI: this is totally the wrong place to put this, really bad hack)
         if self.initiate_backward_driving:
-            self.target_speed_mps = -10
+            self.target_speed_mps = self.backward_drive_target_velocity
             if self.remaining_backward_steps > 0:
                 self.remaining_backward_steps -= 1
             else:
                 self.initiate_backward_driving = False
+                self.target_speed_mps = self.legal_speed_limit_mps
             return
+
+        # TODO: temporary settings to test (this forces crashes with cars -> car gets stuck)
+        obs.detected_speed_limit = 999
+        obs.dist_next_curve = 999
+        obs.dist_next_traffic_light_m = 999
 
         if self.current_state == SpeedState.ACCEL:
             self._handle_accel(obs)
@@ -125,10 +133,11 @@ class SpeedStateMachine:
 
             # check for emergency backward driving when car is stuck
             self.successive_accel_steps += 1
-            if self.successive_accel_steps < self.max_accel_steps \
-                and self.vehicle.velocity_mps < 1:
+            if self.successive_accel_steps > self.max_accel_steps \
+                    and self.vehicle.velocity_mps < self.stuck_velocity_threshold:
                 self.initiate_backward_driving = True
                 self.remaining_backward_steps = self.backward_driving_steps
+                self.max_accel_steps = 0
             return
 
         if needs_brake:
