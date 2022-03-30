@@ -208,13 +208,13 @@ class ObstacleObserver:
         # TODO: use the exact road withds from the XODR map
         street_width = side * self.street_width  # parameter to stop in the  middle of other lane
         slope = 5  # slope of overtaking
-        relative_velocity = self.vehicle.velocity_mps - object_speed
+        relative_velocity = (self.vehicle.velocity_mps + 10/3.6) - object_speed
         relative_distance_to_object = -dist(point, object_coordinates[0])
         if dist(point, first_coord) > dist(first_coord, object_coordinates[0]):
             relative_distance_to_object = -relative_distance_to_object
         time_to_collision = 1
         self.dist_safe = max([relative_velocity * time_to_collision, 0])
-        dist_c = dist(object_coordinates[0], object_coordinates[-1]) + self.dist_safe
+        dist_c = dist(object_coordinates[0], object_coordinates[-1]) + max(self.dist_safe, 10)
         if relative_velocity < 0:
             dist_c = 0
         x_1 = (1 / slope) * (relative_distance_to_object + self.dist_safe)
