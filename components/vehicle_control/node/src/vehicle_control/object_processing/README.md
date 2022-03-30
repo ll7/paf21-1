@@ -13,6 +13,8 @@ The obstacle observer consists of following components:
 - street_width: float 
 - dist_safe: int (parameter to set a fixed safe distance for overtaking)
 ####Interfaces
+######update_objects
+Updates the object list, their position and orientation, based on an input list of Objects. This is the interface used to write from Perception layer to the obstacle observer
 ######get_speed_observation
 Retrieve the speed observation containing the information about blocking vehicles. Considers Obstacles blocking the current trajectory
 ######plan_overtaking_maneuver
