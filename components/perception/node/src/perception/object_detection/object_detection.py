@@ -36,6 +36,7 @@ class ObjectDetector:
         classes = []
         joined_mask = np.zeros_like(depth_img).astype(dtype=bool)
 
+        # determine the centroids for all masks
         for obj_name, obj_mask in self.mask_dict.items():
             mask = ObjectDetector._get_object_mask(semantic_img, obj_mask)
             obj_centroids = ObjectDetector._cluster_depth_image(depth_img, mask)
@@ -46,6 +47,7 @@ class ObjectDetector:
         depth_img = ObjectDetector._apply_mask(depth_img, joined_mask, self.max_range)
         depth_img_flat = np.reshape(depth_img, -1)
         indices_flat = ObjectDetector._flat_indices(centroids, depth_img.shape[1])
+        # convert depth image to local point cloud
         centroids_3d = self._depth2local_point_cloud(depth_img_flat, indices_flat)
         obj_infos = self.obj_tracker.update(centroids_3d, classes)
         return obj_infos
@@ -62,6 +64,7 @@ class ObjectDetector:
 
     @staticmethod
     def _cluster_depth_image(depth_img: np.ndarray, mask: np.ndarray) -> List[Tuple[int, int]]:
+        """Cluster the object out of the depth image with mask."""
         center_points: List[Tuple[int, int]] = []
         mask_bool = mask.astype(dtype=bool)
         # only contours in the first hierarchy
@@ -81,6 +84,7 @@ class ObjectDetector:
 
     @staticmethod
     def _get_rect_center(cnt: np.ndarray) -> Tuple[int, int] or None:
+        """Determine a bounding rect around the contour and return the center of the bounding box"""
         rect = cv2.boundingRect(cnt)
         has_minimum_size = ObjectDetector._has_min_num_pixels(rect[2] * rect[3])
         col, row, width, height = rect
@@ -90,6 +94,7 @@ class ObjectDetector:
     @staticmethod
     def _cluster_contour(depth_img: np.ndarray, pixels: np.ndarray,
                          contour: np.ndarray, max_std=10.0) -> List[np.ndarray]:
+        """Cluster the contour a one dimensional cluster algorithm."""
         # calculate the variance for the filled contour
         variance = np.var(depth_img[pixels[:, 0], pixels[:, 1]])
         if variance < max_std**2:
@@ -115,7 +120,8 @@ class ObjectDetector:
         return [contour[cluster], contour[np.invert(cluster)]]
 
     @staticmethod
-    def _find_outliers(contour_depth):
+    def _find_outliers(contour_depth: np.ndarray):
+        """Find the indizes of the outliers in the contour."""
         mean = np.mean(contour_depth)
         std = np.std(contour_depth)
         distance_from_mean = abs(contour_depth - mean)
@@ -140,10 +146,13 @@ class ObjectDetector:
 
     @staticmethod
     def _flat_indices(centroids: List[Tuple[int, int]], width: int) -> np.ndarray:
+        """Calculate the position of a 2D array into a 1D array."""
         return np.array([int(row * width + col) for col, row in centroids])
 
     @staticmethod
     def _apply_mask(image: np.ndarray, mask: np.ndarray, max_value: float) -> np.ndarray:
+        """Apply the mask to an image and set the pixel,
+        that are not in the mask to the max value."""
         image = image * mask
         # set the pixels that are not in the mask to the maximum value
         image[mask == 0] = max_value
@@ -151,6 +160,7 @@ class ObjectDetector:
 
     @staticmethod
     def _has_min_num_pixels(num_pixels: int) -> bool:
+        """Check if the number of pixel is higher than the threshold of 8 pixels"""
         min_num_pixels = 8.0
         return num_pixels >= min_num_pixels
 
@@ -173,7 +183,7 @@ class ObjectDetector:
 
     @staticmethod
     def _create_inverse_camera_matrix(image_meta: Tuple[int, int, int]) -> np.ndarray:
-        """Creates inverse k matrix."""
+        """Creates inverse camera matrix."""
         k = np.identity(3)
         width, height, fov = image_meta
         k[0, 2] = width / 2.0

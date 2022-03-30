@@ -48,19 +48,14 @@ class TrafficLightDetector:
             distances = TrafficLightDetector._object_distances(patches, depth_image)
             distances = np.array(distances)
 
-            print('Number of patches detected: ', len(patches),
-                    ' ## Patches:''Patches:', patches,
-                    ' ## distances:', distances)
-
-            # determine the object sizes (as approx. area)
-            # obj_areas = [TrafficLightDetector._eval_object_areas(distances[i], patches[i])
-            #              for i in range(len(patches))]
+            print('Number of patches detected: ', len(patches), ' ## Patches: ', patches,
+                  ' ## distances: ', distances)
 
             # 1) ignore traffic lights farther away than a given threshold
             # 2) ignore traffic lights that are too small sized (-> filter pedestrian / bicycle TLs)
             max_dist_m = 80
             # area_min, area_max = 0.11, 12
-            cond = lambda i: distances[i] <= max_dist_m # and area_min <= obj_areas[i] <= area_max
+            cond = lambda i: distances[i] <= max_dist_m  # and area_min <= obj_areas[i] <= area_max
             closeby_patches = [(i, patches[i]) for i in range(len(patches)) if cond(i)]
             print('Closeby patches: ', len(closeby_patches), closeby_patches)
 
@@ -86,9 +81,9 @@ class TrafficLightDetector:
     @staticmethod
     def _hot_zone_score(meta: TrafficLightMetadata) -> float:
         """Check whether the traffic lights are within the expected zones"""
-        img_height = meta.sem_img.shape[0] #200
-        img_width = meta.sem_img.shape[1] #300
-        coord_width, coord_height, _, _ = meta.patch # related to the top-left corner
+        img_height = meta.sem_img.shape[0]  # 200
+        img_width = meta.sem_img.shape[1]  # 300
+        coord_width, coord_height, _, _ = meta.patch  # related to the top-left corner
 
         # info: this score within [0, 1] prefers traffic lights in top and right regions
         top_th, right_th = 0.5, 0.5
@@ -104,33 +99,6 @@ class TrafficLightDetector:
         # possible improvement: train a filter using random forests / real adaboost
 
         return hot_zone_score
-
-    @staticmethod
-    def _eval_object_areas(distance: float, patch: List[int]) -> float:
-        # Size traffic light: 0.76 m x 0.25 m
-        # Perhaps, it is easier to use lookup. Judging by observations,
-        # the distance suitable to make plausible predictions is
-        # app. 30 meters, with pixels values of 1x4
-
-        # Lookup:
-        # 36,17 - 1x3
-        # 31,68 - 1x3
-        # 28,78 - 1x3
-        # 26,13 - 1x4
-        # 13,39 - 2x8
-        # 13,14 - 2x6
-        # 12,16 - 2x7
-        # 10,9 - 2x6
-        # 7,15 - 2x12
-        # 7,1 - 4x14
-        # 6,65 - 5x15
-        # 6,64 - 4x13
-
-        # TODO: use a formula that does the job (this formula is 100% trash)
-        # idea is to filter small bicycle traffic lights, so they get ignored
-        _, _, width, height = patch
-        return width * height / 10
-        # relation between sides might be a indicator (filter square-lookalike objects)
 
     def _eval_traffic_light(self, tl_meta: TrafficLightMetadata) -> TrafficLightInfo:
         """Evaluate a single traffic light."""
@@ -164,7 +132,6 @@ class TrafficLightDetector:
             bounding_boxes.append([x_corner - self.box_offset, y_corner - self.box_offset,
                                    width + self.box_offset * 2, height + self.box_offset * 2])
             # TODO: catch out-of-bounds errors while applying the margin
-
         return bounding_boxes
 
     def _classify_tl_phase(self, image_bgr: np.ndarray) -> TrafficLightPhase:
