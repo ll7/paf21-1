@@ -14,6 +14,8 @@ The live demo will include the interaction with other cars / pedestrians, traffi
 Moreover there will be driving tests on a variety of maps to ensure that the self-driving
 is not bound to a single map that was learnt by heart.
 
+![](./imgs/rviz_simulator_sceenshot.png)
+
 ## Team Members
 - Berghoff, Joshua
 - Böll, Axel
