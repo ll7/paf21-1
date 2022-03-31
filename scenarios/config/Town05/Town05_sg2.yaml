@@ -21,7 +21,7 @@ competition:
       w: 0.9999475589880257
   traffic_rules: true
   ready_for_ego: false
-  town_name: 'Town01'
+  town_name: 'Town05'
   spawn_npc:
     n: 150
     w: 50
