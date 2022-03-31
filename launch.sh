@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Download Carla Simulator
+./setup_simulator.sh
+
 # set config file
 export CONFIG_FILE=$1
 if [ -z $CONFIG_FILE ]; then
@@ -21,4 +24,9 @@ popd
 pushd scenarios
     xhost +
     docker-compose -f $COMPOSE_FILE up -d
+popd
+
+sleep 3
+pushd simulator
+    ./CarlaUE4.sh
 popd
