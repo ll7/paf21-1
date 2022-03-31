@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from threading import Thread
 from typing import Protocol, Callable, List
+from time import sleep
 
 import rospy
 from sensor_msgs.msg import Imu as ImuMsg
@@ -50,7 +51,13 @@ class LocalPlannerNode:
         if self.driving_control is None:
             self.driving_control = DrivingController(self.vehicle, refresh=self.publish_rate_in_hz)
         if self.speed_state_machine is None:
-            self.speed_state_machine = SpeedStateMachine(self.vehicle)
+            while True:
+                try:
+                    racing_mode = not bool(rospy.get_param('competition/traffic_rules'))
+                    break
+                except Exception:
+                    sleep(0.1)
+            self.speed_state_machine = SpeedStateMachine(self.vehicle, racing_mode)
         if self.maneuver_state_machine is None:
             self.maneuver_state_machine = ManeuverStateMachine(self.vehicle)
         if self.nav_service is None:
