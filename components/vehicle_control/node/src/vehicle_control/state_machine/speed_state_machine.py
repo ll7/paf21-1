@@ -54,7 +54,7 @@ class SpeedStateMachine:
     speed_offset_down_mps: float = 3.0 / 3.6
     count: int = 0
     successive_accel_steps: int=0
-    max_accel_steps: int=4000 # 20 seconds of simulation time
+    max_accel_steps: int=1000 # 50 seconds of simulation time
     initiate_backward_driving: bool=False
     backward_driving_steps: int=150
     remaining_backward_steps: int=0 # drive backwards for 7.5 seconds
@@ -90,6 +90,7 @@ class SpeedStateMachine:
         obs.detected_speed_limit = 999
         obs.dist_next_curve = 999
         obs.dist_next_traffic_light_m = 999
+        self.legal_speed_limit_mps = 999
 
         if self.current_state == SpeedState.ACCEL:
             self._handle_accel(obs)
