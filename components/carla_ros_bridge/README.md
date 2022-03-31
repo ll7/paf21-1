@@ -40,7 +40,7 @@ we adjusted according to our needs (the default settings from CARLA GitHub don't
 
 ## Competition Scenario
 This ROS node launches a given scenario specified by a yaml file (the files are located
-[here](./../../scenarios/config).
+[here](./../../scenarios/config)).
 
 It supports features such as
 - loading a CARLA town
