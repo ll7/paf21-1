@@ -61,7 +61,7 @@ See the official CARLA documentation for futher information on the Ackermann con
 ## Build Node + Run Tests
 
 ```sh
-docker build . -t "local_planner"
+docker build . -t "vehicle_control"
 ```
 
 ## References
