@@ -12,7 +12,7 @@ from vehicle_control.core.geometry import rotate_vector, add_vector
 class VehicleMetadata:
     """Representing construction-specific vehicle features"""
     length_between_axles_m: float = 3.1
-    max_steer_angle_rad: float = np.deg2rad(50)
+    max_steer_angle_rad: float = np.deg2rad(40)
     base_accel_mps2: float = 2.0
     base_brake_mps2: float = -3.0
     wheelbase: float = 2.875
