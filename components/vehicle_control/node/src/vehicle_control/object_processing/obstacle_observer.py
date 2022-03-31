@@ -68,6 +68,7 @@ class ObstacleObserver:
             spd_obs.is_trajectory_free = False
             spd_obs.dist_next_obstacle_m = distance
             spd_obs.obj_speed_ms = 0
+            spd_obs.object_type = obj.obj_class
         return spd_obs
 
     def get_blocked_ids(self, route: List[Tuple[float, float]],
@@ -80,7 +81,7 @@ class ObstacleObserver:
         min_id = len(route)
         blocked_ids = []
         for obj_id, obj in objects.items():
-            blocked = self.find_blocked_points(route, obj, threshold=1.3,
+            blocked = self.find_blocked_points(route, obj, threshold=1,
                                                prediction_wanted=prediction_wanted)
 
             if not blocked:
@@ -236,9 +237,8 @@ class ObstacleObserver:
         original_route = [point.pos for point in orig_route]
         # abort with previous trajectory if no overtake required
         blocked_ids, closest_object = self.get_blocked_ids(enum_route, prediction_wanted=True)
-        breaking_dist = (self.vehicle.velocity_mps*3.6) / 2
-        if not blocked_ids or breaking_dist < \
-                dist(temp_route[min(blocked_ids)], self.vehicle.pos) < breaking_dist*2:
+        # breaking_dist = (self.vehicle.velocity_mps*3.6) / 2
+        if not blocked_ids:
             return None
 
         # 2) decide whether overtake on left / right side
@@ -259,25 +259,29 @@ class ObstacleObserver:
             return None
 
         # update waypoint annotations
-        local_route = self._write_route_into_annotated(shifted_wps, local_route)
+        local_route = self._write_route_into_annotated(shifted_wps, local_route, orig_route)
 
         print('overtaking')
         return local_route
 
     def _write_route_into_annotated(self, shifted_wps: List[Tuple[float, float]],
-                                    local_route: List[AnnRouteWaypoint]) -> List[AnnRouteWaypoint]:
+                                    local_route: List[AnnRouteWaypoint],
+                                    orig_route: List[AnnRouteWaypoint]
+                                    ) -> List[AnnRouteWaypoint]:
         new_route = []
+        first_road = self.map.roads_by_id[orig_route[0].road_id]
+        self.street_width = first_road.lane_widths[orig_route[0].actual_lane]
         for i in range(len(local_route)):
             wp = local_route[i]
             pos = shifted_wps[i]
+            orig_wp = orig_route[i].pos
+            orig_lane = orig_route[i].actual_lane
+            print(self.street_width, 'Street width')
+            sign = orig_lane / abs(orig_lane)
             road_id = wp.road_id
-            actual_lane = 0
-            for road in list(self.map.roads_by_id.keys()):
-                actual_lane = self.map.roads_by_id[road].detect_lane(pos)
+            dist_to_org = dist(pos, orig_wp)
+            actual_lane = orig_lane - sign if dist_to_org > self.street_width/2 else orig_lane
 
-                if actual_lane != 0:
-                    road_id = road
-                    break
             if actual_lane == 0:
                 print('invalid overtake')
                 return None
