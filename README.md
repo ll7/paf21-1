@@ -59,3 +59,23 @@ See the [wiki](https://github.com/ll7/paf21-1/wiki/Architecture-Models) for furt
 The scenarios section contains a set of scenario definitions. It's supposed the be self-contained,
 meaning that each scenario can be run in an infrastructure-as-code like manner. This allows to run
 the exact same scenario over and over again on various PCs.
+
+## Architecture
+The logical system overview provides insight in the intercommunication between our self-driving
+components. It outlines the general dataflow from sensor information to actionable driving signals.
+
+![](./imgs/PAF_Architecture_Logical_(components).drawio.png)
+
+In contrast, the technical system overview focusses on the environment required to run the project's
+self-driving simulation. We're heavily relying on Docker to abstract the ROS complexity away.
+This brings several benefits such as enhanced team collaboration through simple dev machine setups,
+GitHub CI/CD pipelines and most importantly more reliable, well defined components.
+
+![](./imgs/PAF_Architecture_Technical_(adjusted).drawio.png)
+
+The original architecture used to be a pure Docker approach, theoretically capable of online reinforcement
+trainings on large GPU clusters (we didn't have the resources to test). But running the CARLA simulator
+inside a Docker container did actually cause considerable performance issues, so we decided to host the
+simulator directly on the host machine and connect all network traffic to localhost via the Docker 'host' network.
+In case a newer version fixes the performance issues, it might be beneficial to switch back to the pure
+Docker approach as it allows for more flexibility.
