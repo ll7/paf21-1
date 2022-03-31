@@ -7,8 +7,8 @@ competition:
     orientation: 
       x: 0.0
       y: 0.0
-      z: 0.7071068
-      w: 0.7071068
+      z: 0.9999997
+      w: 0.0007963
   goal:
     position: 
       x: 570.5172729492188
@@ -23,6 +23,6 @@ competition:
   ready_for_ego: false
   town_name: 'Town06'
   spawn_npc:
-    n: 0 # orig: 50
-    w: 0 # orig: 50
+    n: 50 # orig: 50
+    w: 50 # orig: 50
     s: 1 # seed
