@@ -36,6 +36,28 @@ car drives) and integration smoothing of successive heading / cross-track errors
 Moverover, we had to increase the driving signal rate to ~ 100 Hz in oder to react
 each 0.36 m the car covers.
 
+## ROS Data Interface
+This component interacts with ROS as follows:
+
+### Incoming Messages
+The incoming sensor messages indicate the car's position / orientation and velocity.
+Moreover, we process our own messages from the perception layer to interact with detected objects / traffic lights.
+
+- /drive/<vehicle_name>/tld_info of format std_msgs/String
+- /drive/<vehicle_name>/object_info of format std_msgs/String
+- /carla/<vehicle_name>/imu/imu1 of format sensor_msgs/Imu
+- /carla/<vehicle_name>/odometry of format nav_msgs/Odometry
+
+### Outgoing Messages
+The outgoing sensor messages represent actionable driving signals, interpreted by the Ackermann
+driving controller to translate them into real car signals (press gas / brake, drive backward / forward).
+Furthermore, the current trajectory is sent to the RVIZ dashboard to visualize where our car is heading towards.
+
+- /carla/<vehicle_name>/ackermann_cmd of format ackermann_msgs/AckermannDrive
+- /carla/<vehicle_name>/waypoints of format nav_msgs/Path
+
+See the official CARLA documentation for futher information on the Ackermann controller / RVIZ dashboard.
+
 ## Build Node + Run Tests
 
 ```sh
