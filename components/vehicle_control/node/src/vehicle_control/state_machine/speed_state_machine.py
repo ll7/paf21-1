@@ -138,8 +138,9 @@ class SpeedStateMachine:
                     and self.vehicle.velocity_mps < self.stuck_velocity_threshold:
                 self.initiate_backward_driving = True
                 self.remaining_backward_steps = self.backward_driving_steps
-                self.max_accel_steps = 0
+                self.successive_accel_steps = 0
             return
+        self.successive_accel_steps = 0
 
         if needs_brake:
             self.current_state = SpeedState.BRAKE

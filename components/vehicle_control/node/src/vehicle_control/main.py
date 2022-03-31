@@ -80,6 +80,12 @@ class LocalPlannerNode:
                 self.driving_control.update_route(local_route)
                 self.driving_control.update_target_velocity(velocity)
                 driving_signal = self.driving_control.next_signal()
+
+                # drive backwards when car is stuck (straight steering angle)
+                # JFYI: this is totally the wrong place to put this (really bad hack)
+                if self.speed_state_machine.initiate_backward_driving:
+                    driving_signal.steering_angle_rad = 0
+
                 msg = RosMessagesAdapter.signal_to_message(driving_signal)
                 self.driving_signal_publisher.publish(msg)
             # except IndexError as index_error:
