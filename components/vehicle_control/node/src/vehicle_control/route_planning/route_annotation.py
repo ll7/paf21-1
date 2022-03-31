@@ -104,9 +104,12 @@ class RouteAnnotation:
                 last_dist_speed_sign = ss_dist
             if stopsign_dist < radius_handled:
                 stop_id += 1
-            if sec_dist < last_dist_section:
+            if sec_dist < last_dist_section < 20:
+                last_dist_section = 1e6
                 # legal_speed = default_speed
                 sec_id = min(sec_id + 1, len(metadata.sections_ahead) - 1)
+            else:
+                last_dist_section = sec_dist
 
         return ann_waypoints
 
