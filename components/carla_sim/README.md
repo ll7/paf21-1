@@ -9,6 +9,9 @@ The changes made to it allow us to access the simulator's GUI via the host's X11
 So the simulator is basically started in 'server' mode and used as a GPU rendering backend to provide
 realistic image sensor data for our perception layer.*
 
+The CARLA simulator exposes a HTTP server on ports 2000-2002, allowing for remote-control via the PythonAPI.
+See the official CARLA documentation for further information.
+
 ## Docker Build
 
 ```sh
