@@ -87,10 +87,10 @@ class SpeedStateMachine:
             return
 
         # TODO: temporary settings to test (this forces crashes with cars -> car gets stuck)
-        obs.detected_speed_limit = 999
-        obs.dist_next_curve = 999
-        obs.dist_next_traffic_light_m = 999
-        self.legal_speed_limit_mps = 999
+        # obs.detected_speed_limit = 999
+        # obs.dist_next_curve = 999
+        # obs.dist_next_traffic_light_m = 999
+        # self.legal_speed_limit_mps = 999
 
         if self.current_state == SpeedState.ACCEL:
             self._handle_accel(obs)
