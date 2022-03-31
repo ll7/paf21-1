@@ -126,8 +126,17 @@ class RoutePlanner:
         interpol_route = RoutePlanner._filter_steem_waypoints(interpol_route, pi/8)
         print("wps_filtered:", interpol_route)
 
+        # weird hack because somehow the goal is sometimes not in the route (please fix this!!!)
         ann_route = RouteAnnotation.annotate_waypoints(interpol_route, route_metadata, xodr_map)
-        # ann_route = RoutePlanner.advanced_speed(ann_route) 
+        if euclid_dist(ann_route[-1].pos, end_pos) > 2:
+            last_wp = ann_route[-1]
+            goal_ann = AnnRouteWaypoint(end_pos, last_wp.road_id, last_wp.actual_lane, 
+                                        last_wp.possible_lanes, last_wp.legal_speed,
+                                        last_wp.dist_next_tl, last_wp.end_lane_m,
+                                        last_wp.stop_sign_m)
+            ann_route.append(goal_ann)
+
+        # ann_route = RoutePlanner.advanced_speed(ann_route)
         print("route_annotated", ann_route)
         return ann_route
 
