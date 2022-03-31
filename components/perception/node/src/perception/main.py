@@ -8,7 +8,7 @@ import rospy
 from sensor_msgs.msg import Image as ImageMsg
 from std_msgs.msg import String as StringMsg
 
-from perception.traffic_light_detection import TrafficLightDetector
+from perception.traffic_light_detection import TrafficLightDetector, TrafficLightInfo
 from perception.ros_msg_adapter import RosMessagesAdapter
 from perception.object_detection import ObjectDetector
 
@@ -61,8 +61,10 @@ class PerceptionNode:
                 obj_infos = self.vehicle_detector.detect_object(sem_img, depth_img)
                 if tld_info:
                     print(f'Traffic light detected: {tld_info}')
-                    msg = RosMessagesAdapter.tld_info_to_json_message(tld_info)
-                    self.tld_publisher.publish(msg)
+                else:
+                    tld_info = TrafficLightInfo()
+                msg = RosMessagesAdapter.tld_info_to_json_message(tld_info)
+                self.tld_publisher.publish(msg)
                 if obj_infos:
                     print(f'Object detected: {obj_infos}')
                 msg = RosMessagesAdapter.obj_info_to_json_message(obj_infos)

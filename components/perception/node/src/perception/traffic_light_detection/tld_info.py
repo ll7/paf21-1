@@ -16,7 +16,7 @@ class TrafficLightPhase(IntEnum):
 @dataclass
 class TrafficLightInfo:
     """Representing information on a recently detected traffic light"""
-    phase: TrafficLightPhase
-    distance: float
-    accuracy: float
-    position: Tuple[float, float]
+    phase: TrafficLightPhase = TrafficLightPhase.GREEN
+    distance: float = 999
+    accuracy: float = 0.0
+    position: Tuple[float, float] = (0, 0)

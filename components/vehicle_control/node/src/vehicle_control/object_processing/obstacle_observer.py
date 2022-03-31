@@ -81,7 +81,7 @@ class ObstacleObserver:
         min_id = len(route)
         blocked_ids = []
         for obj_id, obj in objects.items():
-            blocked = self.find_blocked_points(route, obj, threshold=1,
+            blocked = self.find_blocked_points(route, obj, threshold=1.3,
                                                prediction_wanted=prediction_wanted)
 
             if not blocked:
