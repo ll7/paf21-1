@@ -41,12 +41,14 @@ class SpeedObservation:
     dist_next_curve: float = 999
     curve_target_speed: float = 50
     dist_next_stop_m: float = 999
+    object_type: str = ''
 
 
 @dataclass
 class SpeedStateMachine:
     """Representing a state machine for speed control decision-making."""
     vehicle: Vehicle
+    racing_mode: bool = False
     current_state: SpeedState = SpeedState.ACCEL
     target_speed_mps: float = 0
     legal_speed_limit_mps: float = 50 / 3.6
@@ -68,6 +70,11 @@ class SpeedStateMachine:
         if not self.vehicle.is_ready:
             return
 
+        if self.racing_mode:
+            obs.dist_next_traffic_light_m = 999
+            self.legal_speed_limit_mps = 120/3.6
+            if obs.object_type == 'pedestrian':
+                obs.dist_next_obstacle_m = 50
 
         if self.current_state == SpeedState.ACCEL:
             self._handle_accel(obs)
