@@ -31,6 +31,7 @@ class TrajectoryPlanner:
     obj_handler: ObstacleObserver = None
     tld_info: TrafficLightInfo = TrafficLightInfo()
     curve_detection: CurveDetection = CurveDetection()
+    traffic_light_buffer: int = 0
 
     def __post_init__(self):
         if not self.obj_handler:
@@ -169,7 +170,7 @@ class TrajectoryPlanner:
         if self.tld_info:
             speed_obs.tl_phase = self.tld_info.phase
             speed_obs.dist_next_traffic_light_m = self.tld_info.distance
-        self.tld_info = None
+            self.traffic_light_buffer += 1
 
         speed_obs.detected_speed_limit = self.legal_speed_ahead() \
             if len(self.cached_local_ann_route) > 0 else 0.0
