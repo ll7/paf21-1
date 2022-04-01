@@ -3,5 +3,5 @@ logs
 recordings
 simulator
 
-.vscode
+# .vscode I think it is a valuable folder
 .idea
