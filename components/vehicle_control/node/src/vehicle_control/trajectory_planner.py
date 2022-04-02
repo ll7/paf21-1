@@ -8,11 +8,10 @@ from vehicle_control.core import Vehicle
 from vehicle_control.route_planning.route_annotation import AnnRouteWaypoint
 from vehicle_control.driving import DrivingController
 from vehicle_control.core.geometry import angle_between_vectors, points_to_vector, vector_len
-from vehicle_control.state_machine import SpeedObservation, TrafficLightInfo, \
-                                        TrafficLightPhase, ManeuverObservation
+from vehicle_control.state_machine import SpeedObservation, TrafficLightInfo, TrafficLightPhase
 from vehicle_control.driving import CurveDetection, CurveObservation
 from vehicle_control.object_processing import ObstacleObserver
-from vehicle_control.map_provider import load_town_param
+
 
 @dataclass
 class TrajectoryPlanner:
@@ -106,6 +105,7 @@ class TrajectoryPlanner:
 
         if not self.vehicle.is_ready:
             return []
+
         # cache the route to avoid concurrency bugs because
         # the route might be overwritten by the navigation task
         route = self.global_route
@@ -116,25 +116,26 @@ class TrajectoryPlanner:
 
         if self.is_last_wp:
             return [route[-1]]
-        # delete route waypoints behind car
-        # if len(self.current_route) > 0:
-        #    route = route[:self.prev_wp_id] + self.current_route \
-        #            + route[self.prev_wp_id + self.length_route:]
-        self.check_passed_waypoints(route)
+
+        # shift the prev / next waypoint indices
+        # -> remove passed points from trajectory
+        self.update_trajectory_range(route)
 
         bound = min(self.prev_wp_id + self.length_route, len(route))
         temp_global_ann = self.global_route_ann
         temp_route = ann_route[self.prev_wp_id:bound]
         orig_route = orig_route[self.prev_wp_id:bound]
-        overtaking_trajectory = self.obj_handler.plan_overtaking_maneuver(temp_route, orig_route)
 
+        # override pre-planned trajectory with overtaking / lane change trajectory
+        overtaking_trajectory = self.obj_handler.plan_overtaking_maneuver(temp_route, orig_route)
         if overtaking_trajectory:
+            print('override trajectory with lane change / overtaking maneuver')
             self.global_route_ann = temp_global_ann[:self.prev_wp_id] \
                                        + overtaking_trajectory + temp_global_ann[bound:]
-            print('changed_route')                
+
         return self.cached_local_route
 
-    def check_passed_waypoints(self, route):
+    def update_trajectory_range(self, route):
         """Set the next waypoint index for the not yet passed waypoints"""
         while True:
             prev_wp = route[self.prev_wp_id]

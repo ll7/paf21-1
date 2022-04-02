@@ -6,9 +6,9 @@ from copy import deepcopy
 
 import numpy as np
 
-from vehicle_control.core import Vehicle, visualize_route_rviz
-from vehicle_control.core.geometry import rotate_vector, orth_offset_left, add_vector,\
-    scale_vector, sub_vector, vector_to_dir, points_to_vector
+from vehicle_control.core import Vehicle
+from vehicle_control.core.geometry import \
+    rotate_vector, orth_offset_left, add_vector, scale_vector, sub_vector
 from vehicle_control.route_planning.xodr_converter import XodrMap
 from vehicle_control.route_planning.route_annotation import AnnRouteWaypoint
 from vehicle_control.map_provider import load_xodr_map
@@ -52,9 +52,8 @@ class ObstacleObserver:
             if obj_id in self.objects:
                 self.objects[obj_id].update_object_meta(new_abs_pos, self.delta_time)
             else:
-                self.objects[obj_id] = ObjectMeta(identifier=obj_id,
-                                                  obj_class=obj['obj_class'],
-                                                  trajectory=[new_abs_pos])
+                obj = ObjectMeta(obj_id, obj['obj_class'], [new_abs_pos])
+                self.objects[obj_id] = obj
         self.objects = {k: self.objects[k] for k in keys}
 
     def _detect_vehicle_in_lane(self, local_route: List[Tuple[float, float]]) -> SpeedObservation:
@@ -226,10 +225,7 @@ class ObstacleObserver:
     def plan_overtaking_maneuver(self, local_route: List[AnnRouteWaypoint],
                                  orig_route: List[AnnRouteWaypoint]) -> List[AnnRouteWaypoint]:
         """Plan the new trajectory of an overtaking maneuver"""
-        # if self.tracker % 10 == 0:
-        #     orig_route[0] = local_route[0]
-        #     local_route = orig_route
-        #     # route = [point.pos for point in local_route]
+
         self.tracker += 1
         lanes = [(point.actual_lane, point.possible_lanes) for point in local_route]
         temp_route = [point.pos for point in local_route]
@@ -237,7 +233,6 @@ class ObstacleObserver:
         original_route = [point.pos for point in orig_route]
         # abort with previous trajectory if no overtake required
         blocked_ids, closest_object = self.get_blocked_ids(enum_route, prediction_wanted=True)
-        # breaking_dist = (self.vehicle.velocity_mps*3.6) / 2
         if not blocked_ids:
             return None
 
