@@ -2,6 +2,7 @@
 # Dockerized Components
 
 ## Build all Docker Images
+
 Use following command to build all Docker images you'll need for launching
 the CARLA simulation and the driving components.
 
@@ -15,7 +16,10 @@ to speed up the server-side GitHub workflows because building the Docker images
 from scratch on each commit would imply downloading ~15 GB of pre-built Docker images
 which is not feasible*
 
+*Note: This is already part of the `launch.sh` script*
+
 ## Run the Integration Tests
+
 Testing the driving components against the CARLA simulator might sometimes be a bit tricky.
 Therefore, the integration tests are mocking CARLA with pre-recorded ROS bag files.
 This might be especially useful for developing / testing on machines without NVIDIA GPU.
@@ -33,14 +37,18 @@ docker-compose -f integration-tests-compose.yml up --abort-on-container-exit
 ```
 
 ## CARLA Simulation Components
+
 The CARLA simulation involves following components:
+
 - **CARLA simulator**: runs the basic CARLA simulation environment including world rendering, etc.
 - **CARLA ROS bridge**: interfaces for information exchange between CARLA and ROS
   - **Scenario Runner**: launches and monitors well-defined scenarios
   - **CARLA RVIZ**: spectates the remote-controlled car and its sensors / actuators
   
 ## Driving Components (ROS)
+
 The components for driving are the following:
+
 - **Global Planner**: serves navigation tasks based on map data [Details](https://github.com/ll7/paf21-1/wiki/Global-Planner)
 - **Perception**: preprocesses sensor data into high-level driving information [Details](https://github.com/ll7/paf21-1/wiki/Perception)
   - **Traffic Light Detection**: evaluates traffic lights captured by cameras
