@@ -12,7 +12,7 @@ fi
 # set compose file to launch
 COMPOSE_FILE=local-carla-sim-compose.yml
 
-# build docker images
+# build docker images for the components
 pushd components
     docker-compose -f carla-sim-build.yml build
     if [ $? -ne 0 ]; then exit 1; fi
