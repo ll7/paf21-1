@@ -4,5 +4,6 @@
         "ms-python.python",
         "ms-azuretools.vscode-docker",
         "Gruntfuggly.todo-tree",
+        "d-koppenhagen.vscode-code-review",
     ]
 }
