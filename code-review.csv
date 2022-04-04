@@ -1,0 +1,3 @@
+sha,filename,url,lines,title,comment,priority,category,additional,id,private
+"3a21e812a2742258625428433fda3899a3e1a2b2","/launch.sh","","9:0-10:0","The first parameter is the config file where they load a town start goal configuration. Do I have to pass this as a string? Usage is not explained?","Where is the usage explained for the `CONFIG_FILE`","0","","","8896c32c-2885-4db2-9d4f-605dc37d5bb7","0"
+"f29d9accebb5c55b2d40db352dee8da43dac9c2b","/scenarios/README.md","","26:0-33:90","Unclear formulation","It is pretty unclear how to start any scenarios.","0","","","01b50743-6997-4cf6-a59b-73ac5ac15ac7","0"
