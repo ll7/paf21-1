@@ -2,6 +2,7 @@
 # Seminar Autonomous Driving (**P**raktikum **A**utonomes **F**ahren)
 
 ## About
+
 This project is a competition-like challenge in the course Seminar Autonomous Driving
 at the University of Augsburg.
 
@@ -11,27 +12,29 @@ there will be a live demo including a city and a racing mode where the cars of b
 teams compete against each other.
 
 The live demo will include the interaction with other cars / pedestrians, traffic lights.
-Moreover there will be driving tests on a variety of maps to ensure that the self-driving
-is not bound to a single map that was learnt by heart.
+Moreover, there will be driving tests on a variety of maps to ensure that the self-driving
+is not bound to a single map that was learned by heart.
 
-![](./imgs/rviz_simulator_sceenshot.png)
+![Rviz Simulator](./imgs/rviz_simulator_sceenshot.png)
 
 ## Team Members
-- Berghoff, Joshua
-- Böll, Axel
-- Mospan, Pavlo
-- Stoljar, Johannes
-- Sturm, Daniel
-- Tröster, Marco
+
+- Berghoff, Joshua @Berghojo
+- Böll, Axel @AxelBo
+- Mospan, Pavlo @paschok
+- Stoljar, Johannes @stoljarjo
+- Sturm, Daniel @sturdan
+- Tröster, Marco @Bonifatius94
 
 ## Quick Start
+
 0. Before you start, make sure that your PC runs a NVIDIA GPU supporting nvidia-docker.
 1. First, set up your PC according to this
    [tutorial](https://github.com/ll7/paf21-1/wiki/Development-Machine-Setup-(NVIDIA-Docker)).
    It assists you at installing Docker with GPU support.
-2. Clone this GitHub repository, e.g. use '*git clone https://github.com/ll7/paf21-1*'
-3. Next, build all components required and run default scenario with "./launch.sh", 
-4. See [docs](./components/README.md) if you are interested how to build manually. 
+2. Clone this GitHub repository, e.g. use '*git clone <https://github.com/ll7/paf21-1>*'
+3. Next, build all components required and run default scenario with "./launch.sh",
+4. See [docs](./components/README.md) if you are interested how to build manually.
 
 Running steps 2-3 could look something like this (see the README files for further information):
 
@@ -46,9 +49,11 @@ cd paf21-1
 ```
 
 ## Repository Structure
+
 This GitHub repository consists of following parts:
 
 ### Components
+
 This section is all about the components required to launch a scenario such as the CARLA simulator,
 the CARLA ROS bridge and not to mention also our own self-driving car software components.
 
@@ -58,11 +63,13 @@ component is provided as a Docker image, abstracting the ROS runtime in a self-c
 See the [wiki](https://github.com/ll7/paf21-1/wiki/Architecture-Models) for further information.
 
 ### Scenarios
+
 The scenarios section contains a set of scenario definitions. It's supposed the be self-contained,
 meaning that each scenario can be run in an infrastructure-as-code like manner. This allows to run
 the exact same scenario over and over again on various PCs.
 
 ## Architecture
+
 The logical system overview provides insight in the intercommunication between our self-driving
 components. It outlines the general dataflow from sensor information to actionable driving signals.
 
