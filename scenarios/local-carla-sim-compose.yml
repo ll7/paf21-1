@@ -38,6 +38,7 @@ services:
       ROS_MASTER_URI: http://localhost:11311
       ROS_HOSTNAME: localhost
       CARLA_SIM_HOST: localhost
+      CARLA_SIM_WAIT_SECS: 3
       CARLA_OPENSCENARIO_FILE: /config/FollowLeadingVehicle.xosc
       CONFIG_FILE: ${CONFIG_FILE}
     network_mode: host

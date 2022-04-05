@@ -25,7 +25,7 @@ sleep $CARLA_SIM_WAIT_SECS
 
 # launch the given ROS nodes from Docker CMD args
 roslaunch $@ &
-sleep 5 && python /opt/carla/PythonAPI/examples/spawn_npc.py \
+sleep 4 && python /opt/carla/PythonAPI/examples/spawn_npc.py \
     --host $CARLA_SIM_HOST --safe \
     -n $NUM_CARS -w $NUM_PEDESTRIANS -s $RAND_SPAWN_SEED &
 wait
