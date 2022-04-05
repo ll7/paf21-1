@@ -2,5 +2,6 @@
 <launch>
   <node pkg="perception" name="perception"
         type="main.py" output="screen" required="true">
+    <param name="/use_sim_time" value="true" />
   </node>
 </launch>

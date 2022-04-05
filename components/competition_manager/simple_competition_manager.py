@@ -52,13 +52,15 @@ class CompetitionManagerNode:
             # TODO: add logic to receive the next route's goal
             return
 
-        print(f'distance to goal: {distance_to_goal}')
-        print(f'distance to start: {distance_to_start}')
-
         if not self.started and distance_to_start > 0.5:
             self.started = True
             self.start_time = rospy.get_rostime().to_sec()
             print(f'competition started at: {self.start_time}')
+
+        if self.started:
+            print(f'distance to goal: {distance_to_goal}')
+            print(f'distance to start: {distance_to_start}')
+            print(f'time elapsed: {rospy.get_rostime().to_sec()-self.start_time}')
 
         if self.started and distance_to_goal < 1.0:
             self.finished = True
@@ -69,6 +71,7 @@ class CompetitionManagerNode:
                 print('goal reached')
 
     def run_node(self):
+        rospy.set_param('/use_sim_time', True)
         rospy.init_node('competition_manager')
         rospy.Subscriber("carla/ego_vehicle/odometry", Odometry, self.callback)
         rospy.spin()
