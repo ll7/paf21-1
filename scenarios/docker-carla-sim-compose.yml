@@ -1,6 +1,10 @@
 # this is the only docker-compose 2.x version supporting NVIDIA GPUs
 version: '2.3'
 
+# The build of the carla-sim image is currently disabled
+# due to serious performance issues during simulation.
+# Therefore this script won't work unless you build the image.
+
 services:
   carla-simulator:
     image: carla-sim

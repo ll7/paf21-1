@@ -1,12 +1,16 @@
 version: '2'
 
 services:
-  carla-sim:
-    image: carla-sim
-    build:
-      context: ./carla_sim
-      args:
-        - CARLA_VERSION=0.9.10.1
+
+# temporarily disabled dockerized CARLA simulator
+# due to performance issues, re-enable if issue is solved
+
+#  carla-sim:
+#    image: carla-sim
+#    build:
+#      context: ./carla_sim
+#      args:
+#        - CARLA_VERSION=0.9.10.1
 
   carla-ros-bridge:
     image: carla-ros-bridge
