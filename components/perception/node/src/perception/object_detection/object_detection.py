@@ -3,7 +3,7 @@ from typing import Dict, Tuple, List
 from math import pi, tan
 import yaml
 
-from cv2 import cv2
+import cv2
 import numpy as np
 
 from jenkspy import jenks_breaks

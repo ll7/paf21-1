@@ -44,6 +44,7 @@ class LocalPlannerNode:
     driving_control: DrivingController = None
     speed_state_machine: SpeedStateMachine = None
     maneuver_state_machine: ManeuverStateMachine = None
+    last_imu_time: float = 0.0
 
     def __post_init__(self):
         if self.route_planner is None:
@@ -115,10 +116,16 @@ class LocalPlannerNode:
 
     def _init_vehicle_orientation_subscriber(self):
         in_topic = f"/carla/{self.vehicle.name}/imu/imu1"
-        msg_to_orientation = RosMessagesAdapter.message_to_orientation
-        callback = lambda msg: self.vehicle.update_vehicle_orientation(
-            msg_to_orientation(msg))
-        rospy.Subscriber(in_topic, ImuMsg, callback)
+        msg_to_imu_data = RosMessagesAdapter.message_to_imu_data
+
+        def imu_callback(msg):
+            orientation, omega_z, accel_x, timestamp = msg_to_imu_data(msg)
+            dt = timestamp - self.last_imu_time if self.last_imu_time > 0.0 else 0.0
+            self.last_imu_time = timestamp
+            self.vehicle.update_imu(omega_z, accel_x, dt)
+            self.vehicle.update_vehicle_orientation(orientation)
+
+        rospy.Subscriber(in_topic, ImuMsg, imu_callback)
 
     def _init_vehicle_position_subscriber(self):
         in_topic = f"/carla/{self.vehicle.name}/odometry"
