@@ -57,6 +57,27 @@ class RosMessagesAdapter:
         return pos.x, pos.y
 
     @staticmethod
+    def message_to_imu_data(msg: ImuMsg) -> Tuple[float, float, float, float]:
+        """Extract orientation, yaw rate, forward acceleration, and timestamp from an IMU message.
+
+        Returns:
+            orientation_rad: Heading angle derived from the IMU quaternion in radians.
+            omega_z:         Yaw rate (angular velocity around the z-axis) in rad/s.
+            accel_x:         Forward linear acceleration (x-axis) in m/s².
+            timestamp:       Message timestamp in seconds.
+        """
+        quaternion = msg.orientation
+        q_x = 1.0 - 2.0 * (quaternion.y * quaternion.y + quaternion.z * quaternion.z)
+        q_y = 2.0 * (quaternion.w * quaternion.z + quaternion.x * quaternion.y)
+        orientation_rad = vector_to_dir((q_x, q_y))
+
+        omega_z = msg.angular_velocity.z
+        accel_x = msg.linear_acceleration.x
+        timestamp = msg.header.stamp.secs + msg.header.stamp.nsecs * 1e-9
+
+        return orientation_rad, omega_z, accel_x, timestamp
+
+    @staticmethod
     def message_to_orientation(msg: ImuMsg) -> float:
         """Convert a ROS message into the vehicle orientation"""
         quaternion = msg.orientation
