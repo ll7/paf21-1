@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Tuple, List, Dict
 import yaml
 
-from cv2 import cv2
+import cv2
 import numpy as np
 
 # pylint: disable=no-name-in-module

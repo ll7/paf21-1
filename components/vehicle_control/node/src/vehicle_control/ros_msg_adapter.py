@@ -67,9 +67,9 @@ class RosMessagesAdapter:
             timestamp:       Message timestamp in seconds.
         """
         quaternion = msg.orientation
-        q_x = 1.0 - 2.0 * (quaternion.y * quaternion.y + quaternion.z * quaternion.z)
-        q_y = 2.0 * (quaternion.w * quaternion.z + quaternion.x * quaternion.y)
-        orientation_rad = vector_to_dir((q_x, q_y))
+        cos_yaw_term = 1.0 - 2.0 * (quaternion.y * quaternion.y + quaternion.z * quaternion.z)
+        sin_yaw_term = 2.0 * (quaternion.w * quaternion.z + quaternion.x * quaternion.y)
+        orientation_rad = vector_to_dir((cos_yaw_term, sin_yaw_term))
 
         omega_z = msg.angular_velocity.z
         accel_x = msg.linear_acceleration.x
@@ -81,9 +81,9 @@ class RosMessagesAdapter:
     def message_to_orientation(msg: ImuMsg) -> float:
         """Convert a ROS message into the vehicle orientation"""
         quaternion = msg.orientation
-        q_x = 1.0 - 2.0 * (quaternion.y * quaternion.y + quaternion.z * quaternion.z)
-        q_y = 2.0 * (quaternion.w * quaternion.z + quaternion.x * quaternion.y)
-        return vector_to_dir((q_x, q_y))
+        cos_yaw_term = 1.0 - 2.0 * (quaternion.y * quaternion.y + quaternion.z * quaternion.z)
+        sin_yaw_term = 2.0 * (quaternion.w * quaternion.z + quaternion.x * quaternion.y)
+        return vector_to_dir((cos_yaw_term, sin_yaw_term))
 
     @staticmethod
     def signal_to_message(signal: DrivingSignal) -> AckermannDrive:

@@ -67,6 +67,9 @@ class Vehicle:
         Odometry measurements are fed into the EKF as correction steps.  On the
         very first call the filter is also initialised so that subsequent IMU
         predictions have a valid starting point.
+
+        ``self.orientation_rad`` is kept in sync from the EKF state after every
+        call so that all readers (e.g. ``is_ready``) always see a consistent value.
         """
         if self.orientation_rad is None:
             return
@@ -83,6 +86,8 @@ class Vehicle:
         vector_axle = rotate_vector((axle_length, 0), self.sensor_fusion.orientation_rad)
         self.pos = add_vector(vector_axle, self.sensor_fusion.position)
         self.velocity_mps = self.sensor_fusion.velocity_mps
+        # Keep orientation_rad in sync with the EKF's fused heading
+        self.orientation_rad = self.sensor_fusion.orientation_rad
 
     def update_vehicle_orientation(self, orientation: float):
         """Update the vehicle's heading using the IMU orientation measurement.
@@ -91,6 +96,9 @@ class Vehicle:
         correction measurement.  Before the filter is initialised, the value is
         stored directly so it can be used to seed the filter on the first
         odometry update.
+
+        ``self.orientation_rad`` is the single source of truth for heading; it
+        mirrors ``sensor_fusion.orientation_rad`` once the filter is running.
         """
         if not self.sensor_fusion.is_initialized:
             self.orientation_rad = orientation
